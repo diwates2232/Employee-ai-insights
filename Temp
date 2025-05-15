@@ -1,6 +1,131 @@
 // controllers/liveOccupancyController.js
 
 const { poolConnect, pool } = require('../config/db');
+const mapDoorToZone = require('../data/doorZoneMap');
+
+// Encapsulate your query + mapping logic into a reusable function
+async function fetchLiveOccupancyData() {
+  const request = pool.request();
+  const result = await request.query(`
+    WITH CombinedQuery AS (
+      /* … your full SQL from before, including t5_dir, t5_admit, etc. … */
+    )
+    SELECT
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    WHERE
+      LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE())
+      AND AdmitCode = 'Admit'
+      AND Direction IN ('InDirection','OutDirection')
+    ORDER BY LocaleMessageTime ASC
+  `);
+
+  // build current-in-zone map
+  const current = {};
+  for (const evt of result.recordset) {
+    const {
+      EmployeeID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      Dateonly,
+      Swipe_Time,
+      Direction,
+      Door
+    } = evt;
+
+    let zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
+
+    if (Direction === 'InDirection') {
+      current[EmployeeID] = {
+        Dateonly,
+        Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        CardNumber,
+        PersonnelType,
+        zone
+      };
+    } else {
+      delete current[EmployeeID];
+    }
+  }
+
+  // group by zone and build summary
+  const zoneMap = {};
+  for (const emp of Object.values(current)) {
+    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+    zoneMap[emp.zone].push(emp);
+  }
+  const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
+    zone,
+    count: emps.length
+  }));
+
+  return {
+    asOf: new Date().toISOString(),
+    summary,
+    details: zoneMap
+  };
+}
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+    res.write('\n');
+
+    // Immediately send first payload
+    const send = async () => {
+      try {
+        const data = await fetchLiveOccupancyData();
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch (err) {
+        console.error('Error fetching live occupancy for SSE:', err);
+        // optionally send an error event
+        res.write(`event: error\ndata: ${JSON.stringify({ error: 'Fetch failed' })}\n\n`);
+      }
+    };
+
+    await send();
+    // then every 5s
+    const interval = setInterval(send, 5_000);
+
+    // clean up on client disconnect
+    req.on('close', () => {
+      clearInterval(interval);
+    });
+
+  } catch (err) {
+    console.error('Live occupancy SSE setup error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+// controllers/liveOccupancyController.js
+
+const { poolConnect, pool } = require('../config/db');
 // ← Import your real mapping function
 const mapDoorToZone = require('../data/doorZoneMap');
 
