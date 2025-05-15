@@ -1,3 +1,55 @@
+// controllers/employeeController.js
+
+const { poolConnect, pool } = require('../config/db');
+
+exports.getEmployeeData = async (req, res) => {
+  try {
+    // wait for the pool to be ready
+    await poolConnect;
+
+    // create a new request tied to our pool
+    const request = pool.request();
+
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your full SQL here … */
+      )
+      SELECT 
+        LocaleMessageTime,
+        CONVERT(date, LocaleMessageTime)   AS Dateonly,
+        CONVERT(time(0), LocaleMessageTime) AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door,
+        Rejection_Type
+      FROM CombinedQuery
+      ORDER BY LocaleMessageTime DESC;
+    `);
+
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('SQL error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // config/db.js
 
 const sql = require('mssql');
