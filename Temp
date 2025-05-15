@@ -1,3 +1,20 @@
+:: 1. Make sure you’re in your project folder
+cd C:\Users\W0024618\Desktop\swipeData\employee-ai-insights
+
+:: 2. Remove node_modules directory
+rd /s /q node_modules
+
+:: 3. Remove package-lock.json file
+del package-lock.json
+
+:: 4. Re-install your dependencies
+npm install express dotenv cors mssql
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\
 
 
