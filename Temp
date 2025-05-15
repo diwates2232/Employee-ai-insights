@@ -1,24 +1,73 @@
-C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\doorZoneMap.js
+read each door deatails carefull front of door i have mentioned Zone name then carefully give me updated doorZoneMap.js file carefully
 
-
-
-server.js
-
-
-const express = require('express');
-const cors = require('cors');
-const employeeRoutes = require('./routes/employeeRoutes');
-const doorZoneMap=require('./data/doorZoneMap');
-const liveRt  = require('./routes/liveOccupancyRoutes');
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);  // now GET /api/live-occupancynode 
-
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+Door &  	Zone Details 
+APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR 	Red Zone
+APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door	 Red Zone
+APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR	Reception Area
+APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR	Reception Area
+APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR	Red Zone
+APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)	Red Zone
+APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR	Red Zone
+APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)	Red Zone
+APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR	YELLOW Zone
+APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR	YELLOW Zone
+APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)	YELLOW Zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door	YELLOW Zone
+APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door	YELLOW Zone
+APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door	GSOC
+APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door	YELLOW Zone
+APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door	YELLOW Zone
+APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door	YELLOW Zone
+APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR	YELLOW Zone
+APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door	YELLOW Zone
+APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door	GREEN Zone
+APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door	GREEN Zone
+APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door	GREEN Zone
+APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door	GREEN Zone
+APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)	GREEN Zone
+APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)	ORANGE  Zone
+APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR	GREEN Zone
+APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)	GREEN Zone
+APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR	GREEN Zone
+APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR	ORANGE  Zone
+APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)	ORANGE  Zone
+APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR	ORANGE  Zone
+APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door	ORANGE  Zone
+APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR	ORANGE  Zone
+APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door	2nd Floor Pune 
+APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE	2nd Floor Pune 
+APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B	2nd Floor Pune 
+APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74	2nd Floor Pune 
+APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0	2nd Floor Pune 
+APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW	Red Zone
+APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW	YELLOW Zone
+APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)	YELLOW Zone
+APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW	ORANGE  Zone
+APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW	YELLOW Zone
+APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW	Red Zone
+APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW	Reception Area
+APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW	Reception Area
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
+APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR	TOWER B Pune
+APAC_IN_PUN_TOWER B_IBMS ROOM	TOWER B Pune
+APAC_IN_PUN_TOWER B_UPS ROOM	TOWER B Pune
+APAC_IN_PUN_TOWER B_MDF ROOM	TOWER B Pune
+APAC_IN_PUN_TOWER B_PAC ROOM	TOWER B Pune
+APAC_IN_PUN_TOWER B_IT STORE ROOM	TOWER B Pune
+APAC_IN_PUN_TOWER B_GYM ROOM	TOWER B Pune
