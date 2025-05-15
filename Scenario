@@ -1,3 +1,14 @@
+python -m venv venv
+.\venv\Scripts\Activate.ps1   # in PowerShell
+# or .\venv\Scripts\activate.bat  # in CMD
+
+
+
+
+
+
+
+
 # Inside src/
 cd src
 ni extract.py
