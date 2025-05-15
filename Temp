@@ -1,3 +1,131 @@
+// controllers/liveOccupancyController.js
+
+const { poolConnect, pool, sql } = require('../config/db');
+// import the real mapping function (with turnstile & direction logic)
+const mapDoorToZone = require('../data/doorZoneMap');
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // 1) Fetch Admit events with In/Out directions in the last 24h
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your big query unchanged … */
+      )
+      SELECT
+        CONVERT(VARCHAR(10), DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]), 23) AS Dateonly,
+        CONVERT(VARCHAR(8),  DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]), 108) AS Swipe_Time,
+        CASE 
+          WHEN t3.Name IN ('Contractor', 'Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectName1,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
+          SCard.[value]
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM
+        [ACVSUJournal_00010020].[dbo].[ACVSUJournalLog] AS t1
+        /* … all your JOINs unchanged … */
+      WHERE
+        t1.MessageType IN ('CardAdmitted', 'CardRejected')
+        AND t1.PartitionName2 = 'APAC.Default'
+      /* and your date filter */
+    `);
+
+    const events = result.recordset;
+
+    // 2) Track current in‐zone employees
+    const current = {};
+    for (const evt of events) {
+      const {
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        Dateonly,
+        Swipe_Time,
+        Direction,
+        Door
+      } = evt;
+
+      // now using the imported function, and defaulting null back to "Unknown Zone"
+      let zone = mapDoorToZone(Door, Direction);
+      if (!zone) zone = 'Unknown Zone';
+
+      if (Direction === 'InDirection') {
+        current[EmployeeID] = {
+          Dateonly,
+          Swipe_Time,
+          EmployeeID,
+          ObjectName1,
+          CardNumber,
+          PersonnelType,
+          zone
+        };
+      } else {
+        delete current[EmployeeID];
+      }
+    }
+
+    // 3) Group by zone
+    const zoneMap = {};
+    Object.values(current).forEach(emp => {
+      zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+      zoneMap[emp.zone].push(emp);
+    });
+
+    // 4) Summary counts
+    const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
+      zone,
+      count: emps.length
+    }));
+
+    res.json({
+      asOf: new Date().toISOString(),
+      summary,
+      details: zoneMap
+    });
+  } catch (err) {
+    console.error('Live occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+// data/doorZoneMap.js
+
+// … your doorZoneMap object unchanged …
+
+function mapDoorToZone(door, direction) {
+  // Direction‐based rule for turnstiles
+  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
+    return direction === 'InDirection' ? 'Reception Area' : null;
+  }
+
+  // exact match, or fall back to the literal key lookup
+  return doorZoneMap[door] || 'Unknown Zone';
+}
+
+module.exports = mapDoorToZone;
+
+
+
+
+
+
+
 Read all below files carefully . and Solve this issue .
 Issue is When i run this http://localhost:5000/api/live-occupancy
  We {
