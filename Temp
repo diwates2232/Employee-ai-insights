@@ -1,3 +1,7 @@
+cd C:\Users\W0024618\Desktop\swipeData\employee-ai-insights
+node server.js
+
+
 // controllers/liveOccupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
