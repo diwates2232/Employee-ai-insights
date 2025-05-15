@@ -1,3 +1,216 @@
+Read all below files carefully . and Solve this issue .
+Issue is When i run this http://localhost:5000/api/live-occupancy
+ We {
+  "asOf": "2025-05-15T21:25:06.435Z",
+  "summary": [
+    {
+      "zone": "Unknown Zone",
+      "count": 6
+    }
+  ],
+  "details": {
+    "Unknown Zone": [
+      {
+        "Dateonly": "2025-05-16",
+        "Swipe_Time": "01:58:04",
+        "EmployeeID": "0",
+        "ObjectName1": "Vasulkar, Sachin",
+        "CardNumber": "410317",
+        "PersonnelType": "Property Management",
+        "zone": "Unknown Zone"
+      },
+      {
+        "Dateonly": "2025-05-15",
+        "Swipe_Time": "16:57:35",
+        "EmployeeID": "312704",
+        "ObjectName1": "Dalvi, Mohini Atmaram",
+        "CardNumber": "604963",
+        "PersonnelType": "Employee",
+        "zone": "Unknown Zone"
+      },
+
+
+
+This Responec issue is Door Present in doorZoneMap and incomming door are not matches thats why umkown zone retuns .
+find the root cause of this issue and solve this issue and give me updated js file carefully.
+
+file 1
+
+// controllers/liveOccupancyController.js
+
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap = require('../data/doorZoneMap');
+
+/**
+ * Map a raw Door string to its Zone via your lookup table,
+ * falling back to substring match or “Unknown Zone.”
+ */
+function mapDoorToZone(door) {
+  if (doorZoneMap[door]) {
+    return doorZoneMap[door];
+  }
+  // fallback: find a key contained in the door string
+  for (const key of Object.keys(doorZoneMap)) {
+    if (door.includes(key)) {
+      return doorZoneMap[key];
+    }
+  }
+  return 'Unknown Zone';
+}
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // 1) Fetch Admit events with In/Out directions in the last 24h
+    const result = await request.query(`
+        WITH CombinedQuery AS(
+		SELECT 
+	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+    t1.ObjectName1,
+	t1.PartitionName2 As location,
+	t5_card.CardNumber,
+t5_admit.value AS AdmitCode,
+t5_dir.value AS Direction,
+    t1.ObjectName2,
+	t5_rej.value AS Rejection_Type,
+	CASE 
+        WHEN t3.Name IN ('Contractor', 'Terminated Contractor') THEN t2.Text12
+        ELSE CAST(t2.Int1 AS NVARCHAR)
+    END AS "EmployeeID",
+    t3.Name AS PersonnelType,
+    t1.MessageType,t1.XmlGUID
+	FROM
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLog] AS t1
+LEFT JOIN
+    [ACVSCore].[Access].[Personnel] AS t2
+    ON t1.ObjectIdentity1 = t2.GUID
+LEFT JOIN
+    [ACVSCore].[Access].[PersonnelType] AS t3
+    ON t2.[PersonnelTypeId] = t3.[ObjectID]
+LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_admit
+    ON t1.XmlGUID = t5_admit.GUID
+    AND t5_admit.Name = 'AdmitCode'
+LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_dir
+    ON t1.XmlGUID = t5_dir.GUID
+    AND t5_dir.Value IN ('InDirection', 'OutDirection')
+    LEFT JOIN [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxml] AS t_xml
+        ON t1.XmlGUID = t_xml.GUID
+    -- Pre-pull shredded “Card” row
+    LEFT JOIN (
+    SELECT GUID, [value]
+    FROM [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred]
+    WHERE [Name] IN ('Card', 'CHUID')
+    ) AS SCard
+    ON t1.XmlGUID = SCard.GUID
+    /* NEW: three-stage CardNumber resolution */
+    OUTER APPLY (
+    SELECT COALESCE(
+        -- 1) <LogMessage><CHUID><Card>…</Card></CHUID>
+        TRY_CAST(t_xml.XmlMessage AS XML)
+        .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
+        -- 2) <LogMessage><CHUID>…</CHUID> (no nested <Card>)
+        TRY_CAST(t_xml.XmlMessage AS XML)
+        .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
+        -- 3) shredded fallback
+        SCard.[value]
+    ) AS CardNumber
+    ) AS t5_card
+ 
+LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_Rej
+    ON t1.XmlGUID = t5_Rej.GUID
+    AND t5_Rej.Name = 'RejectCode'
+ 
+   
+   --include both admits and rejects
+   WHERE t1.MessageType IN ('CardAdmitted', 'CardRejected')
+   AND t1.PartitionName2 = 'APAC.Default'
+   AND CONVERT(date, DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC)) >= '2025-01-01')
+
+
+     SELECT
+        CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+        CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door
+      FROM CombinedQuery
+      WHERE 
+        LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE()) AND
+        AdmitCode = 'Admit' AND
+        Direction IN ('InDirection','OutDirection')
+      ORDER BY LocaleMessageTime ASC;
+    `);
+
+    const events = result.recordset;
+
+    // 2) Track current in‐zone employees
+    const current = {};
+    for (const evt of events) {
+      const {
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        Dateonly,
+        Swipe_Time,
+        Direction,
+        Door
+      } = evt;
+
+      const zone = mapDoorToZone(Door);
+
+      if (Direction === 'InDirection') {
+        current[EmployeeID] = {
+          Dateonly,
+          Swipe_Time,
+          EmployeeID,
+          ObjectName1,
+          CardNumber,
+          PersonnelType,
+          zone
+        };
+      } else {
+        delete current[EmployeeID];
+      }
+    }
+
+    // 3) Group by zone
+    const zoneMap = {};
+    Object.values(current).forEach(emp => {
+      zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+      zoneMap[emp.zone].push(emp);
+    });
+
+    // 4) Summary counts
+    const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
+      zone,
+      count: emps.length
+    }));
+
+    res.json({
+      asOf: new Date().toISOString(),
+      summary,
+      details: zoneMap
+    });
+  } catch (err) {
+    console.error('Live occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+file 2
+
+
 // data/doorZoneMap.js
 
 const doorZoneMap = {
@@ -87,82 +300,18 @@ module.exports = mapDoorToZone;
 
 
 
+file 3
+
+
+// routes/liveOccupancyRoutes.js
+
+const express = require('express');
+const router  = express.Router();
+const { getLiveOccupancy } = require('../controllers/liveOccupancyController');
+
+router.get('/live-occupancy', getLiveOccupancy);
+
+module.exports = router;
 
 
 
-
-
-
-read each door deatails carefull front of door i have mentioned Zone name then carefully give me updated doorZoneMap.js file carefully
-
-Door &  	Zone Details 
-APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR 	Red Zone
-APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door	 Red Zone
-APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR	Reception Area
-APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR	Reception Area
-APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR	Red Zone
-APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)	Red Zone
-APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR	Red Zone
-APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)	Red Zone
-APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR	YELLOW Zone
-APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR	YELLOW Zone
-APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)	YELLOW Zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door	YELLOW Zone
-APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door	YELLOW Zone
-APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door	GSOC
-APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door	YELLOW Zone
-APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door	YELLOW Zone
-APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door	YELLOW Zone
-APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR	YELLOW Zone
-APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door	YELLOW Zone
-APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door	GREEN Zone
-APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door	GREEN Zone
-APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door	GREEN Zone
-APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door	GREEN Zone
-APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)	GREEN Zone
-APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)	ORANGE  Zone
-APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR	GREEN Zone
-APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)	GREEN Zone
-APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR	GREEN Zone
-APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR	ORANGE  Zone
-APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)	ORANGE  Zone
-APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR	ORANGE  Zone
-APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door	ORANGE  Zone
-APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR	ORANGE  Zone
-APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door	2nd Floor Pune 
-APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE	2nd Floor Pune 
-APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B	2nd Floor Pune 
-APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74	2nd Floor Pune 
-APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0	2nd Floor Pune 
-APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW	Red Zone
-APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW	YELLOW Zone
-APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)	YELLOW Zone
-APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW	ORANGE  Zone
-APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW	YELLOW Zone
-APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW	Red Zone
-APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW	Reception Area
-APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW	Reception Area
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR	if  Direction": "OutDirection", then this is out of Office area remove count from all zone /If Direction is InDirection then Display " Reception Area" as zone
-APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR	TOWER B Pune
-APAC_IN_PUN_TOWER B_IBMS ROOM	TOWER B Pune
-APAC_IN_PUN_TOWER B_UPS ROOM	TOWER B Pune
-APAC_IN_PUN_TOWER B_MDF ROOM	TOWER B Pune
-APAC_IN_PUN_TOWER B_PAC ROOM	TOWER B Pune
-APAC_IN_PUN_TOWER B_IT STORE ROOM	TOWER B Pune
-APAC_IN_PUN_TOWER B_GYM ROOM	TOWER B Pune
