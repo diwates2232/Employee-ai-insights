@@ -1,3 +1,13 @@
+cd $HOME\Desktop
+mkdir ai-employee-security
+cd ai-employee-security
+
+# Create subfolders
+mkdir data notebooks src models
+
+
+
+
 yes i want exact thsi type of  mopdel
 
 
