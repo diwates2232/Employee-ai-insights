@@ -1,4 +1,39 @@
- C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> npm install express dotenv cors mssql
+// config/db.js
+
+const sql = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server: process.env.DB_SERVER,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  options: {
+    encrypt: true,
+    trustServerCertificate: true,
+  },
+};
+
+const pool = new sql.ConnectionPool(config);
+const poolConnect = pool.connect()
+  .then(() => console.log('✅ MSSQL pool connected'))
+  .catch(err => console.error('❌ MSSQL pool connection failed:', err));
+
+pool.on('error', err => {
+  console.error('❌ MSSQL pool error:', err);
+});
+
+module.exports = { sql, poolConnect, pool };
+
+
+
+
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> npm install express dotenv cors mssql
 >>
 
 added 137 packages, and audited 138 packages in 16s
