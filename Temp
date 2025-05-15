@@ -1,0 +1,3 @@
+mkdir employee-ai-insights && cd employee-ai-insights
+npm init -y
+npm install express mysql2 dotenv cors
