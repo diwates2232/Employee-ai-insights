@@ -1,543 +1,72 @@
-// controllers/liveOccupancyController.js
-
-const { poolConnect, pool, sql } = require('../config/db');
-
-/**
- * TODO: replace this stub with your actual door→zone mapping.
- * For now it just splits the door string and picks the 4th segment.
- */
-function mapDoorToZone(door) {
-  const parts = door.split('_');
-  return parts[3] || 'Unknown';
-}
-
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    const request = pool.request();
-
-    // 1) Fetch Admit events with In/Out directions in the last 24h
-    const result = await request.query(`
-      WITH CombinedQuery AS (
-        /* … your original CTE … */
-      )
-      SELECT
-        CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-        CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-        EmployeeID,
-        ObjectName1,       -- employee name
-        PersonnelType,
-        CardNumber,
-        AdmitCode,
-        Direction,
-        ObjectName2 AS Door
-      FROM CombinedQuery
-      WHERE 
-        LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE())
-        AND AdmitCode = 'Admit'
-        AND Direction IN ('InDirection','OutDirection')
-      ORDER BY LocaleMessageTime ASC;
-    `);
-
-    const events = result.recordset;
-
-    // 2) Track current in‐zone employees
-    //    employeeID → { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone }
-    const current = {};
-
-    for (const evt of events) {
-      const {
-        EmployeeID,
-        ObjectName1,
-        PersonnelType,
-        CardNumber,
-        Dateonly,
-        Swipe_Time,
-        Direction,
-        Door
-      } = evt;
-
-      const zone = mapDoorToZone(Door);
-
-      if (Direction === 'InDirection') {
-        // enter or move zone
-        current[EmployeeID] = {
-          Dateonly,
-          Swipe_Time,
-          EmployeeID,
-          ObjectName1,
-          CardNumber,
-          PersonnelType,
-          zone
-        };
-      } else {
-        // OutDirection: remove from zone if present
-        delete current[EmployeeID];
-      }
-    }
-
-    // 3) Group by zone for summary & details
-    const zoneMap = {};
-    Object.values(current).forEach(emp => {
-      const z = emp.zone;
-      zoneMap[z] = zoneMap[z] || [];
-      zoneMap[z].push(emp);
-    });
-
-    const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
-      zone,
-      count: emps.length
-    }));
-
-    res.json({
-      asOf: new Date().toISOString(),
-      summary,
-      details: zoneMap
-    });
-  } catch (err) {
-    console.error('Live occupancy error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-// routes/liveOccupancyRoutes.js
-const express = require('express');
-const router  = express.Router();
-const { getLiveOccupancy } = require('../controllers/liveOccupancyController');
-router.get('/live-occupancy', getLiveOccupancy);
-module.exports = router;
-
-
-
-
-
-
-const liveRt  = require('./routes/liveOccupancyRoutes');
-app.use('/api', liveRt);  // now GET /api/live-occupancy
-
-
-
-
-
-
-
-
-
-/
-
-
-
-
-
-
-
-/ controllers/occupancyController.js
-
-const { poolConnect, pool, sql } = require('../config/db');
-
-function extractZone(door) {
-  // split on “_” and take part that likely represents the zone 
-  // (e.g. “TOWER B” in “APAC_IN_PUN_TOWER B_ST5_…”)
-  const parts = door.split('_');
-  return parts[3] || 'Unknown';
-}
-
-exports.getOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    const request = pool.request();
-
-    // 1) Handle optional ?date=YYYY-MM-DD
-    let whereClause;
-    if (req.query.date) {
-      // user-specified day
-      request.input('filterDate', sql.Date, req.query.date);
-      whereClause = `CONVERT(date, LocaleMessageTime) = @filterDate`;
-    } else {
-      // last 24 hours window
-      // use GETDATE() on the server side
-      whereClause = `LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE())`;
-    }
-
-    // 2) Run the same CTE + filter
-    const result = await request.query(`
-      WITH CombinedQuery AS (
-        /* … your original CTE here … */
-      )
-      SELECT
-        CONVERT(VARCHAR(25), LocaleMessageTime, 126) AS LocaleMessageTime,
-        CONVERT(VARCHAR(10), LocaleMessageTime, 23)  AS Dateonly,
-        CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        PersonnelType,
-        CardNumber,
-        AdmitCode,
-        Direction,
-        ObjectName2 AS Door,
-        Rejection_Type
-      FROM CombinedQuery
-      WHERE ${whereClause}
-      ORDER BY LocaleMessageTime DESC;
-    `);
-
-    const rows = result.recordset;
-
-    // 3) Group into zones
-    const zoneMap = {};
-    rows.forEach(r => {
-      const zone = extractZone(r.Door);
-      (zoneMap[zone] = zoneMap[zone] || []).push(r);
-    });
-
-    // 4) Build summary counts
-    const summary = Object.entries(zoneMap).map(([zone, recs]) => ({
-      zone,
-      count: recs.length,
-    }));
-
-    // 5) Respond
-    res.json({
-      // echo back which filter was used
-      filter: req.query.date
-        ? `date = ${req.query.date}`
-        : 'last 24 hours',
-      summary,
-      details: zoneMap,
-    });
-  } catch (err) {
-    console.error('Occupancy error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-
-
-
-
-// controllers/occupancyController.js
-
-const { poolConnect, pool, sql } = require('../config/db');  // bring in sql
-
-function extractZone(door) {
-  const parts = door.split('_');
-  return parts[3] || 'Unknown';
-}
-
-exports.getOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    const request = pool.request();
-
-    // use sql.Date to match only the date portion
-    const todayDate = new Date();                     // e.g. 2025-05-16T...
-    // strip time portion:
-    const yyyy = todayDate.getFullYear();
-    const mm   = String(todayDate.getMonth() + 1).padStart(2, '0');
-    const dd   = String(todayDate.getDate()).padStart(2, '0');
-    const isoDateOnly = `${yyyy}-${mm}-${dd}`;        // "2025-05-16"
-
-    request.input('today', sql.Date, isoDateOnly);
-
-    const result = await request.query(`
-      WITH CombinedQuery AS (
-        /* … your CTE as before … */
-      )
-      SELECT
-        CONVERT(VARCHAR(25), LocaleMessageTime, 126) AS LocaleMessageTime,
-        CONVERT(VARCHAR(10), LocaleMessageTime, 23)  AS Dateonly,
-        CONVERT(VARCHAR(8), LocaleMessageTime, 108)  AS Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        PersonnelType,
-        CardNumber,
-        AdmitCode,
-        Direction,
-        ObjectName2 AS Door,
-        Rejection_Type
-      FROM CombinedQuery
-      WHERE CONVERT(date, LocaleMessageTime) = @today
-      ORDER BY LocaleMessageTime DESC;
-    `);
-
-    const rows = result.recordset;
-
-    const zoneMap = {};
-    rows.forEach(r => {
-      const zone = extractZone(r.Door);
-      zoneMap[zone] = zoneMap[zone] || [];
-      zoneMap[zone].push(r);
-    });
-
-    const summary = Object.entries(zoneMap).map(
-      ([zone, recs]) => ({ zone, count: recs.length })
-    );
-
-    res.json({
-      date: isoDateOnly,
-      summary,
-      details: zoneMap,
-    });
-  } catch (err) {
-    console.error('Occupancy error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-
-
-
-
-// controllers/occupancyController.js
-
-const { poolConnect, pool } = require('../config/db');
-
-function extractZone(door) {
-  // Assumes door strings like "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR"
-  // We’ll take the 4th underscore-separated segment as the “zone”
-  const parts = door.split('_');
-  return parts[3] || 'Unknown';
-}
-
-exports.getOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    const request = pool.request();
-
-    // only today’s swipes
-    request.input('today', request.SqlDate, new Date());
-
-    // fetch raw rows for today
-    const result = await request.query(`
-      WITH CombinedQuery AS (
-        /* … your CTE as before … */
-      )
-      SELECT
-        LocaleMessageTime,
-        CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-        CONVERT(VARCHAR(8), LocaleMessageTime, 108) AS Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        PersonnelType,
-        CardNumber,
-        AdmitCode,
-        Direction,
-        ObjectName2 AS Door,
-        Rejection_Type
-      FROM CombinedQuery
-      WHERE CONVERT(date, LocaleMessageTime) = @today
-      ORDER BY LocaleMessageTime DESC
-    `);
-
-    const rows = result.recordset;
-
-    // group by zone
-    const zoneMap = {};
-    rows.forEach(r => {
-      const zone = extractZone(r.Door);
-      if (!zoneMap[zone]) zoneMap[zone] = [];
-      zoneMap[zone].push(r);
-    });
-
-    // build summary
-    const summary = Object.entries(zoneMap).map(([zone, recs]) => ({
-      zone,
-      count: recs.length
-    }));
-
-    res.json({
-      date: new Date().toISOString().slice(0,10),
-      summary,       // [{ zone: 'TOWER B', count: 12 }, …]
-      details: zoneMap
-    });
-  } catch (err) {
-    console.error('Occupancy error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-
-// routes/occupancyRoutes.js
-
-const express = require('express');
-const router  = express.Router();
-const { getOccupancy } = require('../controllers/occupancyController');
-
-router.get('/occupancy', getOccupancy);
-
-module.exports = router;
-
-
-
-
-
-// server.js
-
-const express = require('express');
-const cors    = require('cors');
-const empRt   = require('./routes/employeeRoutes');
-const occRt   = require('./routes/occupancyRoutes');  // new
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-app.use('/api', empRt);
-app.use('/api', occRt);      // <-- mounts GET /api/occupancy
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-
-
-
-
-
-// controllers/employeeController.js
-
-const { poolConnect, pool } = require('../config/db');
-
-exports.getEmployeeData = async (req, res) => {
-  try {
-    await poolConnect;
-    const request = pool.request();
-
-    // Pagination params (defaults: page 1, 100 rows)
-    const page     = parseInt(req.query.page)     || 1;
-    const pageSize = parseInt(req.query.pageSize) || 100;
-    const offset   = (page - 1) * pageSize;
-
-    const sqlQuery = `
-      WITH CombinedQuery AS (
-        /* your original CTE here… */
-      )
-      SELECT
-        -- Format as ISO string for the full datetime
-        CONVERT(VARCHAR(25), LocaleMessageTime, 126) AS LocaleMessageTime,
-        -- Keep date only as 'YYYY-MM-DD'
-        CONVERT(VARCHAR(10), LocaleMessageTime, 23)  AS Dateonly,
-        -- Extract just the time as 'HH:MM:SS'
-        CONVERT(VARCHAR(8), LocaleMessageTime, 108)  AS Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        PersonnelType,
-        CardNumber,
-        AdmitCode,
-        Direction,
-        ObjectName2 AS Door,
-        Rejection_Type
-      FROM CombinedQuery
-      ORDER BY LocaleMessageTime DESC
-      OFFSET ${offset} ROWS
-      FETCH NEXT ${pageSize} ROWS ONLY;
-    `;
-
-    const result = await request.query(sqlQuery);
-
-    res.json({
-      page,
-      pageSize,
-      data: result.recordset,
-    });
-  } catch (error) {
-    console.error('SQL error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-
-When i select Top 100 rows we got this API responce
-
-{
-        "LocaleMessageTime": "2025-04-09T13:15:36.000Z",
-        "Dateonly": "2025-04-09T00:00:00.000Z",
-        "Swipe_Time": "1970-01-01T13:15:36.000Z",
-        "EmployeeID": "0",
-        "ObjectName1": "India, TEMP_PUN_001",
-        "PersonnelType": "Temp Badge",
-        "CardNumber": "411101",
-        "AdmitCode": "Admit",
-        "Direction": "InDirection",
-        "Door": "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR",
-        "Rejection_Type": null
-    },
-    {
-        "LocaleMessageTime": "2025-04-09T12:23:39.000Z",
-        "Dateonly": "2025-04-09T00:00:00.000Z",
-        "Swipe_Time": "1970-01-01T12:23:39.000Z",
-        "EmployeeID": "0",
-        "ObjectName1": "India, TEMP_PUN_001",
-        "PersonnelType": "Temp Badge",
-        "CardNumber": "411101",
-        "AdmitCode": "Admit",
-        "Direction": "InDirection",
-        "Door": "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR",
-        "Rejection_Type": null
-    },
-    {
-        "LocaleMessageTime": "2025-04-09T10:24:55.000Z",
-        "Dateonly": "2025-04-09T00:00:00.000Z",
-        "Swipe_Time": "1970-01-01T10:24:55.000Z",
-        "EmployeeID": "0",
-        "ObjectName1": "India, TEMP_PUN_001",
-        "PersonnelType": "Temp Badge",
-        "CardNumber": "411101",
-        "AdmitCode": "Admit",
-        "Direction": "InDirection",
-        "Door": "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR",
-        "Rejection_Type": null
-    },
-    {
-        "LocaleMessageTime": "2025-04-06T12:56:16.000Z",
-        "Dateonly": "2025-04-06T00:00:00.000Z",
-        "Swipe_Time": "1970-01-01T12:56:16.000Z",
-        "EmployeeID": "0",
-        "ObjectName1": "India, TEMP_PUN_001",
-        "PersonnelType": "Temp Badge",
-        "CardNumber": "411101",
-        "AdmitCode": "Admit",
-        "Direction": "InDirection",
-        "Door": "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR",
-        "Rejection_Type": null
-    },
-    {
-        "LocaleMessageTime": "2025-04-06T11:27:45.000Z",
-        "Dateonly": "2025-04-06T00:00:00.000Z",
-        "Swipe_Time": "1970-01-01T11:27:45.000Z",
-        "EmployeeID": "0",
-        "ObjectName1": "India, TEMP_PUN_001",
-        "PersonnelType": "Temp Badge",
-        "CardNumber": "411101",
-        "AdmitCode": "Admit",
-        "Direction": "InDirection",
-        "Door": "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR",
-        "Rejection_Type": null
-    },
-    {
+how i add this door and zone
+
+APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door
+APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE
+APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B
+APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74
+APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0
+APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR
+APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door
+APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR
+APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR
+APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR
+APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)
+APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR
+APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)
+APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR
+APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR
+APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR
+APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR
+APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door
+APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door
+APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door
+APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door
+APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door
+APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door
+APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR
+APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door
+APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW
+APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW
+APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)
+APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR
+APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door
+APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door
+APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door
+APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door
+APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)
+APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)
+APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR
+APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)
+APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR
+APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR
+APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)
+APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR
+APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door
+APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR
+APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW
+APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW
+APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW
+APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW
+APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW
+APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR
+APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR
+APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR
+APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR
+APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR
+APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR
+APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR
+APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR
+APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR
+APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR
+APAC_IN_PUN_TOWER B_IBMS ROOM
+APAC_IN_PUN_TOWER B_UPS ROOM
+APAC_IN_PUN_TOWER B_MDF ROOM
+APAC_IN_PUN_TOWER B_PAC ROOM
+APAC_IN_PUN_TOWER B_IT STORE ROOM
+APAC_IN_PUN_TOWER B_GYM ROOM
