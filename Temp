@@ -1,4 +1,142 @@
-// controllers/occupancyController.js
+// controllers/liveOccupancyController.js
+
+const { poolConnect, pool, sql } = require('../config/db');
+
+/**
+ * TODO: replace this stub with your actual door→zone mapping.
+ * For now it just splits the door string and picks the 4th segment.
+ */
+function mapDoorToZone(door) {
+  const parts = door.split('_');
+  return parts[3] || 'Unknown';
+}
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // 1) Fetch Admit events with In/Out directions in the last 24h
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your original CTE … */
+      )
+      SELECT
+        CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+        CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,       -- employee name
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door
+      FROM CombinedQuery
+      WHERE 
+        LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE())
+        AND AdmitCode = 'Admit'
+        AND Direction IN ('InDirection','OutDirection')
+      ORDER BY LocaleMessageTime ASC;
+    `);
+
+    const events = result.recordset;
+
+    // 2) Track current in‐zone employees
+    //    employeeID → { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone }
+    const current = {};
+
+    for (const evt of events) {
+      const {
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        Dateonly,
+        Swipe_Time,
+        Direction,
+        Door
+      } = evt;
+
+      const zone = mapDoorToZone(Door);
+
+      if (Direction === 'InDirection') {
+        // enter or move zone
+        current[EmployeeID] = {
+          Dateonly,
+          Swipe_Time,
+          EmployeeID,
+          ObjectName1,
+          CardNumber,
+          PersonnelType,
+          zone
+        };
+      } else {
+        // OutDirection: remove from zone if present
+        delete current[EmployeeID];
+      }
+    }
+
+    // 3) Group by zone for summary & details
+    const zoneMap = {};
+    Object.values(current).forEach(emp => {
+      const z = emp.zone;
+      zoneMap[z] = zoneMap[z] || [];
+      zoneMap[z].push(emp);
+    });
+
+    const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
+      zone,
+      count: emps.length
+    }));
+
+    res.json({
+      asOf: new Date().toISOString(),
+      summary,
+      details: zoneMap
+    });
+  } catch (err) {
+    console.error('Live occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+// routes/liveOccupancyRoutes.js
+const express = require('express');
+const router  = express.Router();
+const { getLiveOccupancy } = require('../controllers/liveOccupancyController');
+router.get('/live-occupancy', getLiveOccupancy);
+module.exports = router;
+
+
+
+
+
+
+const liveRt  = require('./routes/liveOccupancyRoutes');
+app.use('/api', liveRt);  // now GET /api/live-occupancy
+
+
+
+
+
+
+
+
+
+/
+
+
+
+
+
+
+
+/ controllers/occupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
 
