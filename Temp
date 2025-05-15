@@ -1,85 +1,119 @@
-DB_SERVER=SRVWUDEN0890V
-DB_USER=GSOC_Test
-DB_PASSWORD=your_actual_password
-DB_DATABASE=your_database_name
+this is my sql query current .
+so find main db name foe add env. file
 
+WITH CombinedQuery AS(
+		SELECT
+	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+    t1.ObjectName1,
+	t5_card.CardNumber,
+    t1.ObjectName2,
+	t5_rej.value AS Rejection_Type,
+	CASE 
+        WHEN t3.Name IN ('Contractor', 'Terminated Contractor') THEN t2.Text12
+        ELSE CAST(t2.Int1 AS NVARCHAR)
+    END AS "EmployeeID",
+    t3.Name AS PersonnelType,
+    t1.MessageType,t1.XmlGUID
+ 
+	FROM
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLog] AS t1
+LEFT JOIN
+    [ACVSCore].[Access].[Personnel] AS t2
+    ON t1.ObjectIdentity1 = t2.GUID
+LEFT JOIN
+    [ACVSCore].[Access].[PersonnelType] AS t3
+    ON t2.[PersonnelTypeId] = t3.[ObjectID]
+LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_dir
+    ON t1.XmlGUID = t5_dir.GUID
+    AND t5_dir.Value IN ('InDirection', 'OutDirection')
+    LEFT JOIN [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxml] AS t_xml
+        ON t1.XmlGUID = t_xml.GUID
+ 
+    -- Pre-pull shredded “Card” row
+    LEFT JOIN (
+      SELECT GUID, [value]
+      FROM [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred]
+      WHERE [Name] = 'Card'
+    ) AS SCard
+      ON t1.XmlGUID = SCard.GUID
+ 
+    /* NEW: three-stage CardNumber resolution */
+    OUTER APPLY (
+      SELECT COALESCE(
+        -- 1) <LogMessage><CHUID><Card>…</Card></CHUID>
+        TRY_CAST(t_xml.XmlMessage AS XML)
+          .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
+        -- 2) <LogMessage><CHUID>…</CHUID> (no nested <Card>)
+        TRY_CAST(t_xml.XmlMessage AS XML)
+          .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
+        -- 3) shredded fallback
+        SCard.[value]
+      ) AS CardNumber
+    ) AS t5_card
 
-
-
-
-mkdir employee-ai-insights && cd employee-ai-insights
-npm init -y
-npm install express mysql2 dotenv cors
-
-DB_HOST=localhost
-DB_USER=your_sql_user
-DB_PASSWORD=your_sql_password
-DB_NAME=your_database_name
-
-
-
-const mysql = require('mysql2');
-const dotenv = require('dotenv');
-
-dotenv.config();
-
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
-
-module.exports = pool.promise(); // allows async/await
-
-
-
-
-const db = require('../config/db');
-
-exports.getEmployeeData = async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT id, name, status, department, applied_at, reason 
-      FROM employees_status
-    `); // Replace with your custom SQL query if needed
-    res.json(rows);
-  } catch (error) {
-    console.error('SQL error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-const express = require('express');
-const router = express.Router();
-const { getEmployeeData } = require('../controllers/employeeController');
-
-router.get('/employees', getEmployeeData);
-
-module.exports = router;
-
-
-
-
-const express = require('express');
-const cors = require('cors');
-const employeeRoutes = require('./routes/employeeRoutes');
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/api', employeeRoutes);
-
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-
-
+LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_Rej
+    ON t1.XmlGUID = t5_Rej.GUID
+    AND t5_Rej.Name = 'RejectCode'
+ 
+	WHERE   MessageType = 'CardRejected'
+	)
+    SELECT
+    'Lost' as Alert_Type,
+    EmployeeID,ObjectName1,PersonnelType, CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
+    FROM CombinedQuery 
+    WHERE Rejection_Type = 'Lost'
+ 
+	UNION
+ 
+	SELECT
+    'Clearance' as Alert_Type,
+    EmployeeID,ObjectName1,PersonnelType,CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
+    FROM CombinedQuery 
+    WHERE Rejection_Type = 'Clearance'
+ 
+	UNION
+ 
+	SELECT
+    'Disabled' as Alert_Type,
+    EmployeeID,ObjectName1,PersonnelType,CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
+    FROM CombinedQuery 
+    WHERE Rejection_Type = 'Disabled'
+ 
+	UNION
+SELECT 'Stolen', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'Stolen'
+UNION
+SELECT 'Expired', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'Expired'
+UNION
+SELECT 'Wrong PIN', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'PIN'
+UNION
+SELECT 'Unknown Card', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'UnknownCard'
+UNION
+SELECT 'Site Code', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'SiteCode'
+UNION
+SELECT 'Not Activated', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'Not Activated'
+ 
+UNION
+SELECT 'Facility Code', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
+       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
+FROM CombinedQuery
+WHERE Rejection_Type = 'FacilityCode';
