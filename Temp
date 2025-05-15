@@ -1,38 +1,55 @@
+ C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> npm install express dotenv cors mssql
+>>
 
-# 1. Navigate into your project folder
-Set-Location -Path "C:\Users\W0024618\Desktop\swipeData\employee-ai-insights"
+added 137 packages, and audited 138 packages in 16s
 
-# 2. Remove the node_modules folder
-Remove-Item -Recurse -Force .\node_modules
+27 packages are looking for funding
+  run `npm fund` for details
 
-# 3. Remove the package-lock.json file
-Remove-Item -Force .\package-lock.json
+found 0 vulnerabilities
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+Server running at http://localhost:5000
+SQL error: RequestError: No connection is specified for that request.
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:493:37)
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\tedious\request.js:363:11)
+    at C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:461:12
+    at new Promise (<anonymous>)
+    at Request.query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:460:12)
+    at exports.getEmployeeData (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\employeeController.js:8:34)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ENOCONN'
+}
+SQL error: RequestError: No connection is specified for that request.
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:493:37)
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\tedious\request.js:363:11)
+    at C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:461:12
+    at new Promise (<anonymous>)
+    at Request.query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:460:12)
+    at exports.getEmployeeData (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\employeeController.js:8:34)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ENOCONN'
+}
+SQL error: RequestError: No connection is specified for that request.
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:493:37)
+    at Request._query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\tedious\request.js:363:11)
+    at C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:461:12
+    at new Promise (<anonymous>)
+    at Request.query (C:\Users\W0024618\Desktop\swipeData\node_modules\mssql\lib\base\request.js:460:12)
+    at exports.getEmployeeData (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\employeeController.js:8:34)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  code: 'ENOCONN'
+}
 
-# 4. Re-install your dependencies
-npm install express dotenv cors mssql
 
 
 
-:: 1. Make sure you’re in your project folder
-cd C:\Users\W0024618\Desktop\swipeData\employee-ai-insights
-
-:: 2. Remove node_modules directory
-rd /s /q node_modules
-
-:: 3. Remove package-lock.json file
-del package-lock.json
-
-:: 4. Re-install your dependencies
-npm install express dotenv cors mssql
+Read above Error message carefully and alos chack all files details and give me Updated js file .
 
 
 
+File 1
 
-
-
-C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\
-
-
+db.js
 
 const sql = require('mssql');
 const dotenv = require('dotenv');
@@ -55,10 +72,9 @@ const poolConnect = pool.connect();
 module.exports = { sql, poolConnect, pool };
 
 
+File 2
 
-
-
-
+employeeController.js
 
 const { sql, poolConnect } = require('../config/db');
 
@@ -137,16 +153,26 @@ exports.getEmployeeData = async (req, res) => {
 
 
 
+employeeRoutes.js
+
+const express = require('express');
+const router = express.Router();
+const { getEmployeeData } = require('../controllers/employeeController');
+
+router.get('/employees', getEmployeeData);
+
+module.exports = router;
 
 
 
 
+file 4
 
-this is my sql query current .
-so find main db name foe add env. file
-alos update remaining file as per query.
+customQuery.sql
 
 
+const fs=require('fs');
+const sqlText = fs.readFileSync(path.join(__dirname,'../sql/customQuery.sql'), 'utf8');
 WITH CombinedQuery AS(
 		SELECT 
 	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
@@ -227,3 +253,24 @@ SELECT
 	Rejection_Type
 	FROM CombinedQuery
 	Order BY LocaleMessageTime DESC;
+
+
+file 5
+
+server.js
+
+const express = require('express');
+const cors = require('cors');
+const employeeRoutes = require('./routes/employeeRoutes');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use('/api', employeeRoutes);
+
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
