@@ -1,11 +1,16 @@
 this is my sql query current .
 so find main db name foe add env. file
+alos update remaining file as per query.
+
 
 WITH CombinedQuery AS(
-		SELECT
+		SELECT 
 	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
     t1.ObjectName1,
+	t1.PartitionName2 As location,
 	t5_card.CardNumber,
+t5_admit.value AS AdmitCode,
+t5_dir.value AS Direction,
     t1.ObjectName2,
 	t5_rej.value AS Rejection_Type,
 	CASE 
@@ -14,7 +19,6 @@ WITH CombinedQuery AS(
     END AS "EmployeeID",
     t3.Name AS PersonnelType,
     t1.MessageType,t1.XmlGUID
- 
 	FROM
     [ACVSUJournal_00010020].[dbo].[ACVSUJournalLog] AS t1
 LEFT JOIN
@@ -24,96 +28,58 @@ LEFT JOIN
     [ACVSCore].[Access].[PersonnelType] AS t3
     ON t2.[PersonnelTypeId] = t3.[ObjectID]
 LEFT JOIN
+    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_admit
+    ON t1.XmlGUID = t5_admit.GUID
+    AND t5_admit.Name = 'AdmitCode'
+LEFT JOIN
     [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_dir
     ON t1.XmlGUID = t5_dir.GUID
     AND t5_dir.Value IN ('InDirection', 'OutDirection')
     LEFT JOIN [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxml] AS t_xml
         ON t1.XmlGUID = t_xml.GUID
- 
     -- Pre-pull shredded “Card” row
     LEFT JOIN (
-      SELECT GUID, [value]
-      FROM [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred]
-      WHERE [Name] = 'Card'
+    SELECT GUID, [value]
+    FROM [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred]
+    WHERE [Name] IN ('Card', 'CHUID')
     ) AS SCard
-      ON t1.XmlGUID = SCard.GUID
- 
+    ON t1.XmlGUID = SCard.GUID
     /* NEW: three-stage CardNumber resolution */
     OUTER APPLY (
-      SELECT COALESCE(
+    SELECT COALESCE(
         -- 1) <LogMessage><CHUID><Card>…</Card></CHUID>
         TRY_CAST(t_xml.XmlMessage AS XML)
-          .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
+        .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
         -- 2) <LogMessage><CHUID>…</CHUID> (no nested <Card>)
         TRY_CAST(t_xml.XmlMessage AS XML)
-          .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
+        .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
         -- 3) shredded fallback
         SCard.[value]
-      ) AS CardNumber
+    ) AS CardNumber
     ) AS t5_card
-
+ 
 LEFT JOIN
     [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_Rej
     ON t1.XmlGUID = t5_Rej.GUID
     AND t5_Rej.Name = 'RejectCode'
  
-	WHERE   MessageType = 'CardRejected'
-	)
-    SELECT
-    'Lost' as Alert_Type,
-    EmployeeID,ObjectName1,PersonnelType, CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
-    FROM CombinedQuery 
-    WHERE Rejection_Type = 'Lost'
+   
+   --include both admits and rejects
+   WHERE t1.MessageType IN ('CardAdmitted', 'CardRejected')
+   AND t1.PartitionName2 = 'APAC.Default'
+   AND CONVERT(date, DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC)) >= '2025-01-01')
  
-	UNION
- 
-	SELECT
-    'Clearance' as Alert_Type,
-    EmployeeID,ObjectName1,PersonnelType,CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
-    FROM CombinedQuery 
-    WHERE Rejection_Type = 'Clearance'
- 
-	UNION
- 
-	SELECT
-    'Disabled' as Alert_Type,
-    EmployeeID,ObjectName1,PersonnelType,CardNumber,ObjectName2,CONVERT(TIME(0),(LocaleMessageTime)) AS Swipe_Time, CONVERT(DATE,(LocaleMessageTime)) AS DateOnly,XmlGUID
-    FROM CombinedQuery 
-    WHERE Rejection_Type = 'Disabled'
- 
-	UNION
-SELECT 'Stolen', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'Stolen'
-UNION
-SELECT 'Expired', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'Expired'
-UNION
-SELECT 'Wrong PIN', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'PIN'
-UNION
-SELECT 'Unknown Card', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'UnknownCard'
-UNION
-SELECT 'Site Code', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'SiteCode'
-UNION
-SELECT 'Not Activated', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'Not Activated'
- 
-UNION
-SELECT 'Facility Code', EmployeeID, ObjectName1, PersonnelType, CardNumber, ObjectName2,
-       CONVERT(TIME(0), LocaleMessageTime), CONVERT(DATE, LocaleMessageTime), XmlGUID
-FROM CombinedQuery
-WHERE Rejection_Type = 'FacilityCode';
+SELECT 
+	LocaleMessageTime,
+	Dateonly = Convert(date, LocaleMessageTime), 
+	Swipe_Time = CONVERT(time(0), LocaleMessageTime),
+	EmployeeID,
+	ObjectName1,
+	PersonnelType,
+	CardNumber,
+	AdmitCode,
+	Direction,
+	ObjectName2 As Door,
+	Rejection_Type
+	FROM CombinedQuery
+	Order BY LocaleMessageTime DESC;
