@@ -1,3 +1,98 @@
+// data/doorZoneMap.js
+module.exports = {
+  // ── 2nd Floor ────────────────────────────────────────────────────────────────
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door":          "2nd Floor",
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE":      "2nd Floor",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B":      "2nd Floor",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74":  "2nd Floor",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0":      "2nd Floor",
+
+  // ── Podium (Red) ─────────────────────────────────────────────────────────────
+  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR":         "Podium Red",
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door":             "Podium Red",
+  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR":           "Podium Red",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)":                           "Podium Red",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)":                          "Podium Red",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR":           "Podium Red",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW":   "Podium Red",
+
+  // ── Podium (Main) ────────────────────────────────────────────────────────────
+  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR":                "Podium Main",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR":               "Podium Main",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW":            "Podium Main",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW":           "Podium Main",
+
+  // ── Podium (Yellow) ──────────────────────────────────────────────────────────
+  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR":        "Podium Yellow",
+  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR":                 "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)":                        "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)":                       "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door":                "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door":  "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door":    "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR":                "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door":    "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW":            "Podium Yellow",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW":                "Podium Yellow",
+
+  // ── Podium (P-1 Turnstiles) ───────────────────────────────────────────────────
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR":                        "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR":                        "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR":                        "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR":                        "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR":                   "Podium P-1",
+  "APAC_IN-PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR":                   "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR":                    "Podium P-1",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR":                   "Podium P-1",
+
+  // ── Podium (Green) ───────────────────────────────────────────────────────────
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door":            "Podium Green",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door":      "Podium Green",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door":      "Podium Green",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "Podium Green",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)":                          "Podium Green",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR":                  "Podium Green",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)":                          "Podium Green",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR":                  "Podium Green",
+
+  // ── Podium (Orange) ──────────────────────────────────────────────────────────
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)":                         "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR":                 "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)":                         "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR":                 "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door":           "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR":          "Podium Orange",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW":      "Podium Orange",
+
+  // ── Tower B ────────────────────────────────────────────────────────────────
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR":                        "Tower B",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR":                           "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR":                         "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR":                         "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR":                        "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR":                         "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR":                       "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR":                      "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR":                        "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR":                        "Tower B",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM":                                 "Tower B",
+  "APAC_IN_PUN_TOWER B_UPS ROOM":                                  "Tower B",
+  "APAC_IN_PUN_TOWER B_MDF ROOM":                                  "Tower B",
+  "APAC_IN_PUN_TOWER B_PAC ROOM":                                  "Tower B",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM":                            "Tower B",
+  "APAC_IN_PUN_TOWER B_GYM ROOM":                                  "Tower B",
+};
+
+
+
+
+
+
+
+
+
 how i add this door and zone
 
 APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door
