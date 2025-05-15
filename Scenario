@@ -1,15 +1,20 @@
+yes i want exact thsi type of  mopdel
 
-Step 1: Define Use Cases (Scenarios)
+
+Step 1: Define Use Cases (Scenarios) Like 
 
 Start by deciding what insights or predictions you want the AI model to generate. Common scenarios include:
 	•	Anomaly detection: Identify unusual access patterns.
-	•	Zone crowd forecasting: Predict occupancy in zones by time.
-	•	Employee movement pattern analysis.
-	•	Workplace optimization: Suggest desk/zone utilization improvements.
-	•	Unauthorized access prediction.
-	•	Auto alerts for prolonged stay or access after hours.
+	•	Employee movement pattern analysis.- As of now We are Working as a Security Analyst
+Some times Employee Usee Twice of card 1 is self and another one is for his frend they mark their as well another employee attendace.
 
-Would you like help selecting scenarios based on your goals?
+Also find Built Scenario using office time duration Whos Duration is very less , or Whos Duration is more.
+
+Highglight those Employee Whos have only one Swipe for the day or only two Swipe for the day.
+highlight those Employee Whos 1 st Swipe is Out.
+Highlight those Employee pair wise whose swipe got exact same time as Well same door.
+Highlight employee from their rejection detaiils trend.
+	•	Unauthorized access prediction.
 
 ⸻
 
@@ -18,9 +23,8 @@ Step 2: Prepare and Label Data
 	•	Label your data if needed (e.g., normal, anomaly, after-hours, unauthorized).
 	•	Clean data (handle missing timestamps, normalize employee IDs, ensure time format consistency).
 
-⸻
+yes
 
-Step 3: Feature Engineering
 
 Extract meaningful features like:
 	•	Time of entry/exit
