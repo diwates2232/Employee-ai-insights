@@ -1,5 +1,83 @@
 // controllers/occupancyController.js
 
+const { poolConnect, pool, sql } = require('../config/db');  // bring in sql
+
+function extractZone(door) {
+  const parts = door.split('_');
+  return parts[3] || 'Unknown';
+}
+
+exports.getOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // use sql.Date to match only the date portion
+    const todayDate = new Date();                     // e.g. 2025-05-16T...
+    // strip time portion:
+    const yyyy = todayDate.getFullYear();
+    const mm   = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const dd   = String(todayDate.getDate()).padStart(2, '0');
+    const isoDateOnly = `${yyyy}-${mm}-${dd}`;        // "2025-05-16"
+
+    request.input('today', sql.Date, isoDateOnly);
+
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your CTE as before … */
+      )
+      SELECT
+        CONVERT(VARCHAR(25), LocaleMessageTime, 126) AS LocaleMessageTime,
+        CONVERT(VARCHAR(10), LocaleMessageTime, 23)  AS Dateonly,
+        CONVERT(VARCHAR(8), LocaleMessageTime, 108)  AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door,
+        Rejection_Type
+      FROM CombinedQuery
+      WHERE CONVERT(date, LocaleMessageTime) = @today
+      ORDER BY LocaleMessageTime DESC;
+    `);
+
+    const rows = result.recordset;
+
+    const zoneMap = {};
+    rows.forEach(r => {
+      const zone = extractZone(r.Door);
+      zoneMap[zone] = zoneMap[zone] || [];
+      zoneMap[zone].push(r);
+    });
+
+    const summary = Object.entries(zoneMap).map(
+      ([zone, recs]) => ({ zone, count: recs.length })
+    );
+
+    res.json({
+      date: isoDateOnly,
+      summary,
+      details: zoneMap,
+    });
+  } catch (err) {
+    console.error('Occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+// controllers/occupancyController.js
+
 const { poolConnect, pool } = require('../config/db');
 
 function extractZone(door) {
