@@ -1,5 +1,94 @@
 // controllers/occupancyController.js
 
+const { poolConnect, pool, sql } = require('../config/db');
+
+function extractZone(door) {
+  // split on “_” and take part that likely represents the zone 
+  // (e.g. “TOWER B” in “APAC_IN_PUN_TOWER B_ST5_…”)
+  const parts = door.split('_');
+  return parts[3] || 'Unknown';
+}
+
+exports.getOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // 1) Handle optional ?date=YYYY-MM-DD
+    let whereClause;
+    if (req.query.date) {
+      // user-specified day
+      request.input('filterDate', sql.Date, req.query.date);
+      whereClause = `CONVERT(date, LocaleMessageTime) = @filterDate`;
+    } else {
+      // last 24 hours window
+      // use GETDATE() on the server side
+      whereClause = `LocaleMessageTime >= DATEADD(HOUR, -24, GETDATE())`;
+    }
+
+    // 2) Run the same CTE + filter
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your original CTE here … */
+      )
+      SELECT
+        CONVERT(VARCHAR(25), LocaleMessageTime, 126) AS LocaleMessageTime,
+        CONVERT(VARCHAR(10), LocaleMessageTime, 23)  AS Dateonly,
+        CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door,
+        Rejection_Type
+      FROM CombinedQuery
+      WHERE ${whereClause}
+      ORDER BY LocaleMessageTime DESC;
+    `);
+
+    const rows = result.recordset;
+
+    // 3) Group into zones
+    const zoneMap = {};
+    rows.forEach(r => {
+      const zone = extractZone(r.Door);
+      (zoneMap[zone] = zoneMap[zone] || []).push(r);
+    });
+
+    // 4) Build summary counts
+    const summary = Object.entries(zoneMap).map(([zone, recs]) => ({
+      zone,
+      count: recs.length,
+    }));
+
+    // 5) Respond
+    res.json({
+      // echo back which filter was used
+      filter: req.query.date
+        ? `date = ${req.query.date}`
+        : 'last 24 hours',
+      summary,
+      details: zoneMap,
+    });
+  } catch (err) {
+    console.error('Occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+// controllers/occupancyController.js
+
 const { poolConnect, pool, sql } = require('../config/db');  // bring in sql
 
 function extractZone(door) {
