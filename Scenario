@@ -1,3 +1,18 @@
+# Inside src/
+cd src
+ni extract.py
+ni labelers.py
+ni features.py
+ni train.py
+ni api.py
+cd ..
+
+# At project root
+ni requirements.txt
+
+
+
+
 cd $HOME\Desktop
 mkdir ai-employee-security
 cd ai-employee-security
