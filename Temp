@@ -1,3 +1,8 @@
+
+# Using curl
+curl http://localhost:5000/api/employees --output sample.json
+
+
 // controllers/employeeController.js
 
 const { poolConnect, pool } = require('../config/db');
