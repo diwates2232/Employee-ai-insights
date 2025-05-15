@@ -1,3 +1,7 @@
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\
+
+
+
 const sql = require('mssql');
 const dotenv = require('dotenv');
 dotenv.config();
