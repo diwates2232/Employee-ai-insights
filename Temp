@@ -1,3 +1,115 @@
+// controllers/occupancyController.js
+
+const { poolConnect, pool } = require('../config/db');
+
+function extractZone(door) {
+  // Assumes door strings like "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR"
+  // We’ll take the 4th underscore-separated segment as the “zone”
+  const parts = door.split('_');
+  return parts[3] || 'Unknown';
+}
+
+exports.getOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    const request = pool.request();
+
+    // only today’s swipes
+    request.input('today', request.SqlDate, new Date());
+
+    // fetch raw rows for today
+    const result = await request.query(`
+      WITH CombinedQuery AS (
+        /* … your CTE as before … */
+      )
+      SELECT
+        LocaleMessageTime,
+        CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+        CONVERT(VARCHAR(8), LocaleMessageTime, 108) AS Swipe_Time,
+        EmployeeID,
+        ObjectName1,
+        PersonnelType,
+        CardNumber,
+        AdmitCode,
+        Direction,
+        ObjectName2 AS Door,
+        Rejection_Type
+      FROM CombinedQuery
+      WHERE CONVERT(date, LocaleMessageTime) = @today
+      ORDER BY LocaleMessageTime DESC
+    `);
+
+    const rows = result.recordset;
+
+    // group by zone
+    const zoneMap = {};
+    rows.forEach(r => {
+      const zone = extractZone(r.Door);
+      if (!zoneMap[zone]) zoneMap[zone] = [];
+      zoneMap[zone].push(r);
+    });
+
+    // build summary
+    const summary = Object.entries(zoneMap).map(([zone, recs]) => ({
+      zone,
+      count: recs.length
+    }));
+
+    res.json({
+      date: new Date().toISOString().slice(0,10),
+      summary,       // [{ zone: 'TOWER B', count: 12 }, …]
+      details: zoneMap
+    });
+  } catch (err) {
+    console.error('Occupancy error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+// routes/occupancyRoutes.js
+
+const express = require('express');
+const router  = express.Router();
+const { getOccupancy } = require('../controllers/occupancyController');
+
+router.get('/occupancy', getOccupancy);
+
+module.exports = router;
+
+
+
+
+
+// server.js
+
+const express = require('express');
+const cors    = require('cors');
+const empRt   = require('./routes/employeeRoutes');
+const occRt   = require('./routes/occupancyRoutes');  // new
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.use('/api', empRt);
+app.use('/api', occRt);      // <-- mounts GET /api/occupancy
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
+
+
+
+
+
+
 // controllers/employeeController.js
 
 const { poolConnect, pool } = require('../config/db');
