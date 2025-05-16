@@ -1,3 +1,36 @@
+
+import pandas as pd
+from extract import load_csv
+from labelers import label_anomaly, label_card_sharing, label_tailgating
+
+# Step 1: Load cleaned access logs
+df = load_csv()
+
+# Step 2: Apply labelers
+df_anomaly     = label_anomaly(df)
+df_card_share  = label_card_sharing(df_anomaly)
+df_tailgating  = label_tailgating(df_card_share)
+
+# Step 3: Print some results
+print("\n[Sample with Anomaly Labels]")
+print(df_anomaly[["EmployeeID", "LocaleMessageTime", "anomaly"]].head())
+
+print("\n[Sample with Card Sharing Labels]")
+print(df_card_share[["EmployeeID", "LocaleMessageTime", "card_share"]].head())
+
+print("\n[Sample with Tailgating Labels]")
+print(df_tailgating[["EmployeeID", "LocaleMessageTime", "tailgating"]].head())
+
+
+
+
+
+
+
+
+
+
+
 def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
     csv_path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(csv_path):
