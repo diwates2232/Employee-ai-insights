@@ -1,3 +1,66 @@
+// Example: ZoneDetailsTable.js
+import React from 'react';
+
+const ZoneDetailsTable = ({ details }) => {
+  if (!details || typeof details !== 'object') {
+    return <div>No data available.</div>;
+  }
+
+  return (
+    <div>
+      {Object.entries(details).map(([zone, entries]) => (
+        <div key={zone}>
+          <h3>{zone}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Swipe Time</th>
+                <th>Personnel Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.ObjectName1}</td>
+                  <td>{item.Swipe_Time}</td>
+                  <td>{item.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default ZoneDetailsTable;
+
+
+
+
+
+// In App.js or wherever you're calling the API
+const [occupancyData, setOccupancyData] = useState(null);
+
+useEffect(() => {
+  fetch('http://localhost:5000/api/live-occupancy')
+    .then(res => res.json())
+    .then(data => setOccupancyData(data))
+    .catch(err => console.error('Error fetching occupancy:', err));
+}, []);
+
+// then in your JSX:
+<ZoneDetailsTable details={occupancyData?.details} />
+
+
+
+
+
+
+
+
 let see server.js file carefully and check all file.
 // server.js
 const express = require('express');
