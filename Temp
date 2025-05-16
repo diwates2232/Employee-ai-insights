@@ -1,266 +1,40 @@
+C:\Users\W0024618\Desktop\swipeData\client>npm run build
 
-// File: SwipeData/employee-ai-insights/server.js
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+> client@0.1.0 build
+> set "NODE_OPTIONS=--openssl-legacy-provider" && react-scripts build
 
-const employeeRoutes = require('./routes/employeeRoutes');
-const liveRt = require('./routes/liveOccupancyRoutes');
+Creating an optimized production build...
+(node:47940) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Compiled successfully.
 
-const app = express();
+File sizes after gzip:
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+  200.59 KB  build\static\js\2.e49ba28d.chunk.js
+  30.01 KB   build\static\css\2.de1632da.chunk.css
+  1.71 KB    build\static\js\3.c67daa6d.chunk.js
+  1.13 KB    build\static\js\runtime~main.e3c58c44.js
+  1.09 KB    build\static\js\main.9ed49f10.chunk.js
+  268 B      build\static\css\main.5ecd60fb.chunk.css
 
-// API Routes
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);  // GET /api/live-occupancy
+The project was built assuming it is hosted at the server root.
+You can control this with the homepage field in your package.json.
+For example, add this to build it for GitHub Pages:
 
-// Serve React build from SwipeData/client/build
-const buildPath = path.join(__dirname, '..', 'client', 'build');
-app.use(express.static(buildPath));
+  "homepage" : "http://myname.github.io/myapp",
 
-// All other requests send back React’s index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(buildPath, 'index.html'));
-});
+The build folder is ready to be deployed.
+You may serve it with a static server:
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+  serve -s build
 
+Find out more about deployment here:
 
+  https://bit.ly/CRA-deploy
 
 
 
 
 
-// src/services/api.js
-import axios from 'axios';
 
-const API_URL = '/api/live-occupancy';  
-// Using a relative path — the Express server will proxy or serve this.
 
-export async function fetchOccupancyData() {
-  const resp = await axios.get(API_URL);
-  return resp.data;
-}
-
-
-
-import React, { useEffect, useState } from 'react';
-import { fetchOccupancyData } from './services/api';
-
-
-
-cd ..        (to get back to swipeData/client)
-set NODE_OPTIONS=--openssl-legacy-provider
-npm run build
-
-
-
-
-
-
-
-
-
-
-import React, { useEffect, useState } from 'react';
-import { fetchOccupancyData } from './services/api';
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import 'bootstrap/dist/css/bootstrap.min.css';
-
-function App() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const newData = await fetchOccupancyData();
-      setData(newData);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!data) return <div className="text-center mt-5">Loading...</div>;
-
-  return (
-    <div className="container mt-4">
-      <h2 className="text-center mb-4">Live Employee Occupancy Dashboard</h2>
-      <SummaryChart summary={data.summary} />
-      <ZoneDetailsTable details={data.details} />
-    </div>
-  );
-}
-
-export default App;
-
-
-
-
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from 'recharts';
-
-const SummaryChart = ({ summary }) => (
-  <div className="mb-5">
-    <h4>Zone-wise Occupancy</h4>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={summary}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="zone" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Bar dataKey="count" fill="#007bff" />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-);
-
-export default SummaryChart;
-
-
-
-
-
-import React from 'react';
-import { Accordion, Table } from 'react-bootstrap';
-
-const ZoneDetailsTable = ({ details }) => (
-  <div>
-    <h4>Details by Zone</h4>
-    <Accordion defaultActiveKey="0">
-      {Object.entries(details).map(([zone, entries], index) => (
-        <Accordion.Item eventKey={index.toString()} key={zone}>
-          <Accordion.Header>
-            {zone} – {entries.length} People
-          </Accordion.Header>
-          <Accordion.Body>
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Swipe Time</th>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Card Number</th>
-                  <th>Personnel Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry, i) => (
-                  <tr key={i}>
-                    <td>{entry.Swipe_Time}</td>
-                    <td>{entry.EmployeeID}</td>
-                    <td>{entry.ObjectName1}</td>
-                    <td>{entry.CardNumber}</td>
-                    <td>{entry.PersonnelType}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Accordion.Body>
-        </Accordion.Item>
-      ))}
-    </Accordion>
-  </div>
-);
-
-export default ZoneDetailsTable;
-
-
-cd client
-set NODE_OPTIONS=--openssl-legacy-provider
-npm run build
-
-
-
-
-
-// client/package.json
-{
-  "scripts": {
-    // …
-    "build": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && react-scripts build"
-  }
-}
-
-
-set NODE_OPTIONS=--openssl-legacy-provider
-npm run build
-
-
-
-
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-
-const employeeRoutes = require('./routes/employeeRoutes');
-const liveRt = require('./routes/liveOccupancyRoutes');
-
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// API Routes
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);  // now GET /api/live-occupancy
-
-// Serve frontend static files
-const buildPath = path.join(__dirname, 'client', 'build');
-app.use(express.static(buildPath));
-
-// Serve index.html for unmatched routes (important for React Router)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(buildPath, 'index.html'));
-});
-
-// Start server
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
-
-
-
-
-
-
-
-
-
-raed below Server.js (backend File) So give me Updated js file for serve Frontend build
-
-
-const express = require('express');
-const cors = require('cors');
-const employeeRoutes = require('./routes/employeeRoutes');
-const doorZoneMap=require('./data/doorZoneMap');
-const liveRt  = require('./routes/liveOccupancyRoutes');
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);  // now GET /api/live-occupancynode 
-
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
