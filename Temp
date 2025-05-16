@@ -1,3 +1,52 @@
+
+dir .\data\access_logs.csv
+
+
+
+
+# Example: if it’s sitting on your Desktop
+Copy-Item C:\Users\W0024618\Desktop\access_logs.csv .\data\
+
+
+
+
+# src/extract.py
+
+import pandas as pd
+import os
+
+# Compute the project root (one level up from this file)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+
+def load_csv(filename: str = "access_logs.csv") -> pd.DataFrame:
+    """
+    Load raw access logs from CSV in data/ folder,
+    parse timestamps, and extract Dateonly and Swipe_Time.
+    """
+    data_path = os.path.join(PROJECT_ROOT, "data", filename)
+    df = pd.read_csv(data_path, parse_dates=["LocaleMessageTime"])
+    
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+    return df
+
+def save_pickle(df: pd.DataFrame, filename: str = "logs.pkl"):
+    path = os.path.join(PROJECT_ROOT, "data", filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    df = load_csv()  # will look at data/access_logs.csv
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+    save_pickle(df)
+
+
+
+
+
+
+
 // controllers/liveOccupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
