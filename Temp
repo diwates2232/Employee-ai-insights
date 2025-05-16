@@ -1,3 +1,43 @@
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # Detect and clean timestamp column name
+    raw_ts_col = detect_timestamp_column(csv_path)
+    ts_col = raw_ts_col.strip().strip('"').strip("'")
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # Load CSV without parse_dates
+    df = pd.read_csv(csv_path)
+
+    # Rename timestamp column
+    df = df.rename(columns={raw_ts_col: "LocaleMessageTime"})
+
+    # Force datetime conversion
+    df["LocaleMessageTime"] = pd.to_datetime(
+        df["LocaleMessageTime"], errors="coerce"
+    )
+
+    # Drop rows where datetime failed to parse
+    df = df.dropna(subset=["LocaleMessageTime"])
+
+    # Extract date and time
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+
+
+
+
+
+
+
+
+
+
 import pandas as pd
 import os
 import re
