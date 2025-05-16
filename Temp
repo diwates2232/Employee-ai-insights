@@ -1,4 +1,6 @@
-Select-String -Path .\routes\*.js -Pattern "\`.*\${.*\}.*\`" -List
+router.get(`${DEBUG_URL}`, handler);
+// or
+router.post(`${SOME_URL}`, handler);Select-String -Path .\routes\*.js -Pattern "\`.*\${.*\}.*\`" -List
 
 
 
