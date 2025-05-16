@@ -1,3 +1,123 @@
+import React, { useEffect, useState } from 'react';
+import { fetchOccupancyData } from './services/api';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+function App() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const newData = await fetchOccupancyData();
+      setData(newData);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!data) return <div className="text-center mt-5">Loading...</div>;
+
+  return (
+    <div className="container mt-4">
+      <h2 className="text-center mb-4">Live Employee Occupancy Dashboard</h2>
+      <SummaryChart summary={data.summary} />
+      <ZoneDetailsTable details={data.details} />
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer
+} from 'recharts';
+
+const SummaryChart = ({ summary }) => (
+  <div className="mb-5">
+    <h4>Zone-wise Occupancy</h4>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={summary}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="zone" />
+        <YAxis allowDecimals={false} />
+        <Tooltip />
+        <Bar dataKey="count" fill="#007bff" />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+);
+
+export default SummaryChart;
+
+
+
+
+
+import React from 'react';
+import { Accordion, Table } from 'react-bootstrap';
+
+const ZoneDetailsTable = ({ details }) => (
+  <div>
+    <h4>Details by Zone</h4>
+    <Accordion defaultActiveKey="0">
+      {Object.entries(details).map(([zone, entries], index) => (
+        <Accordion.Item eventKey={index.toString()} key={zone}>
+          <Accordion.Header>
+            {zone} – {entries.length} People
+          </Accordion.Header>
+          <Accordion.Body>
+            <Table striped bordered hover responsive>
+              <thead>
+                <tr>
+                  <th>Swipe Time</th>
+                  <th>Employee ID</th>
+                  <th>Name</th>
+                  <th>Card Number</th>
+                  <th>Personnel Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry, i) => (
+                  <tr key={i}>
+                    <td>{entry.Swipe_Time}</td>
+                    <td>{entry.EmployeeID}</td>
+                    <td>{entry.ObjectName1}</td>
+                    <td>{entry.CardNumber}</td>
+                    <td>{entry.PersonnelType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Accordion.Body>
+        </Accordion.Item>
+      ))}
+    </Accordion>
+  </div>
+);
+
+export default ZoneDetailsTable;
+
+
+cd client
+set NODE_OPTIONS=--openssl-legacy-provider
+npm run build
+
+
+
+
+
 // client/package.json
 {
   "scripts": {
