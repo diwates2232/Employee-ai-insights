@@ -1,3 +1,21 @@
+useEffect(() => {
+  getLiveOccupancy()
+    .then(res => {
+      const data = res.data;
+      console.log("API Response:", data); // <--- Add this line to confirm
+      setSummaryData(data.summary || []);
+      setDetailsData(data.details || {});
+    })
+    .catch(err => console.error('Occupancy fetch error:', err));
+}, []);
+
+
+
+
+
+
+
+
 // src/App.js
 
 import React, { useEffect, useState } from 'react';
