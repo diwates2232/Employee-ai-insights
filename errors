@@ -1,19 +1,42 @@
 
-import axios from 'axios';
+i have upadte api.js file as above once check App.js file carefully and if nedded give me updated js file carefully.
 
-export function getLiveOccupancy() {
-  return axios.get('/api/live-occupancy'); // This is the correct working endpoint
+import React, { useEffect, useState } from 'react';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import './App.css';
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/live-occupancy')
+      .then(res => res.json())
+      .then(payload => {
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+      })
+      .catch(err => console.error('Occupancy fetch error:', err));
+  }, []);
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Live Occupancy Dashboard</h1>
+      </header>
+      <main>
+        <section>
+          <h2>Occupancy Summary</h2>
+          <SummaryChart summary={summaryData} /> {/* FIXED PROP */}
+        </section>
+        <section>
+          <h2>Zone Details</h2>
+          <ZoneDetailsTable data={detailsData} />
+        </section>
+      </main>
+    </div>
+  );
 }
 
-
-
-
-import axios from 'axios';
-
-export function getSummary() {
-  return axios.get('/api/live-occupancy/summary');  // adjust to your actual endpoint
-}
-
-export function getDetails() {
-  return axios.get('/api/live-occupancy/details');
-}
+export default App;
