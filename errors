@@ -1,3 +1,56 @@
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { getLiveOccupancy } from './api'; // ✅ Correct relative import
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import './App.css';
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+
+  useEffect(() => {
+    getLiveOccupancy()
+      .then(res => {
+        const data = res.data;
+        setSummaryData(data.summary || []);
+        setDetailsData(data.details || {});
+      })
+      .catch(err => console.error('Occupancy fetch error:', err));
+  }, []);
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Live Occupancy Dashboard</h1>
+      </header>
+      <main>
+        <section>
+          <h2>Occupancy Summary</h2>
+          <SummaryChart summary={summaryData} />
+        </section>
+        <section>
+          <h2>Zone Details</h2>
+          <ZoneDetailsTable data={detailsData} />
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+
+
 import axios from 'axios';
 
 export function getLiveOccupancy() {
