@@ -1,3 +1,43 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const employeeRoutes = require('./routes/employeeRoutes');
+const liveRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// API Routes
+app.use('/api', employeeRoutes);
+app.use('/api', liveRt);  // now GET /api/live-occupancy
+
+// Serve frontend static files
+const buildPath = path.join(__dirname, 'client', 'build');
+app.use(express.static(buildPath));
+
+// Serve index.html for unmatched routes (important for React Router)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildPath, 'index.html'));
+});
+
+// Start server
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
+
+
+
+
+
+
+
+
+
 raed below Server.js (backend File) So give me Updated js file for serve Frontend build
 
 
