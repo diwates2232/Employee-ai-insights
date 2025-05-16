@@ -1,3 +1,17 @@
+
+# 1. Go to the swipeData root
+cd C:\Users\W0024618\Desktop\swipeData
+
+# 2. Delete the incorrect node_modules and lockfile there
+if (Test-Path .\node_modules) { rd /s /q .\node_modules }
+if (Test-Path .\package-lock.json) { del .\package-lock.json }
+
+# 3. Confirm they’re gone
+ls
+# You should NOT see node_modules or package-lock.json in this folder
+
+
+
 // SwipeData/employee-ai-insights/server.js
 const express = require('express');
 const cors = require('cors');
