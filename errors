@@ -1,6 +1,15 @@
 
 import axios from 'axios';
 
+export function getLiveOccupancy() {
+  return axios.get('/api/live-occupancy'); // This is the correct working endpoint
+}
+
+
+
+
+import axios from 'axios';
+
 export function getSummary() {
   return axios.get('/api/live-occupancy/summary');  // adjust to your actual endpoint
 }
