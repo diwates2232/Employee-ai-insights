@@ -1,3 +1,37 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const employeeRoutes = require('./routes/employeeRoutes');
+const liveRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());  // << Make sure this comes before routes
+
+// Register routes
+app.use('/api', employeeRoutes);
+app.use('/api', liveRt);
+
+// ————— DEBUG: list all registered routes —————
+console.log('\n📋 Registered routes:');
+if (app._router && app._router.stack) {
+  app._router.stack
+    .filter(layer => layer.route)
+    .forEach(layer => {
+      const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+      console.log(`  ${methods}\t/api${layer.route.path}`);
+    });
+} else {
+  console.log('⚠️ No routes registered or Express internals changed.');
+}
+
+
+
+
+
+
 
 // SwipeData/employee-ai-insights/server.js
 const express = require('express');
