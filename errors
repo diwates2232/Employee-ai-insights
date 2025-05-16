@@ -1,3 +1,52 @@
+// At top of server.js
+const express = require('express');
+// … your other requires …
+
+// after all `app.use()` calls and before `app.listen()`:
+function listAllEndpoints(app) {
+  const results = [];
+
+  function recurse(stack, parentPath = '') {
+    stack.forEach(layer => {
+      if (layer.route && layer.route.path) {
+        // This is a direct route
+        const methods = Object.keys(layer.route.methods).map(m => m.toUpperCase());
+        results.push({ path: parentPath + layer.route.path, methods });
+      }
+      else if (layer.name === 'router' && layer.handle.stack) {
+        // Mounted router: layer.regexp holds the mount path
+        const mountPath = layer.regexp.source
+          .replace('^\\','')                // strip leading ^
+          .replace('\\/?(?=\\/|$)','')      // strip trailing express regex
+          .replace(/\\\//g, '/');           // unescape forward slashes
+        recurse(layer.handle.stack, parentPath + mountPath);
+      }
+    });
+  }
+
+  recurse(app._router.stack);
+  return results;
+}
+
+// … after mounting your routers …
+console.log('\n📋 Registered endpoints:');
+listAllEndpoints(app).forEach(e => {
+  console.log(`  ${e.methods.join(',')}\t${e.path}`);
+});
+
+
+
+
+
+app.use('/api/employees', employeeRoutes);
+app.use('/api/occupancy',  liveRt);
+
+
+
+npm install express-list-endpoints
+
+
+
 
 const express           = require('express');
 const cors              = require('cors');
