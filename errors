@@ -1,3 +1,58 @@
+// server.js
+const express = require('express');
+const cors    = require('cors');
+const path    = require('path');
+
+const employeeRoutes  = require('./routes/employeeRoutes');
+const liveOccupancyRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// TEMP: simple sanity-check endpoint
+app.get('/ping', (req, res) => res.send('pong'));
+
+// mount your routers (they themselves define '/employees' and '/live-occupancy')
+app.use('/api', employeeRoutes);
+app.use('/api', liveOccupancyRt);
+
+// ————— DEBUG: list all directly registered routes —————
+if (app._router && Array.isArray(app._router.stack)) {
+  console.log('\n📋 Registered endpoints:');
+  app._router.stack.forEach(layer => {
+    if (layer.route && layer.route.path) {
+      const methods = Object
+        .keys(layer.route.methods)
+        .map(m => m.toUpperCase())
+        .join(',');
+      console.log(`  ${methods}\t${layer.route.path}`);
+    }
+  });
+} else {
+  console.warn('⚠️ No routes found in app._router.stack');
+}
+
+// serve your React build (if you have one)
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+
+// health-check
+app.get('/health', (req, res) => res.send('OK'));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+
+
+
+
+
+
+
+
+
+
 read all files deatsils and Solve the errors if need to make any changes in file then update only this file and give me update file carefully.
 Dont make changes on another file .
 
