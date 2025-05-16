@@ -1,5 +1,60 @@
 // src/App.js
 
+import React, { useEffect, useState } from 'react';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import { getSummary, getDetails } from './services/api';
+import './App.css';
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+
+  useEffect(() => {
+    // Fetch summary (array of { zone, count })
+    getSummary()
+      .then(res => setSummaryData(res.data.summary || []))
+      .catch(err => console.error('Summary fetch error:', err));
+
+    // Fetch details (object: zone → list of employee records)
+    getDetails()
+      .then(res => setDetailsData(res.data.details || {}))
+      .catch(err => console.error('Details fetch error:', err));
+  }, []);
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Live Occupancy Dashboard</h1>
+      </header>
+      <main>
+        <section>
+          <h2>Occupancy Summary</h2>
+          <SummaryChart data={summaryData} />
+        </section>
+        <section>
+          <h2>Zone Details</h2>
+          <ZoneDetailsTable data={detailsData} />
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+
+
+// src/App.js
+
 import React from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import './App.css';
