@@ -1,3 +1,84 @@
+const express         = require('express');
+const cors            = require('cors');
+const path            = require('path');
+// const listEndpoints = require('express-list-endpoints'); // no longer used
+
+const employeeRoutes  = require('./routes/employeeRoutes');
+const liveOccupancyRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// mount your routers just once
+app.use('/api/employees', employeeRoutes);
+app.use('/api/occupancy',  liveOccupancyRt);
+
+// helper to walk the router stack
+function listAllEndpoints(app) {
+  const results = [];
+  const stack = app._router && app._router.stack;
+  if (!stack) return results;    // bail out early
+
+  function recurse(layers, parentPath = '') {
+    layers.forEach(layer => {
+      // a direct route (app.get, router.get, etc)
+      if (layer.route && layer.route.path) {
+        const methods = Object
+          .keys(layer.route.methods)
+          .map(m => m.toUpperCase());
+        results.push({ path: parentPath + layer.route.path, methods });
+      }
+      // a mounted router
+      else if (layer.name === 'router' && layer.handle.stack) {
+        // express encodes the mount path in layer.regexp; this naive strip works
+        const mountPath = layer.regexp.source
+          .replace('^\\', '')             // strip leading ^
+          .replace('\\/?(?=\\/|$)', '')   // strip trailing express regex
+          .replace(/\\\//g, '/');         // unescape slashes
+        recurse(layer.handle.stack, parentPath + mountPath);
+      }
+    });
+  }
+
+  recurse(stack);
+  return results;
+}
+
+// ————— DEBUG: list all registered endpoints —————
+const endpoints = listAllEndpoints(app);
+if (endpoints.length) {
+  console.log('\n📋 Registered endpoints:');
+  endpoints.forEach(e =>
+    console.log(`  ${e.methods.join(',')}\t${e.path}`)
+  );
+} else {
+  console.warn('⚠️ No endpoints found on app._router.stack');
+}
+
+// serve your React build
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+
+// health check
+app.get('/health', (req, res) => res.send('OK'));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`Server running at http://localhost:${PORT}`)
+);
+
+
+
+
+
+
+
+
+
+
+
+
 After updating all details server.js
 
 
