@@ -1,4 +1,9 @@
 
+Select-String -Path .\routes\*.js -Pattern "http"
+
+
+grep -R "http" routes/
+
 cd C:\Users\W0024618\Desktop\swipeData\client
 set NODE_OPTIONS=--openssl-legacy-provider
 npm install        # only the first time
