@@ -1,3 +1,70 @@
+import pandas as pd
+import os
+import re
+
+# Project paths
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
+CSV_NAME     = "access_logs.csv"
+PICKLE_NAME  = "logs.pkl"
+
+def detect_timestamp_column(path: str) -> str:
+    """
+    Inspect the CSV header columns and pick the first one containing 'time'.
+    Strips any stray quotes or whitespace.
+    """
+    df_head = pd.read_csv(path, nrows=0)
+    for col in df_head.columns:
+        clean = col.strip().strip('"').strip("'")
+        if re.search(r"time", clean, re.IGNORECASE):
+            return clean
+    # fallback to first column
+    return df_head.columns[0].strip().strip('"').strip("'")
+
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # Detect and clean timestamp column name
+    raw_ts_col = detect_timestamp_column(csv_path)
+    ts_col = raw_ts_col
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # Load CSV, parsing the timestamp column
+    df = pd.read_csv(csv_path, parse_dates=[raw_ts_col])
+
+    # Rename the parsed column uniformly
+    df = df.rename(columns={raw_ts_col: "LocaleMessageTime"})
+
+    # Now we can safely split into date/time
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
+    path = os.path.join(DATA_DIR, filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    df = load_csv()
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+    save_pickle(df)
+
+
+
+
+
+
+
+
+
+
+
+
 LocaleMessageTime,EmployeeID,ObjectName1,PersonnelType,CardNumber,AdmitCode,Direction,Door,Rejection_Type
 
 
