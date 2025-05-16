@@ -1,3 +1,59 @@
+// src/App.js
+
+import React from 'react';
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
+import './App.css';
+
+function Dashboard() {
+  return <h1>Dashboard placeholder</h1>;
+}
+
+function EmployeeList() {
+  return <h1>Employee List placeholder</h1>;
+}
+
+function LiveOccupancy() {
+  return <h1>Live Occupancy placeholder</h1>;
+}
+
+function App() {
+  return (
+    <Router>
+      <Switch>
+        {/* Home shows your Dashboard component */}
+        <Route exact path="/" component={Dashboard} />
+
+        {/* /employees lists your employee data */}
+        <Route path="/employees" component={EmployeeList} />
+
+        {/* /occupancy shows the real-time occupancy view */}
+        <Route path="/occupancy" component={LiveOccupancy} />
+
+        {/* Fallback: redirect any unknown URLs back to home */}
+        <Redirect to="/" />
+      </Switch>
+    </Router>
+  );
+}
+
+export default App;
+
+
+
+
+-import React from 'react';
++import React from 'react';
++import Dashboard from './components/Dashboard';
++import EmployeeList from './components/EmployeeList';
++import LiveOccupancy from './components/LiveOccupancy';
+
+
+
+
+
+
+
+
 ./src/App.js
   Line 24:31:  'Redirect' is not defined  react/jsx-no-undef
 
