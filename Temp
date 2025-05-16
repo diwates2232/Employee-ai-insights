@@ -1,4 +1,18 @@
 
+// server.js (just after your `app.use('/api', ...)` lines)
+
+console.log('\n📋 Registered routes:');
+app._router.stack
+  .filter(layer => layer.route)
+  .forEach(layer => {
+    const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+    console.log(`  ${methods}\t${layer.route.path}`);
+  });
+console.log();   // blank line
+
+
+
+
 Select-String -Path .\routes\*.js -Pattern "http"
 
 
