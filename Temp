@@ -1,27 +1,20 @@
-npm install axios recharts react-bootstrap bootstrap
+raed below Server.js (backend File) So give me Updated js file for serve Frontend build
 
 
+const express = require('express');
+const cors = require('cors');
+const employeeRoutes = require('./routes/employeeRoutes');
+const doorZoneMap=require('./data/doorZoneMap');
+const liveRt  = require('./routes/liveOccupancyRoutes');
+const app = express();
 
-npm run build
+app.use(cors());
+app.use(express.json());
 
+app.use('/api', employeeRoutes);
+app.use('/api', liveRt);  // now GET /api/live-occupancynode 
 
-
-cd ..
-
-
-API-http://localhost:5000/api/live-occupancy
-
-Responce
-
-data: {"asOf":"2025-05-16T17:07:04.878Z","summary":[{"zone":"Red Zone","count":4},{"zone":"GSOC","count":2},{"zone":"TOWER B Pune","count":1}],"details":{"Red Zone":[{"Dateonly":"2025-05-16","Swipe_Time":"21:55:55","EmployeeID":"317719","ObjectName1":"kang, Narendar singh","CardNumber":"234533","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:55:52","EmployeeID":"321516","ObjectName1":"Dubey, Shashank","CardNumber":"608390","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"17:12:00","EmployeeID":"323404","ObjectName1":"JAGTAP, SHASHIKANT","CardNumber":"609629","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:20:31","EmployeeID":"325804","ObjectName1":"Gaddam, John Pascal","CardNumber":"615897","PersonnelType":"Employee","zone":"Red Zone"}],"GSOC":[{"Dateonly":"2025-05-16","Swipe_Time":"22:04:49","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"22:17:04","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"TOWER B Pune":[{"Dateonly":"2025-05-16","Swipe_Time":"22:36:58","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"TOWER B Pune"}]}}
-
-data: {"asOf":"2025-05-16T17:07:29.128Z","summary":[{"zone":"Red Zone","count":4},{"zone":"GSOC","count":2},{"zone":"TOWER B Pune","count":1}],"details":{"Red Zone":[{"Dateonly":"2025-05-16","Swipe_Time":"21:55:55","EmployeeID":"317719","ObjectName1":"kang, Narendar singh","CardNumber":"234533","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:55:52","EmployeeID":"321516","ObjectName1":"Dubey, Shashank","CardNumber":"608390","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"17:12:00","EmployeeID":"323404","ObjectName1":"JAGTAP, SHASHIKANT","CardNumber":"609629","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:20:31","EmployeeID":"325804","ObjectName1":"Gaddam, John Pascal","CardNumber":"615897","PersonnelType":"Employee","zone":"Red Zone"}],"GSOC":[{"Dateonly":"2025-05-16","Swipe_Time":"22:04:49","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"22:17:04","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"TOWER B Pune":[{"Dateonly":"2025-05-16","Swipe_Time":"22:37:28","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"TOWER B Pune"}]}}
-
-API Responce is continously live updating.
-
-this is Employee Occupancy dashboard.
-
-now i want to make interactive Dashboard for Employee Live Occupancy Dashboard
-Build Frontend using React use interactive tools to show dashboard.
-
-also guide me step by step
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
