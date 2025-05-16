@@ -1,3 +1,9 @@
+set NODE_OPTIONS=--openssl-legacy-provider
+npm run build
+
+
+
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
