@@ -1,4 +1,17 @@
 
+cd C:\Users\W0024618\Desktop\swipeData\client
+set NODE_OPTIONS=--openssl-legacy-provider
+npm install        # only the first time
+npm run build
+
+
+
+
+cd C:\Users\W0024618\Desktop\swipeData\employee-ai-insights
+npm install        # only the first time
+node server.js
+
+
 node .\employee-ai-insights\server.jsp
 
 
