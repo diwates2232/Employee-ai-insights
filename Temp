@@ -1,3 +1,84 @@
+# src/extract.py
+
+import pandas as pd
+import os
+import re
+
+# Compute project root (one level up from this file)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
+CSV_NAME     = "access_logs.csv"
+PICKLE_NAME  = "logs.pkl"
+
+def detect_timestamp_column(path: str) -> str:
+    """
+    Read the header of the CSV and pick the first column
+    whose name contains 'time' (case-insensitive).
+    """
+    with open(path, 'r', encoding='utf-8') as f:
+        header = f.readline().strip()
+    cols = [c.strip() for c in header.split(',')]
+    for c in cols:
+        if re.search(r"time", c, re.IGNORECASE):
+            return c
+    # fallback to first column
+    return cols[0]
+
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    """
+    Load raw access logs from CSV in data/ folder,
+    auto-detect timestamp column, parse it, and extract
+    Dateonly and Swipe_Time columns.
+    """
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # 1) Detect which column holds the timestamp
+    ts_col = detect_timestamp_column(csv_path)
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # 2) Read CSV, parsing the timestamp column
+    df = pd.read_csv(csv_path, parse_dates=[ts_col])
+
+    # 3) Rename it uniformly
+    df = df.rename(columns={ts_col: "LocaleMessageTime"})
+
+    # 4) Derive separate date and time columns
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
+    path = os.path.join(DATA_DIR, filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    # 1) Load raw CSV
+    df = load_csv()
+
+    # 2) Quick sanity check
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+
+    # 3) Save for fast reload
+    save_pickle(df)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import pandas as pd
 import os
 
