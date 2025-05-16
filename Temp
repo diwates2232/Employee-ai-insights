@@ -1,3 +1,72 @@
+# src/extract.py
+
+import pandas as pd
+import os
+import re
+
+# Project paths
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
+CSV_NAME     = "access_logs.csv"
+PICKLE_NAME  = "logs.pkl"
+
+def detect_timestamp_column(path: str) -> str:
+    """
+    Load zero rows to inspect column names, then pick
+    the first one containing 'time' (case-insensitive).
+    """
+    df_head = pd.read_csv(path, nrows=0)
+    for col in df_head.columns:
+        if re.search(r"time", col, re.IGNORECASE):
+            return col
+    # fallback to first column
+    return df_head.columns[0]
+
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # 1) Detect the timestamp column
+    ts_col = detect_timestamp_column(csv_path)
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # 2) Read CSV, parsing only that column as datetime
+    df = pd.read_csv(csv_path, parse_dates=[ts_col])
+
+    # 3) Rename it to a uniform name
+    df = df.rename(columns={ts_col: "LocaleMessageTime"})
+
+    # 4) Derive date-only and time-only columns
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
+    path = os.path.join(DATA_DIR, filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    # Load & parse
+    df = load_csv()
+    # Sanity checks
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+    # Save for downstream
+    save_pickle(df)
+
+
+
+
+
+
+
+
+
+
+
 ai-employee-security/data/access_logs.csv
 
 
