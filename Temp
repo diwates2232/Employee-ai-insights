@@ -1,3 +1,34 @@
+// src/services/api.js
+import axios from 'axios';
+
+const API_URL = '/api/live-occupancy';  
+// Using a relative path — the Express server will proxy or serve this.
+
+export async function fetchOccupancyData() {
+  const resp = await axios.get(API_URL);
+  return resp.data;
+}
+
+
+
+import React, { useEffect, useState } from 'react';
+import { fetchOccupancyData } from './services/api';
+
+
+
+cd ..        (to get back to swipeData/client)
+set NODE_OPTIONS=--openssl-legacy-provider
+npm run build
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { fetchOccupancyData } from './services/api';
 import SummaryChart from './components/SummaryChart';
