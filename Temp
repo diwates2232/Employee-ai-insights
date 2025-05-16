@@ -1,3 +1,116 @@
+# src/labelers.py
+
+import pandas as pd
+from datetime import timedelta
+
+def label_anomaly(df: pd.DataFrame, window_minutes: int = 10, max_swipes: int = 5) -> pd.DataFrame:
+    """
+    Label 'anomaly' if an employee has more than `max_swipes` within `window_minutes`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    # Count swipes in rolling window per employee
+    df["swipe_count_rolling"] = (
+        df.groupby("EmployeeID")["LocaleMessageTime"]
+          .rolling(f"{window_minutes}min")
+          .count()
+          .reset_index(0, drop=True)
+    )
+    df["anomaly"] = df["swipe_count_rolling"] > max_swipes
+    return df
+
+def label_card_share(df: pd.DataFrame, window: timedelta = timedelta(minutes=5)) -> pd.DataFrame:
+    """
+    Label 'card_share' when two different EmployeeIDs use the same CardNumber within `window`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    df["prev_employee"] = df.groupby("CardNumber")["EmployeeID"].shift(1)
+    df["prev_time"]     = df.groupby("CardNumber")["LocaleMessageTime"].shift(1)
+    df["card_share"] = (
+        (df["EmployeeID"] != df["prev_employee"]) &
+        (df["LocaleMessageTime"] - df["prev_time"] <= window)
+    )
+    return df
+
+def label_duration(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute duration per day and label 'short_stay' (<1h) and 'long_stay' (>10h).
+    """
+    # Aggregate per EmployeeID & Dateonly
+    agg = (
+        df.groupby(["EmployeeID", "Dateonly"])["LocaleMessageTime"]
+          .agg(["min", "max", "count"])
+          .rename(columns={"min": "first_swipe", "max": "last_swipe", "count": "swipe_count"})
+          .reset_index()
+    )
+    agg["duration_hours"] = (agg["last_swipe"] - agg["first_swipe"]).dt.total_seconds() / 3600
+    agg["short_stay"] = agg["duration_hours"] < 1
+    agg["long_stay"]  = agg["duration_hours"] > 10
+    return agg
+
+def label_low_swipe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'one_swipe' or 'two_swipe' if total swipes per day ≤ 2.
+    """
+    counts = (
+        df.groupby(["EmployeeID", "Dateonly"])
+          .size()
+          .reset_index(name="swipe_count")
+    )
+    counts["one_swipe"] = counts["swipe_count"] == 1
+    counts["two_swipe"] = counts["swipe_count"] == 2
+    return counts
+
+def label_exit_first(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'exit_first' if the first swipe of the day is OutDirection.
+    """
+    first = (
+        df.sort_values("LocaleMessageTime")
+          .groupby(["EmployeeID", "Dateonly"])
+          .first()
+          .reset_index()
+    )
+    first["exit_first"] = first["Direction"] == "OutDirection"
+    return first
+
+def label_simultaneous(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'simultaneous' when two different EmployeeIDs swipe same Door at same time.
+    """
+    dup = (
+        df.groupby(["Door", "LocaleMessageTime"])["EmployeeID"]
+          .nunique()
+          .reset_index(name="user_count")
+    )
+    dup["simultaneous"] = dup["user_count"] > 1
+    # Merge back
+    return df.merge(dup[["Door", "LocaleMessageTime", "simultaneous"]], 
+                    on=["Door", "LocaleMessageTime"], how="left")
+
+# TODO: Implement the remaining label functions:
+# 7. label_rejection_trend()
+# 8. label_unauthorized_access()
+# 9. label_after_hours()
+# 10. label_rapid_hop()
+# 11. label_loiter_after_hours()
+# 12. label_weekend_access()
+# 13. label_holiday_access()
+# 14. label_no_exit()
+# 15. label_rapid_in_out()
+# 16. label_zone_pingpong()
+# 17. label_new_door()
+# 18. label_high_volume()
+# 19. label_time_window_violation()
+# 20. label_failed_access_trend()
+
+
+
+
+
+
+
+
+
 # src/extract.py
 
 import pandas as pd
