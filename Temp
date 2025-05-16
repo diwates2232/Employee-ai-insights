@@ -1,3 +1,12 @@
+// client/package.json
+{
+  "scripts": {
+    // …
+    "build": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && react-scripts build"
+  }
+}
+
+
 set NODE_OPTIONS=--openssl-legacy-provider
 npm run build
 
