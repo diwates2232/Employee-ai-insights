@@ -1,95 +1,16 @@
-Read below .env file and mssql query.
-Currently We use one DB Server , i mean this APAC Server, now I want fetch Data from LACA srver, EMEA Server, NAMER server.
-DB database is same for all .just i want to fetch data from diffrent Server, so What i need to do.in below file 
+API-http://localhost:5000/api/live-occupancy
 
-.env file  
-DB_SERVER=SRVWUPNQ0986V
-DB_USER=GSOC_Test
-DB_PASSWORD=Westernuniongsoc@2025
-DB_DATABASE=ACVSUJournal_00010020
+Responce
 
+data: {"asOf":"2025-05-16T17:07:04.878Z","summary":[{"zone":"Red Zone","count":4},{"zone":"GSOC","count":2},{"zone":"TOWER B Pune","count":1}],"details":{"Red Zone":[{"Dateonly":"2025-05-16","Swipe_Time":"21:55:55","EmployeeID":"317719","ObjectName1":"kang, Narendar singh","CardNumber":"234533","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:55:52","EmployeeID":"321516","ObjectName1":"Dubey, Shashank","CardNumber":"608390","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"17:12:00","EmployeeID":"323404","ObjectName1":"JAGTAP, SHASHIKANT","CardNumber":"609629","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:20:31","EmployeeID":"325804","ObjectName1":"Gaddam, John Pascal","CardNumber":"615897","PersonnelType":"Employee","zone":"Red Zone"}],"GSOC":[{"Dateonly":"2025-05-16","Swipe_Time":"22:04:49","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"22:17:04","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"TOWER B Pune":[{"Dateonly":"2025-05-16","Swipe_Time":"22:36:58","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"TOWER B Pune"}]}}
 
+data: {"asOf":"2025-05-16T17:07:29.128Z","summary":[{"zone":"Red Zone","count":4},{"zone":"GSOC","count":2},{"zone":"TOWER B Pune","count":1}],"details":{"Red Zone":[{"Dateonly":"2025-05-16","Swipe_Time":"21:55:55","EmployeeID":"317719","ObjectName1":"kang, Narendar singh","CardNumber":"234533","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:55:52","EmployeeID":"321516","ObjectName1":"Dubey, Shashank","CardNumber":"608390","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"17:12:00","EmployeeID":"323404","ObjectName1":"JAGTAP, SHASHIKANT","CardNumber":"609629","PersonnelType":"Employee","zone":"Red Zone"},{"Dateonly":"2025-05-16","Swipe_Time":"21:20:31","EmployeeID":"325804","ObjectName1":"Gaddam, John Pascal","CardNumber":"615897","PersonnelType":"Employee","zone":"Red Zone"}],"GSOC":[{"Dateonly":"2025-05-16","Swipe_Time":"22:04:49","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"22:17:04","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"TOWER B Pune":[{"Dateonly":"2025-05-16","Swipe_Time":"22:37:28","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"TOWER B Pune"}]}}
 
+API Responce is continously live updating.
 
-query
+this is Employee Occupancy dashboard.
 
-WITH CombinedQuery AS(
-		SELECT 
-	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-    t1.ObjectName1,
-	t1.PartitionName2 As location,
-	t5_card.CardNumber,
-t5_admit.value AS AdmitCode,
-t5_dir.value AS Direction,
-    t1.ObjectName2,
-	t5_rej.value AS Rejection_Type,
-	CASE 
-        WHEN t3.Name IN ('Contractor', 'Terminated Contractor') THEN t2.Text12
-        ELSE CAST(t2.Int1 AS NVARCHAR)
-    END AS "EmployeeID",
-    t3.Name AS PersonnelType,
-    t1.MessageType,t1.XmlGUID
-	FROM
-    [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS t1
-LEFT JOIN
-    [ACVSCore].[Access].[Personnel] AS t2
-    ON t1.ObjectIdentity1 = t2.GUID
-LEFT JOIN
-    [ACVSCore].[Access].[PersonnelType] AS t3
-    ON t2.[PersonnelTypeId] = t3.[ObjectID]
-LEFT JOIN
-    [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] AS t5_admit
-    ON t1.XmlGUID = t5_admit.GUID
-    AND t5_admit.Name = 'AdmitCode'
-LEFT JOIN
-    [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] AS t5_dir
-    ON t1.XmlGUID = t5_dir.GUID
-    AND t5_dir.Value IN ('InDirection', 'OutDirection')
-    LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] AS t_xml
-        ON t1.XmlGUID = t_xml.GUID
-    -- Pre-pull shredded “Card” row
-    LEFT JOIN (
-    SELECT GUID, [value]
-    FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-    WHERE [Name] IN ('Card', 'CHUID')
-    ) AS SCard
-    ON t1.XmlGUID = SCard.GUID
-    /* NEW: three-stage CardNumber resolution */
-    OUTER APPLY (
-    SELECT COALESCE(
-        -- 1) <LogMessage><CHUID><Card>…</Card></CHUID>
-        TRY_CAST(t_xml.XmlMessage AS XML)
-        .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
-        -- 2) <LogMessage><CHUID>…</CHUID> (no nested <Card>)
-        TRY_CAST(t_xml.XmlMessage AS XML)
-        .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
-        -- 3) shredded fallback
-        SCard.[value]
-    ) AS CardNumber
-    ) AS t5_card
- 
-LEFT JOIN
-    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_Rej
-    ON t1.XmlGUID = t5_Rej.GUID
-    AND t5_Rej.Name = 'RejectCode'
- 
-   
-   --include both admits and rejects
-   WHERE t1.MessageType IN ('CardAdmitted', 'CardRejected')
-   AND t1.PartitionName2 = 'APAC.Default'
-   AND CONVERT(date, DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC)) >= '2025-01-01')
- 
-SELECT 
-	LocaleMessageTime,
-	Dateonly = Convert(date, LocaleMessageTime), 
-	Swipe_Time = CONVERT(time(0), LocaleMessageTime),
-	EmployeeID,
-	ObjectName1,
-	PersonnelType,
-	CardNumber,
-	AdmitCode,
-	Direction,
-	ObjectName2 As Door,
-	Rejection_Type
-	FROM CombinedQuery
-	Order BY LocaleMessageTime DESC;
+now i want to make interactive Dashboard for Employee Live Occupancy Dashboard
+Build Frontend using React use interactive tools to show dashboard.
+
+also guide me step by step
