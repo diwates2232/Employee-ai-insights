@@ -1,3 +1,45 @@
-http://localhost:5000/api/live-occupancy
+let see server.js file carefully and check all file.
+// server.js
+const express = require('express');
+const cors    = require('cors');
+const path    = require('path');
 
-data: {"asOf":"2025-05-16T22:35:26.417Z","summary":[{"zone":"Red Zone","count":1},{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"details":{"Red Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"04:05:05","EmployeeID":"0","ObjectName1":"Kadam, Krishnakant","CardNumber":"410358","PersonnelType":"Property Management","zone":"Red Zone"}],"GSOC":[{"Dateonly":"2025-05-17","Swipe_Time":"04:04:46","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"23:00:07","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"04:05:24","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]}}
+const employeeRoutes  = require('./routes/employeeRoutes');
+const liveOccupancyRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// TEMP: simple sanity-check endpoint
+app.get('/ping', (req, res) => res.send('pong'));
+
+// mount your routers (they themselves define '/employees' and '/live-occupancy')
+app.use('/api', employeeRoutes);
+app.use('/api', liveOccupancyRt);
+
+// ————— DEBUG: list all directly registered routes —————
+if (app._router && Array.isArray(app._router.stack)) {
+  console.log('\n📋 Registered endpoints:');
+  app._router.stack.forEach(layer => {
+    if (layer.route && layer.route.path) {
+      const methods = Object
+        .keys(layer.route.methods)
+        .map(m => m.toUpperCase())
+        .join(',');
+      console.log(`  ${methods}\t${layer.route.path}`);
+    }
+  });
+} else {
+  console.warn('⚠️ No routes found in app._router.stack');
+}
+
+// serve your React build (if you have one)
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+
+// health-check
+app.get('/health', (req, res) => res.send('OK'));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
