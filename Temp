@@ -1,5 +1,73 @@
 # src/test_labelers.py
 
+import sys
+import os
+from pathlib import Path
+
+# ── Add project root to PYTHONPATH so we can import src.labelers ─────────
+FILE = Path(__file__).resolve()
+PROJECT_ROOT = FILE.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# ── Load the pickled logs ───────────────────────────────────────────────────
+import pandas as pd
+
+logs_path = PROJECT_ROOT / "data" / "logs.pkl"
+df = pd.read_pickle(logs_path)
+print("Original columns:", df.columns.tolist())
+
+# ── Import your labelers ────────────────────────────────────────────────────
+from src.labelers import (
+    label_anomaly,
+    label_card_share,
+    label_duration,
+    label_low_swipe,
+    label_exit_first,
+    label_simultaneous,
+    # add other labelers as you implement them
+)
+
+# ── Apply each labeler ──────────────────────────────────────────────────────
+df_anom         = label_anomaly(df)
+df_card_share   = label_card_share(df)
+df_duration     = label_duration(df)
+df_low_swipe    = label_low_swipe(df)
+df_exit_first   = label_exit_first(df)
+df_simultaneous = label_simultaneous(df)
+
+# ── Inspect the new columns ──────────────────────────────────────────────────
+print("\nAfter label_anomaly, columns:", df_anom.columns.tolist())
+print("Sample anomaly flags:\n", df_anom[["EmployeeID", "LocaleMessageTime", "anomaly"]].head())
+
+print("\nAfter label_card_share, columns:", df_card_share.columns.tolist())
+print("Sample card_share flags:\n", df_card_share[["EmployeeID", "CardNumber", "card_share"]].head())
+
+print("\nDuration output columns:", df_duration.columns.tolist())
+print(df_duration.head())
+
+print("\nLow-swipe output columns:", df_low_swipe.columns.tolist())
+print(df_low_swipe.head())
+
+print("\nFirst-swipe-out output columns:", df_exit_first.columns.tolist())
+print(df_exit_first.head())
+
+print("\nSimultaneous output columns:", df_simultaneous.columns.tolist())
+print(df_simultaneous[df_simultaneous["simultaneous"]].head())
+
+
+
+
+
+
+
+
+
+
+
+
+
+# src/test_labelers.py
+
 import pandas as pd
 from pathlib import Path
 
