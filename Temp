@@ -1,3 +1,34 @@
+// SwipeData/employee-ai-insights/server.js
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const employeeRoutes = require('./routes/employeeRoutes');
+const liveRt       = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use('/api', employeeRoutes);
+app.use('/api', liveRt);
+
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(buildPath, 'index.html'));
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client>npm run build
 
 > client@0.1.0 build
