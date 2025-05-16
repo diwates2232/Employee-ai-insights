@@ -1,4 +1,9 @@
-# src/test_labelers.py
+# 
+
+
+Get-Content .\data\access_logs.csv -TotalCount 1
+
+src/test_labelers.py
 
 import sys
 import os
