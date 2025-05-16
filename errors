@@ -1,143 +1,50 @@
-// src/App.js
+./src/App.js
+  Line 24:31:  'Redirect' is not defined  react/jsx-no-undef
 
-import React from 'react';
-import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import EmployeeList from './components/EmployeeList';
-import LiveOccupancy from './components/LiveOccupancy';
-import './App.css';
+Search for the keywords to learn more about each error.
+Compiling...
+Failed to compile.
 
-function App() {
-  return (
-    <Router>
-      <Switch>
-        {/* Home shows your Dashboard component */}
-        <Route exact path="/" component={Dashboard} />
+./src/App.js
+  Line 1:2:  Expected an assignment or function call and instead saw an expression  no-unused-expressions
+  Line 1:2:  'src' is not defined                                                   no-undef
+  Line 3:1:  Import in body of module; reorder to top                               import/first
+  Line 4:1:  Import in body of module; reorder to top                               import/first
+  Line 5:1:  Import in body of module; reorder to top                               import/first
+  Line 6:1:  Import in body of module; reorder to top                               import/first
+  Line 7:1:  Import in body of module; reorder to top                               import/first
+  Line 8:1:  Import in body of module; reorder to top                               import/first
 
-        {/* /employees lists your employee data */}
-        <Route path="/employees" component={EmployeeList} />
+Search for the keywords to learn more about each error.
+Compiling...
+Failed to compile.
 
-        {/* /occupancy shows the real‐time occupancy view */}
-        <Route path="/occupancy" component={LiveOccupancy} />
+./src/App.js
+  Line 1:2:  Expected an assignment or function call and instead saw an expression  no-unused-expressions
+  Line 1:2:  'src' is not defined                                                   no-undef
+  Line 3:1:  Import in body of module; reorder to top                               import/first
+  Line 4:1:  Import in body of module; reorder to top                               import/first
+  Line 5:1:  Import in body of module; reorder to top                               import/first
+  Line 6:1:  Import in body of module; reorder to top                               import/first
+  Line 7:1:  Import in body of module; reorder to top                               import/first
+  Line 8:1:  Import in body of module; reorder to top                               import/first
 
-        {/* Fallback: redirect any unknown URLs back to home */}
-        <Redirect to="/" />
-      </Switch>
-    </Router>
-  );
-}
+Search for the keywords to learn more about each error.
+Compiling...
+Failed to compile.
 
-export default App;
+./src/App.js
+Module not found: Can't resolve './components/Dashboard' in 'C:\Users\W0024618\Desktop\swipeData\client\src'
+Compiling...
+Failed to compile.
 
+./src/App.js
+Module not found: Can't resolve './components/Dashboard' in 'C:\Users\W0024618\Desktop\swipeData\client\src'
+Compiling...
+Failed to compile.
 
-// src/App.js
-
-import React from 'react';                     // ← Make sure React is in scope
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import EmployeeList from './components/EmployeeList';
-import LiveOccupancy from './components/LiveOccupancy';
-import './App.css';
-
-function App() {
-  return (
-    <Router>
-      <Switch>
-        {/* Home shows your Dashboard component */}
-        <Route exact path="/" component={Dashboard} />
-
-        {/* /employees lists your employee data */}
-        <Route path="/employees" component={EmployeeList} />
-
-        {/* /occupancy shows the real‐time occupancy view */}
-        <Route path="/occupancy" component={LiveOccupancy} />
-
-        {/* Fallback: redirect any unknown URLs back to home */}
-        <Route render={() => <Redirect to="/" />} />
-      </Switch>
-    </Router>
-  );
-}
-
-export default App;
+./src/App.js
+Module not found: Can't resolve './components/Dashboard' in 'C:\Users\W0024618\Desktop\swipeData\client\src'
 
 
 
-
-
-
-
-
-
-"scripts": {
-  "start": "node server.js",
-  "client": "npm start --prefix client",
-  "dev": "concurrently \"npm run start\" \"npm run client\""
-}
-
-
-
-// src/App.js
-
-import React from 'react';          // ← ADD THIS LINE
-import logo from './logo.svg';
-import './App.css';
-
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
-
-export default App;
-
-
-
-
-
-
-
-
-
-this is my current App.js file so give me updated js file carefully
-
-import logo from './logo.svg';
-import './App.css';
-
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
-
-export default App;
