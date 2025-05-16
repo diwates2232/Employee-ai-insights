@@ -1,5 +1,37 @@
 // src/App.js
 
+import React from 'react';
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
+import Dashboard from './components/Dashboard';
+import EmployeeList from './components/EmployeeList';
+import LiveOccupancy from './components/LiveOccupancy';
+import './App.css';
+
+function App() {
+  return (
+    <Router>
+      <Switch>
+        {/* Home shows your Dashboard component */}
+        <Route exact path="/" component={Dashboard} />
+
+        {/* /employees lists your employee data */}
+        <Route path="/employees" component={EmployeeList} />
+
+        {/* /occupancy shows the real‐time occupancy view */}
+        <Route path="/occupancy" component={LiveOccupancy} />
+
+        {/* Fallback: redirect any unknown URLs back to home */}
+        <Redirect to="/" />
+      </Switch>
+    </Router>
+  );
+}
+
+export default App;
+
+
+// src/App.js
+
 import React from 'react';                     // ← Make sure React is in scope
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
