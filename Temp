@@ -1,3 +1,77 @@
+// src/components/PersonnelTypeBreakdownTable.jsx
+import React from 'react';
+import { Table } from 'react-bootstrap';
+
+export default function PersonnelTypeBreakdownTable({ data }) {
+  if (!data || data.length === 0) {
+    return <p>No data available for personnel types.</p>;
+  }
+
+  return (
+    <Table striped bordered hover responsive>
+      <thead>
+        <tr>
+          <th>Personnel Type</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((entry, idx) => (
+          <tr key={idx}>
+            <td>{entry.type}</td>
+            <td>{entry.count}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+
+
+const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+
+setPersonnelBreakdown(payload.personnelBreakdown || []);
+
+
+<DashboardHome
+  summaryData={summaryData}
+  detailsData={detailsData}
+  floorData={floorData}
+  zoneBreakdown={zoneBreakdown}
+  personnelBreakdown={personnelBreakdown}
+/>
+
+
+
+
+
+
+import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
+
+
+
+export default function DashboardHome({
+  summaryData,
+  detailsData,
+  floorData,
+  zoneBreakdown,
+  personnelBreakdown
+}) {
+
+
+
+
+
+<h2 className="mb-4">Personnel Type Breakdown</h2>
+<PersonnelTypeBreakdownTable data={personnelBreakdown} />
+
+
+
+
+
+
+
 // src/App.js
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
