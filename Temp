@@ -1,3 +1,135 @@
+// src/index.js
+import 'bootstrap/dist/css/bootstrap.min.css';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+import './index.css';  // our custom overrides
+
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root')
+);
+
+
+
+
+/* src/index.css */
+:root {
+  --wu-yellow: #ffc82c;
+  --wu-black:  #000000;
+  --wu-grey:   #f5f5f5;
+  --wu-dark:   #343a40;
+
+  /* Accent or chart colors */
+  --wu-green:  #00b159;
+  --wu-red:    #e02b2b;
+  --wu-orange: #ff7f27;
+}
+
+/* Example global styles */
+body {
+  background-color: var(--wu-grey);
+  color: var(--wu-dark);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Override Bootstrap primary button */
+.btn-primary {
+  background-color: var(--wu-yellow);
+  border-color: var(--wu-yellow);
+  color: var(--wu-black);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #e6ba28;
+  border-color: #e6ba28;
+}
+
+
+
+
+
+
+// src/App.js
+import React from 'react';
+import { Container, Navbar } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import DashboardHome from './pages/DashboardHome';
+import ZoneDetailsPage from './pages/ZoneDetailsPage';
+import './App.css';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union
+        </Navbar.Brand>
+      </Navbar>
+
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route path="/"        element={<DashboardHome />} />
+          <Route path="/details" element={<ZoneDetailsPage />} />
+        </Routes>
+      </Container>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+npm install react-router-dom
+
+
+
+
+client/src/pages/
+├── DashboardHome.jsx
+└── ZoneDetailsPage.jsx
+
+
+
+
+
+import React from 'react';
+
+export default function DashboardHome() {
+  return (
+    <div>
+      <h2>Dashboard Overview</h2>
+      {/* We’ll fill this in with cards and charts in later steps */}
+    </div>
+  );
+}
+
+
+
+
+import React from 'react';
+
+export default function ZoneDetailsPage() {
+  return (
+    <div>
+      <h2>Zone Details</h2>
+      {/* We’ll add the detail tables here in Phase 5 */}
+    </div>
+  );
+}
+
+
+
+
 backend 
 
 
