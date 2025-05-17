@@ -1,3 +1,70 @@
+import React, { useEffect, useState } from 'react';
+import SummaryCard from '../components/SummaryCard'; // assumed path
+import '../styles/DashboardHome.css'; // assumed CSS
+
+const DashboardHome = () => {
+  const [personnelSummary, setPersonnelSummary] = useState({
+    employees: 0,
+    contractors: 0
+  });
+
+  useEffect(() => {
+    const events = new EventSource('/api/live-occupancy');
+
+    events.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.personnelSummary) {
+        setPersonnelSummary(data.personnelSummary);
+      }
+    };
+
+    return () => {
+      events.close();
+    };
+  }, []);
+
+  return (
+    <div className="dashboard-home">
+      <h2>Live Occupancy Summary</h2>
+      <div className="summary-cards">
+        <SummaryCard
+          title="Employees"
+          value={personnelSummary.employees}
+        />
+        <SummaryCard
+          title="Contractors"
+          value={personnelSummary.contractors}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default DashboardHome;
+
+
+
+
+
+import React from 'react';
+import './SummaryCard.css'; // assumed styling
+
+const SummaryCard = ({ title, value }) => (
+  <div className="summary-card">
+    <h3>{title}</h3>
+    <p>{value}</p>
+  </div>
+);
+
+export default SummaryCard;
+
+
+
+
+
+
+
 const { poolConnect, pool, sql } = require('../config/db');
 const mapDoorToZone   = require('../data/doorZoneMap');
 const zoneFloorMap    = require('../data/zoneFloorMap');
