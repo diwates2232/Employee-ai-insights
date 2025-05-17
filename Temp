@@ -1,3 +1,6 @@
+const zoneFloorMap = require('../data/zoneFloorMap');
+
+
 // data/zoneFloorMap.js
 
 /**
