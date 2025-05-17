@@ -1,3 +1,90 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import SummaryChart from '../components/SummaryChart';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
+import SummaryCards from '../components/SummaryCards'; // Kept import as-is
+
+export default function DashboardHome({
+  summaryData,
+  detailsData,
+  floorData,
+  zoneBreakdown,
+  personnelBreakdown
+}) {
+  const personnelSummary = summaryData?.personnelSummary || { employees: 0, contractors: 0 };
+
+  return (
+    <>
+      <SummaryCards personnelSummary={personnelSummary} />
+
+      <h2 className="mb-4">Occupancy Summary</h2>
+      <SummaryChart summary={summaryData} />
+
+      <h2 className="mb-4">Floor Occupancy</h2>
+      <FloorOccupancyChart data={floorData} />
+
+      <h2 className="mb-4">Zone Breakdown</h2>
+      <ZoneBreakdownTable data={zoneBreakdown} />
+
+      <h2 className="mb-4">Zone Details (Preview)</h2>
+      <ZoneDetailsTable data={detailsData} />
+
+      <h2 className="mb-4">Personnel Type Breakdown</h2>
+      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
+
+      <div className="mt-3">
+        <Link to="/details" className="btn btn-primary">
+          View Full Zone Details
+        </Link>
+      </div>
+    </>
+  );
+}
+
+
+
+
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+
+const SummaryCards = ({ personnelSummary }) => {
+  const cards = [
+    { title: 'Employees Occupancy', value: personnelSummary.employees },
+    { title: 'Contractors Occupancy', value: personnelSummary.contractors }
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((card, idx) => (
+        <Col key={idx} sm={6} md={3} className="mb-3">
+          <Card className="text-center shadow-sm">
+            <Card.Body>
+              <Card.Title>{card.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                {card.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export default SummaryCards;
+
+
+
+
+
+
+
+
+
 read both my previous file carefully and give me updated file as per my requirnments
 
 DashboardHome.jsx
