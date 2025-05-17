@@ -1,200 +1,91 @@
-npm install react-router@^6 react-router-dom@^6
+below is my previous data file .now guilde me step by step how i create zoneFloorMap.js file .and Give me Updated zoneFloorMap.js file first
 
+// data/doorZoneMap.js
 
+const doorZoneMap = {
+  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
+  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
+  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)": "Red Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door": "GSOC",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0": "2nd Floor Pune",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_UPS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_MDF ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_PAC ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
+};
 
-# Windows PowerShell
-rm -Recurse -Force node_modules
-del package-lock.json
-npm install
+// Special door prefixes for dynamic direction-based mapping
+const turnstilePrefixList = [
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
+];
 
+function mapDoorToZone(door, direction) {
+  // Direction‐based rule for turnstiles
+  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
+    return direction === 'InDirection' ? 'Reception Area' : null;
+  }
 
-
-$Env:NODE_OPTIONS="--openssl-legacy-provider"
-npm start
-
-
-
-npm install react-router react-router-dom
-
-
-# from client/
-rd /s /q node_modules
-del package-lock.json
-npm install
-
-
-
-set NODE_OPTIONS=--openssl-legacy-provider
-npm start
-
-
-
-
-// src/App.js
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-
-import './App.css';
-
-function DashboardHome({ summaryData, detailsData }) {
-  return (
-    <>
-      <h2 className="mb-4">Occupancy Summary</h2>
-      <SummaryChart summary={summaryData} />
-
-      <h2 className="mb-4">Zone Details (Preview)</h2>
-      {/* Small preview; link to full details page */}
-      <ZoneDetailsTable data={detailsData} />
-      <div className="mt-3">
-        <Link to="/details" className="btn btn-primary">
-          View Full Zone Details
-        </Link>
-      </div>
-    </>
-  );
+  // exact match, or fall back to the literal key lookup
+  return doorZoneMap[door] || 'Unknown Zone';
 }
 
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Zone Details</h2>
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setDetailsData(payload.details || {});
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
-            Details
-          </Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                summaryData={summaryData}
-                detailsData={detailsData}
-              />
-            }
-          />
-          <Route
-            path="/details"
-            element={<ZoneDetailsPage detailsData={detailsData} />}
-          />
-        </Routes>
-      </Container>
-    </BrowserRouter>
-  );
-}
-
-export default App;
+module.exports = mapDoorToZone;
 
 
-
-
-
-
-
-
-
-
-
-this is my Current app.js file now Wrap abobe file in my current file and give me Updated app.js file .then we will move phase 2
-
-// src/App.js
-
-import React, { useEffect, useState } from 'react';
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import './App.css';
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-
-  useEffect(() => {
-const es = new EventSource('http://localhost:5000/api/live-occupancy');
-  es.onmessage = (e) => {
-    try {
-      const payload = JSON.parse(e.data);
-      console.log('SSE payload:', payload);
-      setSummaryData(payload.summary || []);
-      setDetailsData(payload.details || {});
-    } catch (err) {
-      console.error('SSE parse error:', err);
-    }
-  };
-  es.onerror = err => {
-    console.error('SSE error:', err);
-    es.close();
-  };
-
-  // cleanup on unmount
-  return () => es.close();
-  }, []);
-
-
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Live Occupancy Dashboard</h1>
-      </header>
-      <main>
-        <section>
-          <h2>Occupancy Summary</h2>
-          <SummaryChart summary={summaryData} />
-        </section>
-        <section>
-          <h2>Zone Details</h2>
-          <ZoneDetailsTable data={detailsData} />
-        </section>
-      </main>
-    </div>
-  );
-}
-
-export default App;
