@@ -1,3 +1,63 @@
+// client/src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const colors = {
+  Employee: '#8884d8',
+  Contractor: '#82ca9d',
+  Visitor: '#ffc658',
+  Intern: '#ff8042',
+  // Add more types if needed
+};
+
+function FloorOccupancyChart({ data }) {
+  if (!data || data.length === 0) return <p>No data to display</p>;
+
+  // Get all unique personnel types from the data
+  const personnelTypes = Array.from(
+    new Set(data.flatMap(d => Object.keys(d).filter(k => k !== 'floor' && k !== 'total')))
+  );
+
+  return (
+    <div>
+      <h3>Floor-wise Occupancy</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <XAxis dataKey="floor" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          {personnelTypes.map((type) => (
+            <Bar
+              key={type}
+              dataKey={type}
+              stackId="a"
+              fill={colors[type] || '#ccc'}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export default FloorOccupancyChart;
+
+
+
+
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+
+// Inside your render method / return block
+<FloorOccupancyChart data={liveData.floorBreakdown} />
+
+
+
+
+
+
+
+
 const { poolConnect, pool, sql } = require('../config/db');
 const mapDoorToZone = require('../data/doorZoneMap');
 const zoneFloorMap = require('../data/zoneFloorMap');
