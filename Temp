@@ -1,3 +1,154 @@
+const { poolConnect, pool, sql } = require('../config/db');
+const mapDoorToZone   = require('../data/doorZoneMap');
+const zoneFloorMap    = require('../data/zoneFloorMap');
+
+async function fetchNewEvents(since) {
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+  /* unchanged SQL … */
+  /*                                                          */
+  /* (omitted for brevity – this block is identical to yours) */
+  /*                                                          */
+
+  return result.recordset;
+}
+
+/* ----------------- main in-memory aggregation ---------------- */
+async function buildOccupancy(allEvents) {
+
+  const current      = {};              // keyed by EmployeeID
+  const uniquePeople = new Map();       // dedup key → person record
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, ObjectName1, PersonnelType,
+      CardNumber, Dateonly, Swipe_Time,
+      Direction, Door
+    } = evt;
+
+    const zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
+
+    // build a stable dedup key: EmployeeID → CardNumber → Name
+    const dedupKey = EmployeeID || CardNumber || ObjectName1;
+
+    if (Direction === 'InDirection') {
+      // add / update
+      uniquePeople.set(dedupKey, { PersonnelType });
+      current[EmployeeID] = {
+        Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+        CardNumber, PersonnelType, zone
+      };
+    } else {
+      // remove
+      uniquePeople.delete(dedupKey);
+      delete current[EmployeeID];
+    }
+  }
+
+  /* ---- employee vs contractor live counts (summary cards) ---- */
+  let employeeCount    = 0;
+  let contractorCount  = 0;
+
+  for (const { PersonnelType } of uniquePeople.values()) {
+    if (PersonnelType === 'Employee' || PersonnelType === 'Terminated Personnel') {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
+  }
+
+  /* ------------ existing zone / floor aggregations ------------- */
+  const zoneMap = {};
+  Object.values(current).forEach(emp => {
+    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+    zoneMap[emp.zone].push(emp);
+  });
+
+  const zoneDetails = Object.fromEntries(
+    Object.entries(zoneMap).map(([zone, emps]) => {
+      const byType = emps.reduce((acc, { PersonnelType }) => {
+        acc[PersonnelType] = (acc[PersonnelType] || 0) + 1;
+        return acc;
+      }, {});
+      return [zone, { total: emps.length, byPersonnelType: byType, employees: emps }];
+    })
+  );
+
+  const floorMap = {};
+  for (const [zone, d] of Object.entries(zoneDetails)) {
+    const floor = zoneFloorMap[zone] || 'Unknown Floor';
+    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
+    floorMap[floor].total += d.total;
+    for (const [pt, c] of Object.entries(d.byPersonnelType)) {
+      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt] || 0) + c;
+    }
+  }
+
+  const summary        = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, count: d.total }));
+  const zoneBreakdown  = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, ...d.byPersonnelType, total: d.total }));
+  const floorBreakdown = Object.entries(floorMap).map(([f, d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
+
+  return {
+    asOf: new Date().toISOString(),
+    summary,
+    zoneBreakdown,
+    floorBreakdown,
+    details: zoneMap,
+    personnelSummary: { employees: employeeCount, contractors: contractorCount } // NEW
+  };
+}
+
+/* --------------------- SSE controller ------------------------ */
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':   'keep-alive'
+    });
+    res.write('\n');
+
+    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60); // 1 h ago
+    const events  = [];
+
+    /* helper to push updates */
+    const push = async () => {
+      const fresh = await fetchNewEvents(lastSeen);
+      if (fresh.length) {
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+        events.push(...fresh);
+        const payload = await buildOccupancy(events);
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      }
+    };
+
+    /* initial payload */
+    {
+      const recent = await fetchNewEvents(lastSeen);
+      if (recent.length) {
+        lastSeen = recent[recent.length - 1].LocaleMessageTime;
+        events.push(...recent);
+      }
+      const initial = await buildOccupancy(events);
+      res.write(`data: ${JSON.stringify(initial)}\n\n`);
+    }
+
+    const timer = setInterval(push, 1000);
+    req.on('close', () => clearInterval(timer));
+
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
 Now read this file carefully and give me updated file carefully. be insure do only changes only for requirenent , dont make another changes in file ,and give me updated js file carefully.
 
 
