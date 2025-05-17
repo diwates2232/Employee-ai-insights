@@ -1,418 +1,106 @@
-// client/src/components/FloorOccupancyChart.jsx
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const colors = {
-  Employee: '#8884d8',
-  Contractor: '#82ca9d',
-  Visitor: '#ffc658',
-  Intern: '#ff8042',
-  // Add more types if needed
-};
 
-function FloorOccupancyChart({ data }) {
-  if (!data || data.length === 0) return <p>No data to display</p>;
 
-  // Get all unique personnel types from the data
-  const personnelTypes = Array.from(
-    new Set(data.flatMap(d => Object.keys(d).filter(k => k !== 'floor' && k !== 'total')))
+// src/App.js
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+
+import './App.css';
+
+function DashboardHome({ summaryData, detailsData }) {
+  return (
+    <>
+      <h2 className="mb-4">Occupancy Summary</h2>
+      <SummaryChart summary={summaryData} />
+
+      <h2 className="mb-4">Zone Details (Preview)</h2>
+      {/* Small preview; link to full details page */}
+      <ZoneDetailsTable data={detailsData} />
+      <div className="mt-3">
+        <Link to="/details" className="btn btn-primary">
+          View Full Zone Details
+        </Link>
+      </div>
+    </>
   );
+}
+
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <div>
-      <h3>Floor-wise Occupancy</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <XAxis dataKey="floor" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          {personnelTypes.map((type) => (
-            <Bar
-              key={type}
-              dataKey={type}
-              stackId="a"
-              fill={colors[type] || '#ccc'}
-            />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
+
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                summaryData={summaryData}
+                detailsData={detailsData}
+              />
+            }
+          />
+          <Route
+            path="/details"
+            element={<ZoneDetailsPage detailsData={detailsData} />}
+          />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
-export default FloorOccupancyChart;
-
-
-
-
-import FloorOccupancyChart from './components/FloorOccupancyChart';
-
-// Inside your render method / return block
-<FloorOccupancyChart data={liveData.floorBreakdown} />
-
-
-
-
-
-
-
-
-const { poolConnect, pool, sql } = require('../config/db');
-const mapDoorToZone = require('../data/doorZoneMap');
-const zoneFloorMap = require('../data/zoneFloorMap');
-
-async function fetchNewEvents(since) {
-  const req = pool.request();
-  req.input('since', sql.DateTime2, since);
-  const result = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT 
-        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE 
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.[value]
-        ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
-        t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, [value]
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE [Name] IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return result.recordset;
-}
-
-async function buildOccupancy(allEvents) {
-  const current = {};
-  for (const evt of allEvents) {
-    const {
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      Dateonly,
-      Swipe_Time,
-      Direction,
-      Door
-    } = evt;
-
-    let zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
-
-    if (Direction === 'InDirection') {
-      current[EmployeeID] = {
-        Dateonly,
-        Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        CardNumber,
-        PersonnelType,
-        zone
-      };
-    } else {
-      delete current[EmployeeID];
-    }
-  }
-
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([zone, emps]) => {
-      const counts = emps.reduce((acc, { PersonnelType }) => {
-        acc[PersonnelType] = (acc[PersonnelType] || 0) + 1;
-        return acc;
-      }, {});
-      return [zone, {
-        total: emps.length,
-        byPersonnelType: counts,
-        employees: emps
-      }];
-    })
-  );
-
-  const floorMap = {};
-  for (const [zone, details] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[zone] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += details.total;
-    for (const [ptype, cnt] of Object.entries(details.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[ptype] =
-        (floorMap[floor].byPersonnelType[ptype] || 0) + cnt;
-    }
-  }
-
-  const summary = Object.entries(zoneDetails).map(([zone, d]) => ({
-    zone,
-    count: d.total
-  }));
-
-  const zoneBreakdown = Object.entries(zoneDetails).map(
-    ([zone, d]) => ({ zone, ...d.byPersonnelType, total: d.total })
-  );
-
-  const floorBreakdown = Object.entries(floorMap).map(
-    ([floor, d]) => ({ floor, ...d.byPersonnelType, total: d.total })
-  );
-
-  return {
-    asOf: new Date().toISOString(),
-    summary,
-    zoneBreakdown,
-    floorBreakdown,
-    details: zoneMap
-  };
-}
-
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-
-    res.writeHead(200, {
-      'Content-Type':      'text/event-stream',
-      'Cache-Control':     'no-cache',
-      'Connection':        'keep-alive'
-    });
-    res.write('\n');
-
-    let lastSeen = new Date(Date.now() - 1000 * 60 * 60); // start one hour back (or adjust)
-
-    const allEvents = [];
-
-    const checkForNew = async () => {
-      const newEvents = await fetchNewEvents(lastSeen);
-      if (newEvents.length > 0) {
-        lastSeen = newEvents[newEvents.length - 1].LocaleMessageTime;
-        allEvents.push(...newEvents);
-        const payload = await buildOccupancy(allEvents);
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
-      }
-    };
-
-    {
-      const recent = await fetchNewEvents(new Date(Date.now() - 1000 * 60 * 60));
-      if (recent.length) {
-        lastSeen = recent[recent.length - 1].LocaleMessageTime;
-        allEvents.push(...recent);
-      }
-      const initial = await buildOccupancy(allEvents);
-      res.write(`data: ${JSON.stringify(initial)}\n\n`);
-    }
-
-    const interval = setInterval(checkForNew, 1000);
-    req.on('close', () => clearInterval(interval));
-
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
-
-
-
-
-
-
-
-
-// controllers/liveOccupancyController.js
-
-const { poolConnect, pool, sql } = require('../config/db');
-const mapDoorToZone = require('../data/doorZoneMap');
-const zoneFloorMap = require('../data/zoneFloorMap');
-
-async function fetchNewEvents(since) {
-  const req = pool.request();
-  req.input('since', sql.DateTime2, since);
-  const result = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT 
-        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE 
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.[value]
-        ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
-        t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, [value]
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE [Name] IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return result.recordset;
-}
-
-async function buildOccupancy(allEvents) {
-  const current = {};
-  for (const evt of allEvents) {
-    const {
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      Dateonly,
-      Swipe_Time,
-      Direction,
-      Door
-    } = evt;
-
-    let zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
-
-    if (Direction === 'InDirection') {
-      current[EmployeeID] = {
-        Dateonly,
-        Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        CardNumber,
-        PersonnelType,
-        zone
-      };
-    } else {
-      delete current[EmployeeID];
-    }
-  }
-
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-
-  const summary = Object.entries(zoneMap).map(([zone, emps]) => ({
-    zone,
-    count: emps.length
-  }));
-
-  return { asOf: new Date().toISOString(), summary, details: zoneMap };
-}
-
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-
-    res.writeHead(200, {
-      'Content-Type':      'text/event-stream',
-      'Cache-Control':     'no-cache',
-      'Connection':        'keep-alive'
-    });
-    res.write('\n');
-
-    let lastSeen = new Date(Date.now() - 1000 * 60 * 60); // start one hour back (or adjust)
-
-    // keep a running list of all in-scope events to compute occupancy
-    const allEvents = [];
-
-    const checkForNew = async () => {
-      const newEvents = await fetchNewEvents(lastSeen);
-      if (newEvents.length > 0) {
-        // update our lastSeen to the timestamp of the newest event
-        lastSeen = newEvents[newEvents.length - 1].LocaleMessageTime;
-        // add them to the master list
-        allEvents.push(...newEvents);
-        // rebuild occupancy and push
-        const payload = await buildOccupancy(allEvents);
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
-      }
-    };
-
-    // initial emit (empty or existing in last hour)
-    {
-      const recent = await fetchNewEvents(new Date(Date.now() - 1000*60*60));
-      if (recent.length) {
-        lastSeen = recent[recent.length-1].LocaleMessageTime;
-        allEvents.push(...recent);
-      }
-      const initial = await buildOccupancy(allEvents);
-      res.write(`data: ${JSON.stringify(initial)}\n\n`);
-    }
-
-    const interval = setInterval(checkForNew, 1000);
-
-    req.on('close', () => clearInterval(interval));
-
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
+export default App;
 
