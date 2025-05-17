@@ -1,3 +1,22 @@
+// src/api.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+export function getLiveOccupancy() {
+  return api.get('/live-occupancy');
+}
+
+
+
+
+
+
+
+
+
 // src/components/SummaryChart.js
 import React, { useEffect } from 'react';
 import {
