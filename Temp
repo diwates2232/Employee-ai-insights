@@ -1,72 +1,299 @@
-const personnelBreakdown = [];
-
-if (employeeCount > 0) {
-  personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
-}
-if (contractorCount > 0) {
-  personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
-}
+File 1
 
 
 
 
+
+
+//DashboardHome.jsx
 
 import React from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import ReactDOM from 'react-dom/client'; // correct import for React 18+
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { Link } from 'react-router-dom';
+import SummaryChart from '../components/SummaryChart';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
+import SummaryCards from '../components/SummaryCards';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+export default function DashboardHome({
+  summaryData,
+  detailsData,
+  floorData,
+  zoneBreakdown,
+  personnelBreakdown,
+  totalVisitedToday,
+  personnelSummary
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
 
-// Optional: log performance metrics
-reportWebVitals();
+  return (
+    <>
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+      />
+
+      <h2 className="mb-4">Occupancy Summary</h2>
+      <SummaryChart summary={summaryData} />
+
+      <h2 className="mb-4">Floor Occupancy</h2>
+      <FloorOccupancyChart data={floorData} />
+
+      <h2 className="mb-4">Zone Breakdown</h2>
+      <ZoneBreakdownTable data={zoneBreakdown} />
+
+      <h2 className="mb-4">Personnel Type Breakdown</h2>
+      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
+
+      <div className="mt-3">
+        <Link to="/details" className="btn btn-primary">
+          View Full Zone Details
+        </Link>
+      </div>
+    </>
+  );
+}
 
 
 
+File 2
+
+// client/src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const colors = {
+  Employee: '#8884d8',
+  Contractor: '#82ca9d',
+  Visitor: '#ffc658',
+  Intern: '#ff8042',
+  // Add more types if needed
+};
+
+function FloorOccupancyChart({ data }) {
+  if (!data || data.length === 0) return <p>No data to display</p>;
+
+  // Get all unique personnel types from the data
+  const personnelTypes = Array.from(
+    new Set(data.flatMap(d => Object.keys(d).filter(k => k !== 'floor' && k !== 'total')))
+  );
+
+  return (
+    <div>
+      <h3>Floor-wise Occupancy</h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <XAxis dataKey="floor" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          {personnelTypes.map((type) => (
+            <Bar
+              key={type}
+              dataKey={type}
+              stackId="a"
+              fill={colors[type] || '#ccc'}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export default FloorOccupancyChart;
 
 
+File 3
 
-
-
-Lets check index.js and give me updated js file carefully
+Summarycard.jsx
 
 import React from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import './index.css';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const SummaryCards = ({ totalOccupancy, employeeCount, contractorCount }) => {
+  const cards = [
+    {
+      title: 'Total Occupancy',
+      value: totalOccupancy,
+      icon: <FaUsers size={24} />,
+      color: '#007bff' // Blue
+    },
+    {
+      title: 'Employees Occupancy',
+      value: employeeCount,
+      icon: <FaUserTie size={24} />,
+      color: '#28a745' // Green
+    },
+    {
+      title: 'Contractors Occupancy',
+      value: contractorCount,
+      icon: <FaHardHat size={24} />,
+      color: '#fd7e14' // Orange
+    }
+  ];
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+  return (
+    <Row className="mb-4">
+      {cards.map((card, idx) => (
+        <Col key={idx} sm={6} md={3} className="mb-3">
+          <Card className="text-center shadow-sm" style={{ borderLeft: `5px solid ${card.color}` }}>
+            <Card.Body>
+              <div className="mb-2" style={{ color: card.color }}>{card.icon}</div>
+              <Card.Title>{card.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
+                {card.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export default SummaryCards;
 
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+
+file 4
+
+// src/components/SummaryChart.js
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer
+} from 'recharts';
+
+const SummaryChart = ({ summary }) => {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  return (
+    <div className="mb-5">
+      <h4>Zone-wise Occupancy</h4>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={summary}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="zone" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Bar dataKey="count" fill="#007bff" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default SummaryChart;
 
 
 
 
+file 5
+
+// src/components/ZoneBreakdownTable.jsx
+import React from 'react';
+import { Table } from 'react-bootstrap';
+
+function ZoneBreakdownTable({ data }) {
+  if (!data || !data.length) return <p>No zone breakdown data available.</p>;
+
+  // Get all unique personnel types across all zones
+  const personnelTypes = Array.from(
+    new Set(
+      data.flatMap(zone => Object.keys(zone).filter(k => k !== 'zone' && k !== 'total'))
+    )
+  );
+
+  return (
+    <Table striped bordered hover responsive>
+      <thead>
+        <tr>
+          <th>Zone</th>
+          {personnelTypes.map((ptype) => (
+            <th key={ptype}>{ptype}</th>
+          ))}
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((zoneRow, idx) => (
+          <tr key={idx}>
+            <td>{zoneRow.zone}</td>
+            {personnelTypes.map((ptype) => (
+              <td key={ptype}>{zoneRow[ptype] || 0}</td>
+            ))}
+            <td>{zoneRow.total}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+export default ZoneBreakdownTable;
+
+
+
+file 6
+
+// src/components/ZoneDetailsTable.js
+import React, { useEffect } from 'react';
+
+function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data || {});
+
+  useEffect(() => {
+    console.log('Zone Details Table Data:', data);
+  }, [data]);
+
+  if (entries.length === 0) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-details-table">
+      {entries.map(([zone, employees]) => (
+        <section key={zone}>
+          <h3>{zone}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>EmployeeID</th>
+                <th>Name</th>
+                <th>Swipe Time</th>
+                <th>Personnel Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map(emp => (
+                <tr key={emp.EmployeeID + emp.Swipe_Time}>
+                  <td>{emp.EmployeeID}</td>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export default ZoneDetailsTable;
 
 
