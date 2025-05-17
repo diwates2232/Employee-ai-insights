@@ -1,3 +1,37 @@
+// data/zoneFloorMap.js
+
+/**
+ * Map each occupancy zone to its corresponding floor.
+ * Keys must exactly match the zone strings your doorZoneMap produces.
+ */
+const zoneFloorMap = {
+  // Podium Floor zones
+  'Red Zone':           'Podium Floor, Pune',
+  'YELLOW Zone':        'Podium Floor, Pune',
+  'GREEN Zone':         'Podium Floor, Pune',
+  'ORANGE Zone':        'Podium Floor, Pune',
+  'Reception Area':     'Podium Floor, Pune',
+  'GSOC':               'Podium Floor, Pune',
+
+  // Second Floor zones
+  '2nd Floor Pune':     '2nd Floor, Pune',
+
+  // Tower B zones
+  'TOWER B Pune':       'Tower B, Pune',
+
+  // Add any other zones here:
+  // 'Some Other Zone':  'Some Floor Name'
+};
+
+module.exports = zoneFloorMap;
+
+
+
+
+
+
+
+
 New-Item zoneFloorMap.js -ItemType File
 
 
