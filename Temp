@@ -1,3 +1,8 @@
+New-Item zoneFloorMap.js -ItemType File
+
+
+
+
 below is my previous data file .now guilde me step by step how i create zoneFloorMap.js file .and Give me Updated zoneFloorMap.js file first
 
 // data/doorZoneMap.js
