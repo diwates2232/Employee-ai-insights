@@ -1,3 +1,25 @@
++  const personnelBreakdown = Object.entries(zoneDetails).map(([zone, d]) => {
++    return {
++      zone,
++      ...d.byPersonnelType
++    };
++  });
+
+  return {
+    asOf: new Date().toISOString(),
+    summary,
+    zoneBreakdown,
+    floorBreakdown,
+    details: zoneMap,
+    personnelSummary: { employees: employeeCount, contractors: contractorCount },
++   personnelBreakdown
+  };
+
+
+
+
+
+
 
 lets check js file carefully and solve this isseu and give me updated js file carefully,
 dont make another changes on this file .
