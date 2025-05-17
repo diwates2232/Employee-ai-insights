@@ -1,3 +1,47 @@
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
+
+const [zoneBreakdown, setZoneBreakdown] = useState([]);
+
+
+setZoneBreakdown(payload.zoneBreakdown || []);
+
+
+
+
+<DashboardHome
+  summaryData={summaryData}
+  detailsData={detailsData}
+  floorData={floorData}
+  zoneBreakdown={zoneBreakdown}
+/>
+
+
+function DashboardHome({ summaryData, detailsData, floorData, zoneBreakdown }) {
+  return (
+    <>
+      <h2 className="mb-4">Occupancy Summary</h2>
+      <SummaryChart summary={summaryData} />
+
+      <h2 className="mb-4">Floor Occupancy</h2>
+      <FloorOccupancyChart data={floorData} />
+
+      <h2 className="mb-4">Zone Breakdown</h2>
+      <ZoneBreakdownTable data={zoneBreakdown} /> {/* NEW */}
+
+      <h2 className="mb-4">Zone Details (Preview)</h2>
+      <ZoneDetailsTable data={detailsData} />
+      <div className="mt-3">
+        <Link to="/details" className="btn btn-primary">
+          View Full Zone Details
+        </Link>
+      </div>
+    </>
+  );
+}
+
+
+
+
 // src/components/ZoneBreakdownTable.jsx
 import React from 'react';
 import { Table } from 'react-bootstrap';
