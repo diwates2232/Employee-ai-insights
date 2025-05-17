@@ -1,1 +1,28 @@
 data: {"asOf":"2025-05-17T21:32:50.775Z","summary":[{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"zoneBreakdown":[{"zone":"GSOC","Contractor":2,"total":2},{"zone":"YELLOW Zone","Contractor":1,"total":1}],"floorBreakdown":[{"floor":"Podium Floor, Pune","Contractor":3,"total":3}],"details":{"GSOC":[{"Dateonly":"2025-05-18","Swipe_Time":"02:24:16","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-18","Swipe_Time":"02:10:45","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-18","Swipe_Time":"02:39:02","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]},"personnelBreakdown":[{"type":"Contractor","count":3}],"totalVisitedToday":8}
+  // Build personnelSummary
+  let employeeCount = 0;
+  let contractorCount = 0;
+
+  Object.values(current).forEach(emp => {
+    const type = emp.PersonnelType?.toLowerCase();
+    if (type === 'employee' || type === 'terminated personnel') {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
+  });
+
+  return {
+    asOf: new Date().toISOString(),
+    summary,
+    zoneBreakdown,
+    floorBreakdown,
+    details: zoneMap,
+    personnelBreakdown: Object.entries(personnelCount).map(
+      ([type, count]) => ({ type, count })
+    ),
+    personnelSummary: {
+      employees: employeeCount,
+      contractors: contractorCount
+    }
+  };
