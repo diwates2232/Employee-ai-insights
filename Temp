@@ -1,3 +1,19 @@
+npm install react-router@^6 react-router-dom@^6
+
+
+
+# Windows PowerShell
+rm -Recurse -Force node_modules
+del package-lock.json
+npm install
+
+
+
+$Env:NODE_OPTIONS="--openssl-legacy-provider"
+npm start
+
+
+
 npm install react-router react-router-dom
 
 
