@@ -1,3 +1,38 @@
+useEffect(() => {
+  getLiveOccupancy()
+    .then(res => {
+      console.log('Live Occupancy Payload:', res.data);
+      const { summary, details } = res.data;
+      setSummaryData(summary || []);
+      setDetailsData(details || {});
+    })
+    .catch(err => {
+      console.error('Fetch Error:', err.message);
+    });
+}, []);
+
+
+
+
+
+useEffect(() => {
+  console.log('SummaryChart Data:', summary);
+}, [summary]);
+
+
+
+
+
+useEffect(() => {
+  console.log('Zone Details Table Data:', data);
+}, [data]);
+
+
+
+
+
+
+
 // src/components/SummaryChart.js
 import React from 'react';
 import {
