@@ -1,4 +1,59 @@
 import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
+
+const SummaryCards = ({ totalOccupancy, employeeCount, contractorCount }) => {
+  const cards = [
+    {
+      title: 'Total Occupancy',
+      value: totalOccupancy,
+      icon: <FaUsers size={24} />,
+      color: '#007bff' // Blue
+    },
+    {
+      title: 'Employees Occupancy',
+      value: employeeCount,
+      icon: <FaUserTie size={24} />,
+      color: '#28a745' // Green
+    },
+    {
+      title: 'Contractors Occupancy',
+      value: contractorCount,
+      icon: <FaHardHat size={24} />,
+      color: '#fd7e14' // Orange
+    }
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((card, idx) => (
+        <Col key={idx} sm={6} md={3} className="mb-3">
+          <Card className="text-center shadow-sm" style={{ borderLeft: `5px solid ${card.color}` }}>
+            <Card.Body>
+              <div className="mb-2" style={{ color: card.color }}>{card.icon}</div>
+              <Card.Title>{card.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
+                {card.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export default SummaryCards;
+
+
+
+
+
+
+
+
+
+import React from 'react';
 import { Link } from 'react-router-dom';
 import SummaryChart from '../components/SummaryChart';
 import FloorOccupancyChart from '../components/FloorOccupancyChart';
