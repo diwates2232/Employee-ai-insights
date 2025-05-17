@@ -1,3 +1,7 @@
+const currentOccupancy = Object.values(detailsData || {}).reduce((sum, zone) => sum + (zone.employees?.length || 0), 0);
+
+
+
 import React from 'react';
 import { Card, Row, Col } from 'react-bootstrap';
 
