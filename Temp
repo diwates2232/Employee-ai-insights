@@ -1,397 +1,125 @@
-// src/pages/DashboardHome.jsx
+Read ablve door details .
+issue is there some door has InDirection as well outDirection
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Row, Col, Tabs, Tab, ListGroup, Card, Container } from 'react-bootstrap';
+also some door has only one reader in or out.
 
-import SummaryCards from '../components/SummaryCards';
-import SummaryChart from '../components/SummaryChart';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
-import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
-import ZoneDetailsTable from '../components/ZoneDetailsTable';
+thats why counts are mismatch.
 
-export default function DashboardHome({
-  summaryData,
-  detailsData,
-  floorData,
-  zoneBreakdown,
-  personnelBreakdown,
-  personnelSummary
-}) {
-  // card values
-  const employees   = personnelSummary?.employees   ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
 
-  return (
-    <Container fluid>
-      {/* 1. Top-level summary cards */}
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-      />
+for Podium floor Swipe come from this door 
 
-      {/* 2. Occupancy Summary section */}
-      <h2 className="mt-4 mb-3">Occupancy Summary</h2>
-      <Row>
-        <Col md={8}>
-          <SummaryChart summary={summaryData} />
-        </Col>
-        <Col md={4}>
-          <Card>
-            <Card.Header>Zone Totals</Card.Header>
-            <ListGroup variant="flush">
-              {summaryData.map((z, i) => (
-                <ListGroup.Item key={i}>
-                  {z.zone}: {z.count}
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
+"APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+ "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+ "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+ "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+"APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
 
-      {/* 3. Floor-wise Occupancy */}
-      <h2 className="mt-5 mb-3">Floor-wise Occupancy</h2>
-      <FloorOccupancyChart data={floorData} />
+if Above door and Swipe is InDirection the this is our "Reception Area"
+if Above door and Swipe is OutDirection "then Employee left office .then remove count.
+otherwise When swipe in and out swipe come but here zone is not mentioned then count their value 
+in behalf of their previous Swipe door.
 
-      {/* 4. Zone Breakdown with Tabs */}
-      <h2 className="mt-5 mb-3">Zone Breakdown</h2>
-      <Tabs defaultActiveKey="chart" id="zone-breakdown-tabs" className="mb-3">
-        <Tab eventKey="chart" title="Chart">
-          <SummaryChart summary={summaryData} />
-        </Tab>
-        <Tab eventKey="table" title="Table">
-          <ZoneBreakdownTable data={zoneBreakdown} />
-        </Tab>
-      </Tabs>
 
-      {/* 5. Personnel Type Breakdown */}
-      <h2 className="mt-5 mb-3">Personnel Type Breakdown</h2>
-      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
+for Tower b
+ "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
+door is this and swipe direction is out then consider employee left office.
+then remove count.
+otherwise calculate count on as per previous or current zone.
 
-      {/* 6. Zone Details Preview + Link */}
-      <h2 className="mt-5 mb-3">Zone Details (Preview)</h2>
-      <ZoneDetailsTable data={detailsData} />
-      <div className="mt-3">
-        <Link to="/details" className="btn btn-primary">
-          View Full Zone Details
-        </Link>
-      </div>
-    </Container>
-  );
-}
+
+
+Now Upgrade logic and give me updated file .
+update carefully .
 
 
 
 
+// data/doorZoneMap.js
 
-
-
-
-
-
-
-
-
-
-
-
-
-File 1
-
-
-//DashboardHome.jsx
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import SummaryChart from '../components/SummaryChart';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
-import ZoneDetailsTable from '../components/ZoneDetailsTable';
-import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
-import SummaryCards from '../components/SummaryCards';
-
-export default function DashboardHome({
-  summaryData,
-  detailsData,
-  floorData,
-  zoneBreakdown,
-  personnelBreakdown,
-  totalVisitedToday,
-  personnelSummary
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  return (
-    <>
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-      />
-
-      <h2 className="mb-4">Occupancy Summary</h2>
-      <SummaryChart summary={summaryData} />
-
-      <h2 className="mb-4">Floor Occupancy</h2>
-      <FloorOccupancyChart data={floorData} />
-
-      <h2 className="mb-4">Zone Breakdown</h2>
-      <ZoneBreakdownTable data={zoneBreakdown} />
-
-      <h2 className="mb-4">Personnel Type Breakdown</h2>
-      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
-
-      <div className="mt-3">
-        <Link to="/details" className="btn btn-primary">
-          View Full Zone Details
-        </Link>
-      </div>
-    </>
-  );
-}
-
-
-
-File 2
-
-// client/src/components/FloorOccupancyChart.jsx
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const colors = {
-  Employee: '#8884d8',
-  Contractor: '#82ca9d',
-  Visitor: '#ffc658',
-  Intern: '#ff8042',
-  // Add more types if needed
+const doorZoneMap = {
+  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
+  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
+  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)": "Red Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door": "GSOC",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0": "2nd Floor Pune",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_UPS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_MDF ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_PAC ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
 };
 
-function FloorOccupancyChart({ data }) {
-  if (!data || data.length === 0) return <p>No data to display</p>;
+// Special door prefixes for dynamic direction-based mapping
+const turnstilePrefixList = [
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
+];
 
-  // Get all unique personnel types from the data
-  const personnelTypes = Array.from(
-    new Set(data.flatMap(d => Object.keys(d).filter(k => k !== 'floor' && k !== 'total')))
-  );
-
-  return (
-    <div>
-      <h3>Floor-wise Occupancy</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <XAxis dataKey="floor" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Legend />
-          {personnelTypes.map((type) => (
-            <Bar
-              key={type}
-              dataKey={type}
-              stackId="a"
-              fill={colors[type] || '#ccc'}
-            />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-export default FloorOccupancyChart;
-
-
-File 3
-
-Summarycard.jsx
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
-
-const SummaryCards = ({ totalOccupancy, employeeCount, contractorCount }) => {
-  const cards = [
-    {
-      title: 'Total Occupancy',
-      value: totalOccupancy,
-      icon: <FaUsers size={24} />,
-      color: '#007bff' // Blue
-    },
-    {
-      title: 'Employees Occupancy',
-      value: employeeCount,
-      icon: <FaUserTie size={24} />,
-      color: '#28a745' // Green
-    },
-    {
-      title: 'Contractors Occupancy',
-      value: contractorCount,
-      icon: <FaHardHat size={24} />,
-      color: '#fd7e14' // Orange
-    }
-  ];
-
-  return (
-    <Row className="mb-4">
-      {cards.map((card, idx) => (
-        <Col key={idx} sm={6} md={3} className="mb-3">
-          <Card className="text-center shadow-sm" style={{ borderLeft: `5px solid ${card.color}` }}>
-            <Card.Body>
-              <div className="mb-2" style={{ color: card.color }}>{card.icon}</div>
-              <Card.Title>{card.title}</Card.Title>
-              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
-                {card.value}
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-      ))}
-    </Row>
-  );
-};
-
-export default SummaryCards;
-
-
-
-file 4
-
-// src/components/SummaryChart.js
-import React, { useEffect } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from 'recharts';
-
-const SummaryChart = ({ summary }) => {
-  useEffect(() => {
-    console.log('Summary Chart Data:', summary);
-  }, [summary]);
-
-  return (
-    <div className="mb-5">
-      <h4>Zone-wise Occupancy</h4>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={summary}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="zone" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Bar dataKey="count" fill="#007bff" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-export default SummaryChart;
-
-
-
-
-file 5
-
-// src/components/ZoneBreakdownTable.jsx
-import React from 'react';
-import { Table } from 'react-bootstrap';
-
-function ZoneBreakdownTable({ data }) {
-  if (!data || !data.length) return <p>No zone breakdown data available.</p>;
-
-  // Get all unique personnel types across all zones
-  const personnelTypes = Array.from(
-    new Set(
-      data.flatMap(zone => Object.keys(zone).filter(k => k !== 'zone' && k !== 'total'))
-    )
-  );
-
-  return (
-    <Table striped bordered hover responsive>
-      <thead>
-        <tr>
-          <th>Zone</th>
-          {personnelTypes.map((ptype) => (
-            <th key={ptype}>{ptype}</th>
-          ))}
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((zoneRow, idx) => (
-          <tr key={idx}>
-            <td>{zoneRow.zone}</td>
-            {personnelTypes.map((ptype) => (
-              <td key={ptype}>{zoneRow[ptype] || 0}</td>
-            ))}
-            <td>{zoneRow.total}</td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
-  );
-}
-
-export default ZoneBreakdownTable;
-
-
-
-file 6
-
-// src/components/ZoneDetailsTable.js
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
+function mapDoorToZone(door, direction) {
+  // Direction‐based rule for turnstiles
+  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
+    return direction === 'InDirection' ? 'Reception Area' : null;
   }
 
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
+  // exact match, or fall back to the literal key lookup
+  return doorZoneMap[door] || 'Unknown Zone';
 }
 
-export default ZoneDetailsTable;
+module.exports = mapDoorToZone;
 
 
