@@ -1,3 +1,56 @@
+// src/components/ZoneBreakdownTable.jsx
+import React from 'react';
+import { Table } from 'react-bootstrap';
+
+function ZoneBreakdownTable({ data }) {
+  if (!data || !data.length) return <p>No zone breakdown data available.</p>;
+
+  // Get all unique personnel types across all zones
+  const personnelTypes = Array.from(
+    new Set(
+      data.flatMap(zone => Object.keys(zone).filter(k => k !== 'zone' && k !== 'total'))
+    )
+  );
+
+  return (
+    <Table striped bordered hover responsive>
+      <thead>
+        <tr>
+          <th>Zone</th>
+          {personnelTypes.map((ptype) => (
+            <th key={ptype}>{ptype}</th>
+          ))}
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((zoneRow, idx) => (
+          <tr key={idx}>
+            <td>{zoneRow.zone}</td>
+            {personnelTypes.map((ptype) => (
+              <td key={ptype}>{zoneRow[ptype] || 0}</td>
+            ))}
+            <td>{zoneRow.total}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+export default ZoneBreakdownTable;
+
+
+
+
+
+
+
+
+
+
+
+
 // src/App.js
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
