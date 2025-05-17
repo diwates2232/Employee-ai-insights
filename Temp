@@ -1,3 +1,77 @@
+// data/doorZoneMap.js
+
+const doorZoneMap = {
+  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
+  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
+  // ... [rest of your existing exact mappings] ...
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
+  // Tower B exact doors
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
+  // ... [all other Tower B doors] ...
+  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
+};
+
+// Special door prefixes for Podium turnstiles
+const turnstilePrefixList = [
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+  "APAC_IN-PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
+];
+
+// Tower B doors prefixes (for in/out logic)
+const towerBPrefixList = [
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR",
+  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR",
+  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM",
+  "APAC_IN_PUN_TOWER B_UPS ROOM",
+  "APAC_IN_PUN_TOWER B_MDF ROOM",
+  "APAC_IN_PUN_TOWER B_PAC ROOM",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM",
+  "APAC_IN_PUN_TOWER B_GYM ROOM"
+];
+
+function mapDoorToZone(door, direction) {
+  // 1. Podium turnstiles: InDirection -> Reception Area, OutDirection -> exit (null)
+  if (turnstilePrefixList.some(pref => door.startsWith(pref))) {
+    return direction === 'InDirection' ? 'Reception Area' : null;
+  }
+
+  // 2. Tower B doors: OutDirection -> exit (null), otherwise use exact mapping
+  if (towerBPrefixList.some(pref => door.startsWith(pref))) {
+    return direction === 'OutDirection' ? null : 'TOWER B Pune';
+  }
+
+  // 3. All other doors: exact lookup (always positive)
+  return doorZoneMap[door] || 'Unknown Zone';
+}
+
+module.exports = mapDoorToZone;
+
+
+
+
+
+
+
+
+
+
+
+
 Read ablve door details .
 issue is there some door has InDirection as well outDirection
 
