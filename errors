@@ -1,23 +1,68 @@
-// src/api.js
-import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api'
-});
+check all files details and solve this issue
 
-export function getLiveOccupancy() {
-  return api.get('/live-occupancy');
+
+API-http://localhost:5000/api/live-occupancy
+responce
+
+data: {"asOf":"2025-05-17T00:22:29.995Z","summary":[{"zone":"TOWER B Pune","count":1},{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"details":{"TOWER B Pune":[{"Dateonly":"2025-05-17","Swipe_Time":"05:35:33","EmployeeID":"0","ObjectName1":"Vasulkar, Sachin","CardNumber":"410317","PersonnelType":"Property Management","zone":"TOWER B Pune"}],"GSOC":[{"Dateonly":"2025-05-17","Swipe_Time":"04:54:26","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-17","Swipe_Time":"05:15:27","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"05:49:13","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]}}
+
+
+File 1
+
+backend /
+
+
+
+// server.js
+const express = require('express');
+const cors    = require('cors');
+const path    = require('path');
+
+const employeeRoutes  = require('./routes/employeeRoutes');
+const liveOccupancyRt = require('./routes/liveOccupancyRoutes');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// TEMP: simple sanity-check endpoint
+app.get('/ping', (req, res) => res.send('pong'));
+
+// mount your routers (they themselves define '/employees' and '/live-occupancy')
+app.use('/api', employeeRoutes);
+app.use('/api', liveOccupancyRt);
+
+// ————— DEBUG: list all directly registered routes —————
+if (app._router && Array.isArray(app._router.stack)) {
+  console.log('\n📋 Registered endpoints:');
+  app._router.stack.forEach(layer => {
+    if (layer.route && layer.route.path) {
+      const methods = Object
+        .keys(layer.route.methods)
+        .map(m => m.toUpperCase())
+        .join(',');
+      console.log(`  ${methods}\t${layer.route.path}`);
+    }
+  });
+} else {
+  console.warn('⚠️ No routes found in app._router.stack');
 }
 
+// serve your React build (if you have one)
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+
+// health-check
+app.get('/health', (req, res) => res.send('OK'));
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
 
 
-
-
-
-
-
-
+file 2
 // src/components/SummaryChart.js
+
 import React, { useEffect } from 'react';
 import {
   BarChart,
@@ -53,11 +98,10 @@ const SummaryChart = ({ summary }) => {
 export default SummaryChart;
 
 
-
-
-
+file 3
 
 // src/components/ZoneDetailsTable.js
+
 import React, { useEffect } from 'react';
 
 function ZoneDetailsTable({ data = {} }) {
@@ -104,100 +148,68 @@ export default ZoneDetailsTable;
 
 
 
+file 4
+
+
+// src/api.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+export function getLiveOccupancy() {
+  return api.get('/live-occupancy');
+}
 
 
 
 
 
+// src/App.js
 
+import React, { useEffect, useState } from 'react';
+import { getLiveOccupancy } from './api'; // ✅ Correct relative import
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import './App.css';
 
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
 
+  useEffect(() => {
+  getLiveOccupancy()
+    .then(res => {
+      console.log('Live Occupancy Payload:', res.data);
+      const { summary, details } = res.data;
+      setSummaryData(summary || []);
+      setDetailsData(details || {});
+    })
+    .catch(err => {
+      console.error('Fetch Error:', err.message);
+    });
+}, []);
 
-
-
-
-
-
-
-
-
-// src/components/SummaryChart.js
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from 'recharts';
-
-const SummaryChart = ({ summary }) => {
-  console.log("Summary Chart Data:", summary); // ✅ Logging inside component scope
 
   return (
-    <div className="mb-5">
-      <h4>Zone-wise Occupancy</h4>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={summary}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="zone" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Bar dataKey="count" fill="#007bff" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-export default SummaryChart;
-
-
-
-
-
-// src/components/ZoneDetailsTable.js
-import React from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-  console.log("Zone Details:", data); // ✅ Correctly scoped log
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="App">
+      <header className="App-header">
+        <h1>Live Occupancy Dashboard</h1>
+      </header>
+      <main>
+        <section>
+          <h2>Occupancy Summary</h2>
+          <SummaryChart summary={summaryData} />
         </section>
-      ))}
+        <section>
+          <h2>Zone Details</h2>
+          <ZoneDetailsTable data={detailsData} />
+        </section>
+      </main>
     </div>
   );
 }
 
-export default ZoneDetailsTable;
-
+export default App;
 
