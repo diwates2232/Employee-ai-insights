@@ -1,3 +1,16 @@
+const personnelBreakdown = [];
+
+if (employeeCount > 0) {
+  personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
+}
+if (contractorCount > 0) {
+  personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
+}
+
+
+
+
+
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ReactDOM from 'react-dom/client'; // correct import for React 18+
