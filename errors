@@ -1,290 +1,55 @@
-// src/api.js
-const api = axios.create({
-  baseURL: 'http://localhost:5001/api'
-});
 
+Again We got this error
 
+C:\Users\W0024618\Desktop\swipeData\client>npm start
 
+> client@0.1.0 start
+> react-scripts start
+? Something is already running on port 3000.
 
+Would you like to run the app on another port instead? Yes
+i ｢wds｣: Project is running at http://10.199.29.107/
+i ｢wds｣: webpack output is served from
+i ｢wds｣: Content not from webpack is served from C:\Users\W0024618\Desktop\swipeData\client\public
+i ｢wds｣: 404s will fallback to /
+Starting the development server...
 
-// src/App.js
-import React, { useEffect, useState } from 'react';
-// remove the axios helper import
--import { getLiveOccupancy } from './api';
-+// import SummaryChart, ZoneDetailsTable as before
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import './App.css';
+Error: error:0308010C:digital envelope routines::unsupported
+    at new Hash (node:internal/crypto/hash:79:19)
+    at Object.createHash (node:crypto:139:10)
+    at module.exports (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\util\createHash.js:135:53)
+    at NormalModule._initBuildHash (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:417:16)
+    at handleParseError (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:471:10)
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:503:5
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:358:12
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:373:3
+    at iterateNormalLoaders (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:214:10)
+    at iterateNormalLoaders (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:221:10)
+C:\Users\W0024618\Desktop\swipeData\client\node_modules\react-scripts\scripts\start.js:19
+  throw err;
+  ^
 
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-
-  useEffect(() => {
--   getLiveOccupancy()
--     .then(res => {
--       console.log('Live Occupancy Payload:', res.data);
--       const { summary, details } = res.data;
--       setSummaryData(summary || []);
--       setDetailsData(details || {});
--     })
--     .catch(err => {
--       console.error('Fetch Error:', err.message);
--     });
-+  // open SSE stream
-+  const es = new EventSource('http://localhost:5001/api/live-occupancy');
-+
-+  es.onmessage = (e) => {
-+    try {
-+      const payload = JSON.parse(e.data);
-+      console.log('SSE payload:', payload);
-+      setSummaryData(payload.summary || []);
-+      setDetailsData(payload.details || {});
-+    } catch (err) {
-+      console.error('SSE parse error:', err);
-+    }
-+  };
-+  es.onerror = err => {
-+    console.error('SSE error:', err);
-+    es.close();
-+  };
-+
-+  // cleanup on unmount
-+  return () => es.close();
-  }, []);
-
-  return (
-    <div className="App">
-      {/* ... */}
-      <SummaryChart summary={summaryData} />
-      <ZoneDetailsTable data={detailsData} />
-    </div>
-  );
+Error: error:0308010C:digital envelope routines::unsupported
+    at new Hash (node:internal/crypto/hash:79:19)
+    at Object.createHash (node:crypto:139:10)
+    at module.exports (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\util\createHash.js:135:53)
+    at NormalModule._initBuildHash (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:417:16)
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:452:10
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:323:13
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:367:11
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:233:18
+    at context.callback (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:111:13)
+    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\babel-loader\lib\index.js:59:103 {
+  opensslErrorStack: [
+    'error:03000086:digital envelope routines::initialization error',
+    'error:0308010C:digital envelope routines::unsupported'
+  ],
+  library: 'digital envelope routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_EVP_UNSUPPORTED'
 }
 
-export default App;
+Node.js v22.15.0
 
-
-
-
-
-
-
-
-
-
-
-check all files details and solve this issue
-
-
-API-http://localhost:5000/api/live-occupancy
-responce
-
-data: {"asOf":"2025-05-17T00:22:29.995Z","summary":[{"zone":"TOWER B Pune","count":1},{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"details":{"TOWER B Pune":[{"Dateonly":"2025-05-17","Swipe_Time":"05:35:33","EmployeeID":"0","ObjectName1":"Vasulkar, Sachin","CardNumber":"410317","PersonnelType":"Property Management","zone":"TOWER B Pune"}],"GSOC":[{"Dateonly":"2025-05-17","Swipe_Time":"04:54:26","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-17","Swipe_Time":"05:15:27","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"05:49:13","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]}}
-
-
-File 1
-
-backend /
-
-
-
-// server.js
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-
-const employeeRoutes  = require('./routes/employeeRoutes');
-const liveOccupancyRt = require('./routes/liveOccupancyRoutes');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// TEMP: simple sanity-check endpoint
-app.get('/ping', (req, res) => res.send('pong'));
-
-// mount your routers (they themselves define '/employees' and '/live-occupancy')
-app.use('/api', employeeRoutes);
-app.use('/api', liveOccupancyRt);
-
-// ————— DEBUG: list all directly registered routes —————
-if (app._router && Array.isArray(app._router.stack)) {
-  console.log('\n📋 Registered endpoints:');
-  app._router.stack.forEach(layer => {
-    if (layer.route && layer.route.path) {
-      const methods = Object
-        .keys(layer.route.methods)
-        .map(m => m.toUpperCase())
-        .join(',');
-      console.log(`  ${methods}\t${layer.route.path}`);
-    }
-  });
-} else {
-  console.warn('⚠️ No routes found in app._router.stack');
-}
-
-// serve your React build (if you have one)
-const buildPath = path.join(__dirname, '..', 'client', 'build');
-app.use(express.static(buildPath));
-
-// health-check
-app.get('/health', (req, res) => res.send('OK'));
-
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
-
-
-file 2
-// src/components/SummaryChart.js
-
-import React, { useEffect } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from 'recharts';
-
-const SummaryChart = ({ summary }) => {
-  useEffect(() => {
-    console.log('Summary Chart Data:', summary);
-  }, [summary]);
-
-  return (
-    <div className="mb-5">
-      <h4>Zone-wise Occupancy</h4>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={summary}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="zone" />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Bar dataKey="count" fill="#007bff" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-export default SummaryChart;
-
-
-file 3
-
-// src/components/ZoneDetailsTable.js
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
-
-
-
-file 4
-
-
-// src/api.js
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api'
-});
-
-export function getLiveOccupancy() {
-  return api.get('/live-occupancy');
-}
-
-
-
-
-
-// src/App.js
-
-import React, { useEffect, useState } from 'react';
-import { getLiveOccupancy } from './api'; // ✅ Correct relative import
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import './App.css';
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-
-  useEffect(() => {
-  getLiveOccupancy()
-    .then(res => {
-      console.log('Live Occupancy Payload:', res.data);
-      const { summary, details } = res.data;
-      setSummaryData(summary || []);
-      setDetailsData(details || {});
-    })
-    .catch(err => {
-      console.error('Fetch Error:', err.message);
-    });
-}, []);
-
-
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Live Occupancy Dashboard</h1>
-      </header>
-      <main>
-        <section>
-          <h2>Occupancy Summary</h2>
-          <SummaryChart summary={summaryData} />
-        </section>
-        <section>
-          <h2>Zone Details</h2>
-          <ZoneDetailsTable data={detailsData} />
-        </section>
-      </main>
-    </div>
-  );
-}
-
-export default App;
+C:\Users\W0024618\Desktop\swipeData\client>
 
