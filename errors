@@ -1,3 +1,78 @@
+// src/api.js
+const api = axios.create({
+  baseURL: 'http://localhost:5001/api'
+});
+
+
+
+
+
+// src/App.js
+import React, { useEffect, useState } from 'react';
+// remove the axios helper import
+-import { getLiveOccupancy } from './api';
++// import SummaryChart, ZoneDetailsTable as before
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import './App.css';
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+
+  useEffect(() => {
+-   getLiveOccupancy()
+-     .then(res => {
+-       console.log('Live Occupancy Payload:', res.data);
+-       const { summary, details } = res.data;
+-       setSummaryData(summary || []);
+-       setDetailsData(details || {});
+-     })
+-     .catch(err => {
+-       console.error('Fetch Error:', err.message);
+-     });
++  // open SSE stream
++  const es = new EventSource('http://localhost:5001/api/live-occupancy');
++
++  es.onmessage = (e) => {
++    try {
++      const payload = JSON.parse(e.data);
++      console.log('SSE payload:', payload);
++      setSummaryData(payload.summary || []);
++      setDetailsData(payload.details || {});
++    } catch (err) {
++      console.error('SSE parse error:', err);
++    }
++  };
++  es.onerror = err => {
++    console.error('SSE error:', err);
++    es.close();
++  };
++
++  // cleanup on unmount
++  return () => es.close();
+  }, []);
+
+  return (
+    <div className="App">
+      {/* ... */}
+      <SummaryChart summary={summaryData} />
+      <ZoneDetailsTable data={detailsData} />
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+
 
 check all files details and solve this issue
 
