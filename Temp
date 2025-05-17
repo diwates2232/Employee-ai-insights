@@ -1,3 +1,59 @@
+/* --------------------- SSE controller ------------------------ */
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':   'keep-alive'
+    });
+    res.write('\n');
+
+    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60); // 1 h ago
+    const events  = [];
+
+    /* helper to push updates */
+    const push = async () => {
+      const fresh = await fetchNewEvents(lastSeen);
+      if (fresh.length) {
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+        events.push(...fresh);
+        const payload = await buildOccupancy(events);
+        payload.totalVisitedToday = await fetchTotalVisitedToday(); // <-- ADD THIS LINE
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      }
+    };
+
+    /* initial payload */
+    {
+      const recent = await fetchNewEvents(lastSeen);
+      if (recent.length) {
+        lastSeen = recent[recent.length - 1].LocaleMessageTime;
+        events.push(...recent);
+      }
+      const initial = await buildOccupancy(events);
+      initial.totalVisitedToday = await fetchTotalVisitedToday(); // <-- ADD THIS LINE
+      res.write(`data: ${JSON.stringify(initial)}\n\n`);
+    }
+
+    const timer = setInterval(push, 1000);
+    req.on('close', () => clearInterval(timer));
+
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+
 check all file carefully and give me updated file as per request . dont make another changes in this file
 
 const { poolConnect, pool, sql } = require('../config/db');
