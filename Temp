@@ -1,3 +1,96 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import SummaryChart from '../components/SummaryChart';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
+import SummaryCards from '../components/SummaryCards';
+
+export default function DashboardHome({
+  summaryData,
+  detailsData,
+  floorData,
+  zoneBreakdown,
+  personnelBreakdown,
+  totalVisitedToday,
+  personnelSummary
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  return (
+    <>
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+      />
+
+      <h2 className="mb-4">Occupancy Summary</h2>
+      <SummaryChart summary={summaryData} />
+
+      <h2 className="mb-4">Floor Occupancy</h2>
+      <FloorOccupancyChart data={floorData} />
+
+      <h2 className="mb-4">Zone Breakdown</h2>
+      <ZoneBreakdownTable data={zoneBreakdown} />
+
+      <h2 className="mb-4">Zone Details (Preview)</h2>
+      <ZoneDetailsTable data={detailsData} />
+
+      <h2 className="mb-4">Personnel Type Breakdown</h2>
+      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
+
+      <div className="mt-3">
+        <Link to="/details" className="btn btn-primary">
+          View Full Zone Details
+        </Link>
+      </div>
+    </>
+  );
+}
+
+
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+
+const SummaryCards = ({ totalOccupancy, employeeCount, contractorCount }) => {
+  const cards = [
+    { title: 'Total Occupancy', value: totalOccupancy },
+    { title: 'Employees Occupancy', value: employeeCount },
+    { title: 'Contractors Occupancy', value: contractorCount }
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((card, idx) => (
+        <Col key={idx} sm={6} md={3} className="mb-3">
+          <Card className="text-center shadow-sm">
+            <Card.Body>
+              <Card.Title>{card.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                {card.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export default SummaryCards;
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
