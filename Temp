@@ -1,356 +1,55 @@
-// src/index.js
-import 'bootstrap/dist/css/bootstrap.min.css';
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
-import './index.css';  // our custom overrides
-
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-
-
-
-
-/* src/index.css */
-:root {
-  --wu-yellow: #ffc82c;
-  --wu-black:  #000000;
-  --wu-grey:   #f5f5f5;
-  --wu-dark:   #343a40;
-
-  /* Accent or chart colors */
-  --wu-green:  #00b159;
-  --wu-red:    #e02b2b;
-  --wu-orange: #ff7f27;
-}
-
-/* Example global styles */
-body {
-  background-color: var(--wu-grey);
-  color: var(--wu-dark);
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  margin: 0;
-  padding: 0;
-}
-
-/* Override Bootstrap primary button */
-.btn-primary {
-  background-color: var(--wu-yellow);
-  border-color: var(--wu-yellow);
-  color: var(--wu-black);
-}
-
-.btn-primary:hover,
-.btn-primary:focus {
-  background-color: #e6ba28;
-  border-color: #e6ba28;
-}
-
-
-
-
-
+this is my Current app.js file now Wrap abobe file in my current file and give me Updated app.js file .then we will move phase 2
 
 // src/App.js
-import React from 'react';
-import { Container, Navbar } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import DashboardHome from './pages/DashboardHome';
-import ZoneDetailsPage from './pages/ZoneDetailsPage';
+
+import React, { useEffect, useState } from 'react';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
 import './App.css';
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union
-        </Navbar.Brand>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route path="/"        element={<DashboardHome />} />
-          <Route path="/details" element={<ZoneDetailsPage />} />
-        </Routes>
-      </Container>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-
-
-
-npm install react-router-dom
-
-
-
-
-client/src/pages/
-├── DashboardHome.jsx
-└── ZoneDetailsPage.jsx
-
-
-
-
-
-import React from 'react';
-
-export default function DashboardHome() {
-  return (
-    <div>
-      <h2>Dashboard Overview</h2>
-      {/* We’ll fill this in with cards and charts in later steps */}
-    </div>
-  );
-}
-
-
-
-
-import React from 'react';
-
-export default function ZoneDetailsPage() {
-  return (
-    <div>
-      <h2>Zone Details</h2>
-      {/* We’ll add the detail tables here in Phase 5 */}
-    </div>
-  );
-}
-
-
-
-
-backend 
-
-
-
-// SwipeData/employee-ai-insights/server.js
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-
-const employeeRoutes = require('./routes/employeeRoutes');
-const liveRt       = require('./routes/liveOccupancyRoutes');
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);
-
-
-// ————— DEBUG: list all registered routes —————
-// Register routes
-app.use('/api', employeeRoutes);
-app.use('/api', liveRt);
-
-
-// ————— DEBUG: list all registered routes —————
-console.log('\n📋 Registered routes:');
-if (app._router && app._router.stack) {
-  app._router.stack
-    .filter(layer => layer.route)
-    .forEach(layer => {
-      const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
-      console.log(`  ${methods}\t/api${layer.route.path}`);
-    });
-} else {
-  console.log('⚠️ No routes registered or Express internals changed.');
-}
-
-
-const buildPath = path.join(__dirname, '..', 'client', 'build');
-app.use(express.static(buildPath));
-app.get('/health', (req, res) => {
-  res.send('OK');
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
-
-
-
-react file 1
-
-Components/SummaryCharts.js
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from 'recharts';
-
-const SummaryChart = ({ summary }) => (
-  <div className="mb-5">
-    <h4>Zone-wise Occupancy</h4>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={summary}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="zone" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Bar dataKey="count" fill="#007bff" />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-);
-
-export default SummaryChart;
-
-
-
-
-ZoneDeatailstable.js
-
-import React from 'react';
-import { Accordion, Table } from 'react-bootstrap';
-
-const ZoneDetailsTable = ({ details }) => (
-  <div>
-    <h4>Details by Zone</h4>
-    <Accordion defaultActiveKey="0">
-      {Object.entries(details).map(([zone, entries], index) => (
-        <Accordion.Item eventKey={index.toString()} key={zone}>
-          <Accordion.Header>
-            {zone} – {entries.length} People
-          </Accordion.Header>
-          <Accordion.Body>
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Swipe Time</th>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Card Number</th>
-                  <th>Personnel Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry, i) => (
-                  <tr key={i}>
-                    <td>{entry.Swipe_Time}</td>
-                    <td>{entry.EmployeeID}</td>
-                    <td>{entry.ObjectName1}</td>
-                    <td>{entry.CardNumber}</td>
-                    <td>{entry.PersonnelType}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Accordion.Body>
-        </Accordion.Item>
-      ))}
-    </Accordion>
-  </div>
-);
-
-export default ZoneDetailsTable;
-
-
-
-
-// src/services/api.js
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/live-occupancy';  
-
-// Using a relative path — the Express server will proxy or serve this.
-
-export async function fetchOccupancyData() {
-  const resp = await axios.get(API_URL);
-  return resp.data;
-}
-
-
-
-
-App.js
-
-
-import React, { useEffect, useState } from 'react';
-import { fetchOccupancyData } from './services/api';
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import 'bootstrap/dist/css/bootstrap.min.css';
-
-function App() {
-  const [data, setData] = useState(null);
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const newData = await fetchOccupancyData();
-      setData(newData);
-    }, 5000);
+const es = new EventSource('http://localhost:5000/api/live-occupancy');
+  es.onmessage = (e) => {
+    try {
+      const payload = JSON.parse(e.data);
+      console.log('SSE payload:', payload);
+      setSummaryData(payload.summary || []);
+      setDetailsData(payload.details || {});
+    } catch (err) {
+      console.error('SSE parse error:', err);
+    }
+  };
+  es.onerror = err => {
+    console.error('SSE error:', err);
+    es.close();
+  };
 
-    return () => clearInterval(interval);
+  // cleanup on unmount
+  return () => es.close();
   }, []);
 
-  if (!data) return <div className="text-center mt-5">Loading...</div>;
 
   return (
-    <div className="container mt-4">
-      <h2 className="text-center mb-4">Live Employee Occupancy Dashboard</h2>
-      <SummaryChart summary={data.summary} />
-      <ZoneDetailsTable details={data.details} />
+    <div className="App">
+      <header className="App-header">
+        <h1>Live Occupancy Dashboard</h1>
+      </header>
+      <main>
+        <section>
+          <h2>Occupancy Summary</h2>
+          <SummaryChart summary={summaryData} />
+        </section>
+        <section>
+          <h2>Zone Details</h2>
+          <ZoneDetailsTable data={detailsData} />
+        </section>
+      </main>
     </div>
   );
 }
 
 export default App;
-
-
-
-
-
-Read all file files carefully for more information raed api resonce 
-
-
-data: {"asOf":"2025-05-16T21:05:37.035Z","summary":[{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"details":{"GSOC":[{"Dateonly":"2025-05-17","Swipe_Time":"01:30:06","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"23:00:07","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"02:00:59","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]}}
-
-data: {"asOf":"2025-05-16T21:05:37.601Z","summary":[{"zone":"GSOC","count":2},{"zone":"YELLOW Zone","count":1}],"details":{"GSOC":[{"Dateonly":"2025-05-17","Swipe_Time":"01:30:06","EmployeeID":"75620900","ObjectName1":"Kakade, Aniket Pratap","CardNumber":"619956","PersonnelType":"Contractor","zone":"GSOC"},{"Dateonly":"2025-05-16","Swipe_Time":"23:00:07","EmployeeID":"W0024618","ObjectName1":"Diwate, Swapnil","CardNumber":"619957","PersonnelType":"Contractor","zone":"GSOC"}],"YELLOW Zone":[{"Dateonly":"2025-05-17","Swipe_Time":"02:00:59","EmployeeID":"W0024552","ObjectName1":"Raza, Ahmed","CardNumber":"615795","PersonnelType":"Contractor","zone":"YELLOW Zone"}]}}
-
-
- issue is there My react APP.not shows any data on Ui 
-
-
-Compiling...
-Compiled successfully!
-
-You can now view client in the browser.
-
-  Local:            http://localhost:3002/
-  On Your Network:  http://10.199.29.107:3002/
-
-Note that the development build is not optimized.
-To create a production build, use npm run build.
-Compiling...
-Compiled successfully!
-
-You can now view client in the browser.
-
-  Local:            http://localhost:3002/
-  On Your Network:  http://10.199.29.107:3002/
-
-Note that the development build is not optimized.
-To create a production build, use npm run build.
-
-
-
-
