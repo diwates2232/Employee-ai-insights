@@ -1,380 +1,106 @@
-// src/pages/DashboardHome.jsx
+read carefully App.js file carefully and give me updated js file carefully.dont make unneccesarry changes.
 
-import React from 'react';
-import { Container, Row, Col, Card } from 'react-bootstrap';
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
-export default function DashboardHome({
-  // summary cards data:
-  personnelSummary,      // { employees: number, contractors: number }
-  totalVisitedToday,     // optional if you want fourth card
-  // charts data:
-  floorData,             // [{ floor, … }]
-  zoneSummaryData,       // [{ zone, count }]
-  personnelBreakdown     // [{ personnelType, count }]
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
+import DashboardHome from './pages/DashboardHome';
 
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <Container fluid className="py-4">
-      {/* 0. Top Summary Cards */}
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-      />
-
-      {/* Page title */}
-      <h1 className="mb-4">Site WU – Pune</h1>
-
-      {/* Three‐chart row */}
-      <Row className="g-4">
-        {/* 1. Floor-wise Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Floor-wise Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <FloorOccupancyChart data={floorData} />
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* 2. Zone-wise Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Zone-wise Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <SummaryChart summary={zoneSummaryData} />
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* 3. Personnel Type Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Personnel Type Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <PersonnelDonutChart data={personnelBreakdown} />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
-  );
-}
-
-
-
-
-
-
-
-
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Container, Row, Col, Card } from 'react-bootstrap';
-
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart'; // see stub below
-
-export default function DashboardHome({
-  floorData,           // e.g. [{ floor: 'Podium', total: 4, ... }, ...]
-  zoneSummaryData,     // e.g. [{ zone: 'Red Zone', count: 4 }, ...]
-  personnelBreakdown   // e.g. [{ personnelType: 'Employee', count: 5 }, ...]
-}) {
-  return (
-    <Container fluid className="py-4">
-      {/* Page title */}
-      <h1 className="mb-4">Site WU – Pune</h1>
-
-      {/* Three‐chart row */}
-      <Row className="g-4">
-        {/* 1. Floor-wise Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Floor-wise Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <FloorOccupancyChart data={floorData} />
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* 2. Zone-wise Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Zone-wise Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <SummaryChart summary={zoneSummaryData} />
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* 3. Personnel Type Occupancy */}
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Header>Personnel Type Occupancy</Card.Header>
-            <Card.Body style={{ height: 300 }}>
-              <PersonnelDonutChart data={personnelBreakdown} />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
-  );
-}
-
-
-
-
-
-
-// src/components/PersonnelDonutChart.jsx
-
-import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
-
-// You can tweak these colors or map by type
-const COLORS = ['#28a745', '#fd7e14', '#007bff', '#6f42c1'];
-
-export default function PersonnelDonutChart({ data = [] }) {
-  if (!data.length) return <p>No data to display</p>;
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          dataKey="count"
-          nameKey="personnelType"
-          cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={80}
-          label
-        >
-          {data.map((entry, idx) => (
-            <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-        <Legend verticalAlign="bottom" height={36} />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Row, Col, Tabs, Tab, ListGroup, Card, Container } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import SummaryChart from '../components/SummaryChart';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
-
-// Helper: Group zones by floor
-function groupZonesByFloor(zoneBreakdown) {
-  const grouped = {};
-  for (const zone of zoneBreakdown || []) {
-    const floor = zone.floor || 'Unknown Floor';
-    if (!grouped[floor]) grouped[floor] = [];
-    grouped[floor].push(zone);
-  }
-  return grouped;
-}
-
-export default function DashboardHome({
-  summaryData,
-  detailsData,
-  floorData,
-  zoneBreakdown,
-  personnelBreakdown,
-  personnelSummary
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  const zonesByFloor = groupZonesByFloor(zoneBreakdown);
-
-  return (
-    <Container fluid>
-      {/* 1. Summary Cards */}
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-      />
-
-      {/* 2. Occupancy Summary */}
-      <h2 className="mt-4 mb-3">Occupancy Summary</h2>
-      <Row>
-        <Col md={8}>
-          <SummaryChart summary={summaryData} />
-        </Col>
-        <Col md={4}>
-          <Card>
-            <Card.Header>Zone Totals</Card.Header>
-            <ListGroup variant="flush">
-              {summaryData.map((z, i) => (
-                <ListGroup.Item key={i}>
-                  {z.zone}: {z.count}
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 3. Floor-wise Zone Breakdown */}
-      <h2 className="mt-5 mb-3">Floor-wise Zone Breakdown</h2>
-      {Object.entries(zonesByFloor).map(([floor, zones]) => (
-        <div key={floor} className="mb-4">
-          <h4 className="mb-3">{floor}</h4>
-          <Row>
-            {zones.map((zone, idx) => (
-              <Col key={idx} sm={6} md={4} lg={3}>
-                <Card className="mb-3">
-                  <Card.Body>
-                    <Card.Title>{zone.zone}</Card.Title>
-                    <Card.Text>
-                      Occupancy: <strong>{zone.count}</strong>
-                    </Card.Text>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </div>
-      ))}
-
-      {/* 4. Floor Chart */}
-      <h2 className="mt-5 mb-3">Floor Occupancy Chart</h2>
-      <FloorOccupancyChart data={floorData} />
-
-      {/* 5. Personnel Breakdown */}
-      <h2 className="mt-5 mb-3">Personnel Type Breakdown</h2>
-      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
-
-      {/* 6. Details Link */}
-      <div className="mt-4">
-        <Link to="/details" className="btn btn-primary">
-          View Full Zone Details
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
         </Link>
       </div>
-    </Container>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
 }
 
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 }); // <-- Added state
 
-
-
-
-
-
-
-
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Row, Col, Tabs, Tab, ListGroup, Card, Container } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import SummaryChart from '../components/SummaryChart';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import ZoneBreakdownTable from '../components/ZoneBreakdownTable';
-import PersonnelTypeBreakdownTable from '../components/PersonnelTypeBreakdownTable';
-import ZoneDetailsTable from '../components/ZoneDetailsTable';
-
-export default function DashboardHome({
-  summaryData,
-  detailsData,
-  floorData,
-  zoneBreakdown,
-  personnelBreakdown,
-  personnelSummary
-}) {
-  // card values
-  const employees   = personnelSummary?.employees   ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 }); // <-- Fixed
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <Container fluid>
-      {/* 1. Top-level summary cards */}
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-      />
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Pune
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
 
-      {/* 2. Occupancy Summary section */}
-      <h2 className="mt-4 mb-3">Occupancy Summary</h2>
-      <Row>
-        <Col md={8}>
-          <SummaryChart summary={summaryData} />
-        </Col>
-        <Col md={4}>
-          <Card>
-            <Card.Header>Zone Totals</Card.Header>
-            <ListGroup variant="flush">
-              {summaryData.map((z, i) => (
-                <ListGroup.Item key={i}>
-                  {z.zone}: {z.count}
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 3. Floor-wise Occupancy */}
-      <h2 className="mt-5 mb-3">Floor-wise Occupancy</h2>
-      <FloorOccupancyChart data={floorData} />
-
-      {/* 5. Personnel Type Breakdown */}
-      <h2 className="mt-5 mb-3">Personnel Type Breakdown</h2>
-      <PersonnelTypeBreakdownTable data={personnelBreakdown} />
-
-     
-      <div className="mt-3">
-        <Link to="/details" className="btn btn-primary">
-          View Full Zone Details
-        </Link>
-      </div>
-    </Container>
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                summaryData={summaryData}
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary} // <-- Passed as prop
+              />
+            }
+          />
+          <Route
+            path="/details"
+            element={<ZoneDetailsPage detailsData={detailsData} />}
+          />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
+export default App;
 
 
