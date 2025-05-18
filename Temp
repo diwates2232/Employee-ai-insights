@@ -1,3 +1,27 @@
+return (
+  <Container fluid>
+    <h3 className="mb-4">Site: WU – Pune</h3>
+
+    {/* Floor-wise Occupancy */}
+    <h4 className="mb-3">1. Floor-wise Occupancy</h4>
+    <FloorOccupancyChart data={floorData} />
+
+    {/* Zone-wise Occupancy */}
+    <h4 className="mt-5 mb-3">2. Zone-wise Occupancy</h4>
+    <SummaryChart summary={zoneSummaryData} />
+
+    {/* Personnel Type Breakdown */}
+    <h4 className="mt-5 mb-3">3. Personnel Type Breakdown</h4>
+    <PersonnelTypeBreakdownTable data={personnelBreakdown} />
+  </Container>
+);
+
+
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
