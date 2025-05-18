@@ -1,3 +1,249 @@
+// src/components/SummaryChart.jsx
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  defs,
+  linearGradient,
+  stop
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  return (
+    <Card className="mb-4">
+      <Card.Header>Zone-wise Occupancy</Card.Header>
+      <Card.Body style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={summary} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+            <defs>
+              <linearGradient id="zoneGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#007bff" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#007bff" stopOpacity={0.2}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="zone" tick={{ fontSize: 12 }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend wrapperStyle={{ bottom: 0 }} />
+            <Bar
+              dataKey="count"
+              name="Count"
+              fill="url(#zoneGradient)"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  CartesianGrid
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+const COLORS = {
+  Contractor: '#fd7e14',
+  'Property Management': '#28a745',
+  // add more personnel types here...
+};
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body>No floor data available</Card>;
+  }
+
+  // determine all personnel types present
+  const types = Array.from(
+    new Set(data.flatMap(d => Object.keys(d).filter(k => k !== 'floor' && k !== 'total')))
+  );
+
+  return (
+    <Card className="mb-4">
+      <Card.Header>Floor-wise Occupancy</Card.Header>
+      <Card.Body style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="floor" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend wrapperStyle={{ bottom: -10 }} />
+            {types.map((type, idx) => (
+              <Bar
+                key={type}
+                dataKey={type}
+                stackId="a"
+                name={type}
+                fill={COLORS[type] || '#cccccc'}
+                radius={[8, 8, 0, 0]}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+// src/components/PersonnelDonutChart.jsx
+import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
+
+export default function PersonnelDonutChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body>No personnel data</Card>;
+  }
+
+  const total = data.reduce((sum, entry) => sum + entry.count, 0);
+
+  return (
+    <Card className="mb-4">
+      <Card.Header>Personnel Type Occupancy</Card.Header>
+      <Card.Body style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={4}
+              labelLine={false}
+            >
+              {data.map((entry, idx) => (
+                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+              ))}
+              {/* Center total label */}
+              <Label
+                value={total}
+                position="center"
+                className="recharts-text recharts-label"
+                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ paddingTop: 10 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+// src/pages/DashboardHome.jsx
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  // Flatten personnelBreakdown into chart data:
+  const typeCounts = {};
+  for (const item of personnelBreakdown) {
+    for (const [key, val] of Object.entries(item)) {
+      if (key !== 'zone') typeCounts[key] = (typeCounts[key] || 0) + val;
+    }
+  }
+  const chartData = Object.entries(typeCounts).map(([personnelType, count]) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      {/* Summary cards */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      {/* three‐chart row */}
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
 DashboardHome.jsx
 
 
