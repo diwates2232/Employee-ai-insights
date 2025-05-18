@@ -1,3 +1,85 @@
+// src/pages/DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col, Card } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  // summary cards data:
+  personnelSummary,      // { employees: number, contractors: number }
+  totalVisitedToday,     // optional if you want fourth card
+  // charts data:
+  floorData,             // [{ floor, … }]
+  zoneSummaryData,       // [{ zone, count }]
+  personnelBreakdown     // [{ personnelType, count }]
+}) {
+  const employees       = personnelSummary?.employees   ?? 0;
+  const contractors     = personnelSummary?.contractors ?? 0;
+  const totalOccupancy  = employees + contractors;
+
+  return (
+    <Container fluid className="py-4">
+      {/* 0. Top Summary Cards */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      {/* Optional Page Title */}
+      <h3 className="mb-4">Site: WU – Pune</h3>
+
+      {/* 3-Chart Row */}
+      <Row className="g-4">
+        {/* 1. Floor-wise Occupancy */}
+        <Col md={4}>
+          <Card className="h-100">
+            <Card.Header>Floor-wise Occupancy</Card.Header>
+            <Card.Body style={{ height: 300 }}>
+              <FloorOccupancyChart data={floorData} />
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* 2. Zone-wise Occupancy */}
+        <Col md={4}>
+          <Card className="h-100">
+            <Card.Header>Zone-wise Occupancy</Card.Header>
+            <Card.Body style={{ height: 300 }}>
+              <SummaryChart summary={zoneSummaryData} />
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* 3. Personnel Type Occupancy */}
+        <Col md={4}>
+          <Card className="h-100">
+            <Card.Header>Personnel Type Occupancy</Card.Header>
+            <Card.Body style={{ height: 300 }}>
+              <PersonnelDonutChart data={personnelBreakdown} />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 return (
   <Container fluid>
     <h3 className="mb-4">Site: WU – Pune</h3>
