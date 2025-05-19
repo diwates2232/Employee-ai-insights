@@ -1,3 +1,83 @@
+// src/components/PersonnelDonutChart.jsx
+import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Fixed color palette (can be customized)
+const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
+
+// Always include these personnel types
+const ALL_PERSONNEL_TYPES = ['Employee', 'Contractor', 'Property Management', 'Other'];
+
+export default function PersonnelDonutChart({ data = [] }) {
+  // Normalize data to ensure all types exist (even with zero)
+  const normalizedData = ALL_PERSONNEL_TYPES.map((type) => {
+    const existing = data.find((entry) => entry.personnelType === type);
+    return {
+      personnelType: type,
+      count: existing?.count || 0
+    };
+  });
+
+  const total = normalizedData.reduce((sum, entry) => sum + entry.count, 0);
+
+  if (total === 0) {
+    return <Card body>No personnel data available</Card>;
+  }
+
+  return (
+    <Card className="mb-4">
+      <Card.Header>Personnel Type Occupancy</Card.Header>
+      <Card.Body style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={normalizedData}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={3}
+              labelLine={false}
+              label={({ percent }) =>
+                percent > 0 ? `${(percent * 100).toFixed(0)}%` : ''
+              }
+            >
+              {normalizedData.map((entry, idx) => (
+                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                className="recharts-text recharts-label"
+                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
 Read carefully this file and give me updated file 
 
 
