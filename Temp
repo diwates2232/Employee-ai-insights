@@ -1,4 +1,40 @@
+
+
+
+
+
+
+
 node scripts/generateDoorZoneMap.js
+
+
+
+
+// Add inside data.forEach
+data.forEach((row, index) => {
+  console.log(`Row ${index + 2}:`, row); // Debug print
+
+  const door = row['Door Name']?.trim();
+  const inZone = row['IN Direction Zone Name']?.trim();
+  const outZone = row['OUT Direction Zone Name']?.trim();
+
+  if (!door) return;
+
+  if (inZone) {
+    map[`${door}___InDirection`] = inZone;
+  }
+
+  if (outZone) {
+    map[`${door}___OutDirection`] = outZone;
+  }
+});
+
+
+
+
+
+
+
 
 
 const fs = require('fs');
