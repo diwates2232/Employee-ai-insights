@@ -1,3 +1,61 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+// Paths
+const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
+const outputFilePath = path.join(__dirname, '../data/doorZoneMap.js');
+
+// Read workbook
+const workbook = xlsx.readFile(inputFilePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const data = xlsx.utils.sheet_to_json(sheet);
+
+const map = {};
+
+data.forEach((row, index) => {
+  const door = row['Door Name']?.trim();
+  const inZone = row['IN Zone']?.trim();
+  const outZone = row['OUT Zone']?.trim();
+
+  if (!door) {
+    console.warn(`Skipping row ${index + 2}: Missing door name`);
+    return;
+  }
+
+  if (inZone) {
+    map[`${door}___InDirection`] = inZone;
+  }
+
+  if (outZone) {
+    map[`${door}___OutDirection`] = outZone;
+  }
+});
+
+const fileContent = `// Auto-generated from punedoor.xlsx
+
+function mapDoorToZone(door, direction) {
+  const key = \`\${door}___\${direction}\`;
+  return doorZoneMap[key];
+}
+
+const doorZoneMap = ${JSON.stringify(map, null, 2)};
+
+module.exports = mapDoorToZone;
+`;
+
+fs.writeFileSync(outputFilePath, fileContent, 'utf8');
+console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entries.`);
+
+
+
+
+
+
+
+
+
+
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap  = require('../data/doorZoneMap'); // renamed from mapDoorToZone to doorZoneMap
 const zoneFloorMap = require('../data/zoneFloorMap');
