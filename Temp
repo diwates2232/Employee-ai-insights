@@ -1,426 +1,14 @@
-node scripts/generateDoorZoneMap.js
-node scripts/generateZoneFloorMap.js
-
-
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
-
-const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
-const outputFilePath = path.join(__dirname, '../data/zoneFloorMap.js');
-
-const workbook = xlsx.readFile(inputFilePath);
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const data = xlsx.utils.sheet_to_json(sheet);
-
-const floorMap = {};
-
-function guessFloorFromZone(zone) {
-  if (!zone || zone.toLowerCase() === 'out of office') return null;
-
-  const lower = zone.toLowerCase();
-  if (lower.includes('b1')) return 'Basement 1';
-  if (lower.includes('b2')) return 'Basement 2';
-  if (lower.includes('ground')) return 'Ground Floor';
-  if (lower.includes('1st') || lower.includes('first')) return '1st Floor';
-  if (lower.includes('2nd') || lower.includes('second')) return '2nd Floor';
-  if (lower.includes('3rd') || lower.includes('third')) return '3rd Floor';
-  if (lower.includes('4th') || lower.includes('fourth')) return '4th Floor';
-  if (lower.includes('tower b')) return 'Tower B';
-  if (lower.includes('podium')) return 'Podium';
-  return 'Unknown Floor';
-}
-
-data.forEach(row => {
-  const zones = [
-    row['IN Zone']?.trim(),
-    row['OUT Zone']?.trim()
-  ];
-
-  zones.forEach(zone => {
-    const floor = guessFloorFromZone(zone);
-    if (zone && zone.toLowerCase() !== 'out of office' && floor) {
-      floorMap[zone] = floor;
-    }
-  });
-});
-
-const content = `// Auto-generated from punedoor.xlsx
-const zoneFloorMap = ${JSON.stringify(floorMap, null, 2)};
-module.exports = zoneFloorMap;
-`;
-
-fs.writeFileSync(outputFilePath, content, 'utf8');
-console.log(`✅ zoneFloorMap.js generated with ${Object.keys(floorMap).length} zone entries.`);
-
-
-
-
-
-
-
-
-
-
-node scripts/generateZoneFloorMap.js
-
-
-
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
-
-const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
-const outputFilePath = path.join(__dirname, '../data/zoneFloorMap.js');
-
-const workbook = xlsx.readFile(inputFilePath);
-const sheetName = workbook.SheetNames[0];
-const sheet = workbook.Sheets[sheetName];
-const data = xlsx.utils.sheet_to_json(sheet);
-
-const zoneSet = new Set();
-
-data.forEach((row, index) => {
-  const inZone  = row['IN Direction Zone Name']?.trim();
-  const outZone = row['OUT Direction Zone Name']?.trim();
-
-  if (inZone) zoneSet.add(inZone);
-  if (outZone) zoneSet.add(outZone);
-});
-
-const zoneMap = {};
-[...zoneSet].forEach(zone => {
-  zoneMap[zone] = 'Unknown Floor'; // Default floor
-});
-
-const fileContent = `// Auto-generated from punedoor.xlsx
-
-const zoneFloorMap = ${JSON.stringify(zoneMap, null, 2)};
-
-module.exports = zoneFloorMap;
-`;
-
-fs.writeFileSync(outputFilePath, fileContent, 'utf8');
-console.log(`✅ zoneFloorMap.js generated with ${zoneSet.size} zone entries.`);
-
-
-
-
-
-
-
-
-
-
-
-
-node scripts/generateDoorZoneMap.js
-
-
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
-
-// Paths
-const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
-const outputFilePath = path.join(__dirname, '../data/doorZoneMap.js');
-
-// Read workbook
-const workbook = xlsx.readFile(inputFilePath);
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const data = xlsx.utils.sheet_to_json(sheet);
-
-const map = {};
-
-data.forEach((row, index) => {
-  const door = row['Door Name']?.trim();
-  const inZone = row['IN Zone']?.trim();
-  const outZone = row['OUT Zone']?.trim();
-
-  if (!door) {
-    console.warn(`Skipping row ${index + 2}: Missing door name`);
-    return;
-  }
-
-  if (inZone) {
-    map[`${door}___InDirection`] = inZone;
-  }
-
-  if (outZone) {
-    map[`${door}___OutDirection`] = outZone;
-  }
-});
-
-const fileContent = `// Auto-generated from punedoor.xlsx
-
-function mapDoorToZone(door, direction) {
-  const key = \`\${door}___\${direction}\`;
-  return doorZoneMap[key];
-}
-
-const doorZoneMap = ${JSON.stringify(map, null, 2)};
-
-module.exports = mapDoorToZone;
-`;
-
-fs.writeFileSync(outputFilePath, fileContent, 'utf8');
-console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entries.`);
-
-
-
-
-
-
-
-
-
+ // controllers/liveOccupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
-const doorZoneMap  = require('../data/doorZoneMap'); // renamed from mapDoorToZone to doorZoneMap
-const zoneFloorMap = require('../data/zoneFloorMap');
+//const mapDoorToZone   = require('../data/doorZoneMap');
+const doorZoneMap=require('../data/doorZoneMap');
+const zoneFloorMap    = require('../data/zoneFloorMap');
 
 // Add this helper function to map door + direction to zone
 function mapDoorToZone(doorName, direction) {
   return doorZoneMap[`${doorName}___${direction}`] || 'Unknown Zone';
 }
-
-async function fetchNewEvents(since) {
-  const req = pool.request();
-  req.input('since', sql.DateTime2, since);
-  const result = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT 
-        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE 
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.[value]
-        ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
-        t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, [value]
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE [Name] IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return result.recordset;
-}
-
-async function fetchTotalVisitedToday() {
-  const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  req.input('start', sql.DateTime2, todayStart);
-
-  const result = await req.query(`
-    WITH DailyVisits AS (
-      SELECT DISTINCT
-        CASE 
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      LEFT JOIN [ACVSCore].[Access].[Personnel] p ON log.ObjectIdentity1 = p.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
-      WHERE 
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
-    )
-    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
-  `);
-
-  return result.recordset[0]?.totalVisitedToday || 0;
-}
-
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, ObjectName1, PersonnelType,
-      CardNumber, Dateonly, Swipe_Time,
-      Direction, Door
-    } = evt;
-
-    const zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
-
-    const dedupKey = EmployeeID || CardNumber || ObjectName1;
-
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, { PersonnelType });
-      current[EmployeeID] = {
-        Dateonly, Swipe_Time, EmployeeID, ObjectName1,
-        CardNumber, PersonnelType, zone
-      };
-    } else {
-      uniquePeople.delete(dedupKey);
-      delete current[EmployeeID];
-    }
-  }
-
-  let employeeCount    = 0;
-  let contractorCount  = 0;
-
-  for (const { PersonnelType } of uniquePeople.values()) {
-    if (PersonnelType === 'Employee' || PersonnelType === 'Terminated Personnel') {
-      employeeCount++;
-    } else {
-      contractorCount++;
-    }
-  }
-
-  const zoneMap = {};
-  Object.values(current).forEach(emp => {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  });
-
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([zone, emps]) => {
-      const byType = emps.reduce((acc, { PersonnelType }) => {
-        acc[PersonnelType] = (acc[PersonnelType] || 0) + 1;
-        return acc;
-      }, {});
-      return [zone, { total: emps.length, byPersonnelType: byType, employees: emps }];
-    })
-  );
-
-  const floorMap = {};
-  for (const [zone, d] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[zone] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += d.total;
-    for (const [pt, c] of Object.entries(d.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt] || 0) + c;
-    }
-  }
-
-  const summary        = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, count: d.total }));
-  const zoneBreakdown  = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, ...d.byPersonnelType, total: d.total }));
-  const floorBreakdown = Object.entries(floorMap).map(([f, d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
-
-  const personnelBreakdown = [];
-  if (employeeCount > 0) {
-    personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
-  }
-  if (contractorCount > 0) {
-    personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
-  }
-
-  return {
-    asOf: new Date().toISOString(),
-    summary,
-    zoneBreakdown,
-    floorBreakdown,
-    details: zoneMap,
-    personnelSummary: { employees: employeeCount, contractors: contractorCount },
-    personnelBreakdown,
-  };
-}
-
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':   'keep-alive'
-    });
-    res.write('\n');
-
-    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60);
-    const events  = [];
-
-    const push = async () => {
-      const fresh = await fetchNewEvents(lastSeen);
-      if (fresh.length) {
-        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
-        events.push(...fresh);
-        const payload = await buildOccupancy(events);
-        payload.totalVisitedToday = await fetchTotalVisitedToday();
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
-      }
-    };
-
-    {
-      const recent = await fetchNewEvents(lastSeen);
-      if (recent.length) {
-        lastSeen = recent[recent.length - 1].LocaleMessageTime;
-        events.push(...recent);
-      }
-      const initial = await buildOccupancy(events);
-      initial.totalVisitedToday = await fetchTotalVisitedToday();
-      res.write(`data: ${JSON.stringify(initial)}\n\n`);
-    }
-
-    const timer = setInterval(push, 1000);
-    req.on('close', () => clearInterval(timer));
-
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-Lets read liveOccupaccyController.js file carefully and solve above issue and give me updated js file carefully.
-dont make another changes in this file 
-
-
-const { poolConnect, pool, sql } = require('../config/db');
-const mapDoorToZone   = require('../data/doorZoneMap');
-const zoneFloorMap    = require('../data/zoneFloorMap');
 
 async function fetchNewEvents(since) {
   const req = pool.request();
@@ -623,7 +211,7 @@ exports.getLiveOccupancy = async (req, res) => {
     });
     res.write('\n');
 
-    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60); // 1 h ago
+    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60 *24); // 1 h agonode scripts/generateDoorZoneMap.js
     const events  = [];
 
     /* helper to push updates */
@@ -658,3 +246,132 @@ exports.getLiveOccupancy = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
+
+
+
+
+file 2
+
+// Auto-generated from punedoor.xlsx  doorZonemap.js 
+
+function mapDoorToZone(door, direction) {
+  const key = `${door}___${direction}`;
+  return doorZoneMap[key];
+}
+
+const doorZoneMap = {
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___OutDirection": "ST-1",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___OutDirection": "Out of office",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___OutDirection": "ST-1",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___InDirection": "Green Zone- Pantry",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___OutDirection": "Green - Outer",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow - Outer",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone - Pantry",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow - Outer",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___OutDirection": "Assembly Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___OutDirection": "Assembly Area",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR___OutDirection": "Out of Office",
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR___OutDirection": "Out of Office",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR___OutDirection": "Out of Office",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR___OutDirection": "Out of Office",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___OutDirection": "ST - 6",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___OutDirection": "ST - 6",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___OutDirection": "ST - 5",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___OutDirection": "ST - 5",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___OutDirection": "Reception Area",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___OutDirection": "Reception Area",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_UPS ROOM___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_MDF ROOM___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_PAC ROOM___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_GYM ROOM___InDirection": "Tower B"
+};
+
+module.exports = mapDoorToZone;
+
+
+
+
+file 3
+
+
+// Auto-generated from punedoor.xlsx   zoneFloorMap.js
+
+const zoneFloorMap = {
+  "RED ZONE": "Podium Floor",
+  "ST-1": "Podium Floor",
+  "Yellow zone": "Podium Floor",
+  "Reception Area": "Podium Floor",
+  "Green Zone": "Podium Floor",
+  "Orange Zone": "Podium Floor",
+  "2nd Floor, Pune": "2nd Floor",
+  "Green Zone- Pantry": "Podium Floor",
+  "Green - Outer": "Podium Floor",
+  "Yellow - Outer": "Podium Floor",
+  "Yellow zone - Pantry": "Podium Floor",
+  "Assembly Area": "Podium Floor",
+  "Tower B": "Tower B",
+  "ST - 6": "Tower B",
+  "ST - 5": "Tower B"
+};
+module.exports = zoneFloorMap;
