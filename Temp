@@ -1,3 +1,61 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+// Load Excel file
+const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
+const outputFilePath = path.join(__dirname, '../data/doorZoneMap.js');
+
+const workbook = xlsx.readFile(inputFilePath);
+const sheetName = workbook.SheetNames[0];
+const sheet = workbook.Sheets[sheetName];
+const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+const map = {};
+
+data.forEach((row, index) => {
+  console.log(`Row ${index + 2}:`, row); // Show full row
+
+  const door = row['Name']?.trim();
+  const inDir = row['IN Direction']?.trim();
+  const inZone = row['Zone']?.trim();
+
+  const outDir = row['OUT Direction']?.trim();
+  const outZone = row['Zone ']?.trim(); // Note the space
+
+  if (!door) return;
+
+  if (inDir && inZone) {
+    map[`${door}___InDirection`] = inZone;
+  }
+
+  if (outDir && outZone) {
+    map[`${door}___OutDirection`] = outZone;
+  }
+});
+
+const fileContent = `// Auto-generated from punedoor.xlsx
+
+const doorZoneMap = ${JSON.stringify(map, null, 2)};
+
+module.exports = doorZoneMap;
+`;
+
+fs.writeFileSync(outputFilePath, fileContent, 'utf8');
+console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entries.`);
+
+
+
+
+
+
+
+
+
+
+
+
+
 When i run this generateDoorZoneMap.js file 
 
 const fs = require('fs');
