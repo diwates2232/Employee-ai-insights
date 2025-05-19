@@ -1,261 +1,96 @@
-// src/pages/DashboardHome.jsx
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+Read below file as well uploded file carefully.and update logic carefully.
+if in case we found Swipe but there is no zone spcified then dont remove their count 
+in that case create unknown zone and already we have floor details .
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  // Aggregate all personnel types
-  const personnelTypeCounts = {
-    Employee: employees,
-    Contractor: contractors
-  };
-
-  personnelBreakdown.forEach(({ zone, ...types }) => {
-    for (const [type, count] of Object.entries(types)) {
-      personnelTypeCounts[type] = (personnelTypeCounts[type] || 0) + count;
-    }
-  });
-
-  const chartData = Object.entries(personnelTypeCounts)
-    .filter(([, count]) => count > 0)
-    .map(([personnelType, count]) => ({ personnelType, count }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
-  );
-}
+kindly update each thing carefully and give me updated js file 
 
 
+// data/doorZoneMap.js
 
+const doorZoneMap = {
+  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
+  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
+  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)": "Red Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door": "GSOC",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR": "GREEN Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR": "ORANGE Zone",
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74": "2nd Floor Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0": "2nd Floor Pune",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW": "ORANGE Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW": "YELLOW Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW": "Red Zone",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IBMS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_UPS ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_MDF ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_PAC ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM": "TOWER B Pune",
+  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
+};
 
+// Special door prefixes for dynamic direction-based mapping
+const turnstilePrefixList = [
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
+];
 
-// src/components/PersonnelDonutChart.jsx
-import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
-
-export default function PersonnelDonutChart({ data = [] }) {
-  const total = data.reduce((sum, entry) => sum + entry.count, 0);
-
-  if (!data.length || total === 0) {
-    return <Card body>No personnel data available</Card>;
+function mapDoorToZone(door, direction) {
+  // Direction‐based rule for turnstiles
+  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
+    return direction === 'InDirection' ? 'Reception Area' : null;
   }
 
-  return (
-    <Card className="mb-4">
-      <Card.Header>Personnel Type Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={4}
-              labelLine={false}
-              label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(0)}%`
-              }
-            >
-              {data.map((entry, idx) => (
-                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-              ))}
-              <Label
-                value={total}
-                position="center"
-                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
+  // exact match, or fall back to the literal key lookup
+  return doorZoneMap[door] || 'Unknown Zone';
 }
 
-
-
-
-
-
-
-
-
-Now read both file carefully and give me updated js file carefully
-
-// src/components/PersonnelDonutChart.jsx
-import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
-
-export default function PersonnelDonutChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No personnel data</Card>;
-  }
-
-  const total = data.reduce((sum, entry) => sum + entry.count, 0);
-
-  return (
-    <Card className="mb-4">
-      <Card.Header>Personnel Type Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={4}
-              labelLine={false}
-            >
-              {data.map((entry, idx) => (
-                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-              ))}
-              {/* Center total label */}
-              <Label
-                value={total}
-                position="center"
-                className="recharts-text recharts-label"
-                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ paddingTop: 10 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  // Aggregate personnel counts
-  const personnelTypeCounts = {};
-  personnelBreakdown.forEach(({ zone, ...types }) => {
-    for (const [type, count] of Object.entries(types)) {
-      personnelTypeCounts[type] = (personnelTypeCounts[type] || 0) + count;
-    }
-  });
-
-  // Create chart data only for types with > 0 count
-  const chartData = Object.entries(personnelTypeCounts)
-    .filter(([, count]) => count > 0)
-    .map(([personnelType, count]) => ({ personnelType, count }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
-  );
-}
+module.exports = mapDoorToZone;
 
 
