@@ -1,3 +1,82 @@
+// src/pages/DashboardHome.jsx
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  // Aggregate personnel counts across all zones
+  const personnelTypeCounts = {};
+
+  personnelBreakdown.forEach((zoneEntry) => {
+    const { zone, ...types } = zoneEntry;
+    for (const [type, count] of Object.entries(types)) {
+      if (!personnelTypeCounts[type]) {
+        personnelTypeCounts[type] = 0;
+      }
+      personnelTypeCounts[type] += count;
+    }
+  });
+
+  // Define all known personnel types for consistent chart appearance
+  const ALL_PERSONNEL_TYPES = ['Employee', 'Contractor', 'Property Management', 'Other'];
+  const chartData = ALL_PERSONNEL_TYPES.map((type) => ({
+    personnelType: type,
+    count: personnelTypeCounts[type] || 0
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      {/* Summary cards */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      {/* Three-chart row */}
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Now read below file and give me updated js file carefully
 
 // src/pages/DashboardHome.jsx
