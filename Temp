@@ -1,3 +1,50 @@
+// scripts/generateDoorZoneMap.js
+const fs = require('fs');
+const path = require('path');
+const XLSX = require('xlsx');
+
+// 1) Load the workbook
+const wb = XLSX.readFile(path.resolve(__dirname, '../data/Door Pune.xlsx'));
+
+// 2) Assuming your sheet is the first one
+const ws = wb.Sheets[wb.SheetNames[0]];
+
+// 3) Convert to JSON
+const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+// 4) Build the mapping object
+//    Assuming your sheet has columns: DoorID | Zone
+const doorZoneMap = {};
+rows.forEach(({ DoorID, Zone }) => {
+  if (DoorID && Zone) {
+    doorZoneMap[DoorID.trim()] = Zone.trim();
+  }
+});
+
+// 5) Serialize as a JS module
+const out = `
+// THIS FILE IS AUTO‐GENERATED. DO NOT EDIT BY HAND.
+const doorZoneMap = ${JSON.stringify(doorZoneMap, null, 2)};
+
+module.exports = doorZoneMap;
+`;
+
+fs.writeFileSync(
+  path.resolve(__dirname, '../src/data/doorZoneMap.js'),
+  out,
+  'utf8'
+);
+
+console.log('✅ doorZoneMap.js generated with', Object.keys(doorZoneMap).length, 'entries.');
+
+
+
+
+
+
+
+
+
 // src/data/doorZoneMap.js
 
 const doorZoneMap = {
