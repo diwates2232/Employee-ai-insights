@@ -1,3 +1,63 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
+const outputFilePath = path.join(__dirname, '../data/zoneFloorMap.js');
+
+const workbook = xlsx.readFile(inputFilePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const data = xlsx.utils.sheet_to_json(sheet);
+
+const floorMap = {};
+
+function guessFloorFromZone(zone) {
+  if (!zone || zone.toLowerCase() === 'out of office') return null;
+
+  const lower = zone.toLowerCase();
+  if (lower.includes('b1')) return 'Basement 1';
+  if (lower.includes('b2')) return 'Basement 2';
+  if (lower.includes('ground')) return 'Ground Floor';
+  if (lower.includes('1st') || lower.includes('first')) return '1st Floor';
+  if (lower.includes('2nd') || lower.includes('second')) return '2nd Floor';
+  if (lower.includes('3rd') || lower.includes('third')) return '3rd Floor';
+  if (lower.includes('4th') || lower.includes('fourth')) return '4th Floor';
+  if (lower.includes('tower b')) return 'Tower B';
+  if (lower.includes('podium')) return 'Podium';
+  return 'Unknown Floor';
+}
+
+data.forEach(row => {
+  const zones = [
+    row['IN Zone']?.trim(),
+    row['OUT Zone']?.trim()
+  ];
+
+  zones.forEach(zone => {
+    const floor = guessFloorFromZone(zone);
+    if (zone && zone.toLowerCase() !== 'out of office' && floor) {
+      floorMap[zone] = floor;
+    }
+  });
+});
+
+const content = `// Auto-generated from punedoor.xlsx
+const zoneFloorMap = ${JSON.stringify(floorMap, null, 2)};
+module.exports = zoneFloorMap;
+`;
+
+fs.writeFileSync(outputFilePath, content, 'utf8');
+console.log(`✅ zoneFloorMap.js generated with ${Object.keys(floorMap).length} zone entries.`);
+
+
+
+
+
+
+
+
+
+
 node scripts/generateZoneFloorMap.js
 
 
