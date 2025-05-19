@@ -1,4 +1,42 @@
+const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
+const workbook = xlsx.readFile(path.join(__dirname, '..', 'data', 'punedoor.xlsx'));
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+
+const map = {};
+
+data.forEach((row, index) => {
+  const doorName = row['Door Name']?.trim();
+
+  const inDirection = row['IN Direction']?.trim();
+  const inZone = row['Zone Name']?.trim();
+
+  const outDirection = row['OUT Direction']?.trim();
+  const outZone = row['Zone Name_1']?.trim(); // Excel renames duplicate headers with _1, _2, etc.
+
+  if (!doorName) return;
+
+  if (inDirection && inZone) {
+    map[`${doorName}___InDirection`] = inZone;
+  }
+
+  if (outDirection && outZone) {
+    map[`${doorName}___OutDirection`] = outZone;
+  }
+});
+
+const output = `// Auto-generated door-to-zone mapping from Excel
+
+const doorZoneMap = ${JSON.stringify(map, null, 2)};
+
+module.exports = doorZoneMap;
+`;
+
+fs.writeFileSync(path.join(__dirname, '..', 'data', 'doorZoneMap.js'), output);
+console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entries.`);
 
 
 
