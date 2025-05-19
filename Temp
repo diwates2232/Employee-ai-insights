@@ -1,53 +1,20 @@
-const xlsx = require('xlsx');
+When i run this generateDoorZoneMap.js file 
+
 const fs = require('fs');
 const path = require('path');
+const xlsx = require('xlsx');
 
-const workbook = xlsx.readFile(path.join(__dirname, '..', 'data', 'punedoor.xlsx'));
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
+// Path to your Excel file
+const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
+// Path to output JS file
+const outputFilePath = path.join(__dirname, '../data/doorZoneMap.js');
+
+const workbook = xlsx.readFile(inputFilePath);
+const sheetName = workbook.SheetNames[0];
+const sheet = workbook.Sheets[sheetName];
+const data = xlsx.utils.sheet_to_json(sheet);
 
 const map = {};
-
-data.forEach((row, index) => {
-  const doorName = row['Door Name']?.trim();
-
-  const inDirection = row['IN Direction']?.trim();
-  const inZone = row['Zone Name']?.trim();
-
-  const outDirection = row['OUT Direction']?.trim();
-  const outZone = row['Zone Name_1']?.trim(); // Excel renames duplicate headers with _1, _2, etc.
-
-  if (!doorName) return;
-
-  if (inDirection && inZone) {
-    map[`${doorName}___InDirection`] = inZone;
-  }
-
-  if (outDirection && outZone) {
-    map[`${doorName}___OutDirection`] = outZone;
-  }
-});
-
-const output = `// Auto-generated door-to-zone mapping from Excel
-
-const doorZoneMap = ${JSON.stringify(map, null, 2)};
-
-module.exports = doorZoneMap;
-`;
-
-fs.writeFileSync(path.join(__dirname, '..', 'data', 'doorZoneMap.js'), output);
-console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entries.`);
-
-
-
-
-
-
-node scripts/generateDoorZoneMap.js
-
-
-
-
 // Add inside data.forEach
 data.forEach((row, index) => {
   console.log(`Row ${index + 2}:`, row); // Debug print
@@ -68,45 +35,6 @@ data.forEach((row, index) => {
 });
 
 
-
-
-
-
-
-
-
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
-
-// Path to your Excel file
-const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
-// Path to output JS file
-const outputFilePath = path.join(__dirname, '../data/doorZoneMap.js');
-
-const workbook = xlsx.readFile(inputFilePath);
-const sheetName = workbook.SheetNames[0];
-const sheet = workbook.Sheets[sheetName];
-const data = xlsx.utils.sheet_to_json(sheet);
-
-const map = {};
-
-data.forEach(row => {
-  const door = row['Door Name']?.trim();
-  const inZone = row['IN Direction Zone Name']?.trim();
-  const outZone = row['OUT Direction Zone Name']?.trim();
-
-  if (!door) return;
-
-  if (inZone) {
-    map[`${door}___InDirection`] = inZone;
-  }
-
-  if (outZone) {
-    map[`${door}___OutDirection`] = outZone;
-  }
-});
-
 const fileContent = `// Auto-generated from punedoor.xlsx
 
 const doorZoneMap = ${JSON.stringify(map, null, 2)};
@@ -120,329 +48,52 @@ console.log(`✅ doorZoneMap.js generated with ${Object.keys(map).length} entrie
 
 
 
+We got this output.
 
-
-
-
-
-
-
-
-node scripts/generateDoorZoneMap.js
-
-
-
-
-const fs = require('fs');
-const path = require('path');
-const XLSX = require('xlsx');
-
-// 1. Load the Excel file
-const workbook = XLSX.readFile(path.resolve(__dirname, '../data/punedoor.xlsx'));
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-
-// 2. Build the mapping object from DoorID and Zone columns
-const doorZoneMap = {};
-rows.forEach(({ DoorID, Zone }) => {
-  if (DoorID && Zone) {
-    doorZoneMap[DoorID.trim()] = Zone.trim();
-  }
-});
-
-// 3. Template for final file output
-const outputContent = `
-// THIS FILE IS AUTO-GENERATED FROM EXCEL. DO NOT EDIT MANUALLY.
-const doorZoneMap = ${JSON.stringify(doorZoneMap, null, 2)};
-
-const turnstilePrefixList = [
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
-  "APAC_IN-PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
-];
-
-function mapDoorToZone(door, direction) {
-  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
-    return direction === 'InDirection' ? 'Reception Area' : 'Unknown Zone';
-  }
-
-  return doorZoneMap[door] || 'Unknown Zone';
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node scripts/generateDoorZoneMap.js
+>>
+Row 2: {
+  Name: 'APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door',
+  'IN Direction': 'IN',
+  Zone: 'RED ZONE '
+}
+Row 3: {
+  Name: 'APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)',
+  'IN Direction': 'IN',
+  Zone: 'RED ZONE '
+}
+Row 4: {
+  Name: 'APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR',
+  'IN Direction': 'IN',
+  Zone: 'RED ZONE ',
+  'OUT Direction': 'OUT',
+  'Zone ': 'Out of office'
+}
+Row 5: {
+  Name: 'APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)',
+  'IN Direction': 'IN',
+  Zone: 'RED ZONE ',
+  'OUT Direction': 'OUT',
+  'Zone ': 'ST-1'
 }
 
-module.exports = mapDoorToZone;
-`;
-
-// 4. Write to final destination
-const outPath = path.resolve(__dirname, '../src/data/doorZoneMap.js');
-fs.writeFileSync(outPath, outputContent, 'utf8');
-
-console.log(`✅ doorZoneMap.js generated with ${Object.keys(doorZoneMap).length} entries.`);
+upto
 
 
+}
+Row 62: {
+  Name: 'APAC_IN_PUN_TOWER B_GYM ROOM',
+  'IN Direction': 'IN',
+  Zone: 'Tower B'
+}
+✅ doorZoneMap.js generated with 0 entries.
 
 
+ and  file
 
 
+// Auto-generated from punedoor.xlsx
 
-
-
-
-
-
-
-
-
-
-
-// scripts/generateDoorZoneMap.js
-const fs = require('fs');
-const path = require('path');
-const XLSX = require('xlsx');
-
-// 1) Load the workbook
-const wb = XLSX.readFile(path.resolve(__dirname, '../data/Door Pune.xlsx'));
-
-// 2) Assuming your sheet is the first one
-const ws = wb.Sheets[wb.SheetNames[0]];
-
-// 3) Convert to JSON
-const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-// 4) Build the mapping object
-//    Assuming your sheet has columns: DoorID | Zone
 const doorZoneMap = {};
-rows.forEach(({ DoorID, Zone }) => {
-  if (DoorID && Zone) {
-    doorZoneMap[DoorID.trim()] = Zone.trim();
-  }
-});
-
-// 5) Serialize as a JS module
-const out = `
-// THIS FILE IS AUTO‐GENERATED. DO NOT EDIT BY HAND.
-const doorZoneMap = ${JSON.stringify(doorZoneMap, null, 2)};
 
 module.exports = doorZoneMap;
-`;
-
-fs.writeFileSync(
-  path.resolve(__dirname, '../src/data/doorZoneMap.js'),
-  out,
-  'utf8'
-);
-
-console.log('✅ doorZoneMap.js generated with', Object.keys(doorZoneMap).length, 'entries.');
-
-
-
-
-
-
-
-
-
-// src/data/doorZoneMap.js
-
-const doorZoneMap = {
-  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
-  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
-  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)": "Red Zone",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)": "Red Zone",
-  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR": "YELLOW Zone",
-  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door": "GSOC",
-  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0": "2nd Floor Pune",
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW": "Red Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW": "Red Zone",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_IBMS ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_UPS ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_MDF ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_PAC ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_IT STORE ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
-};
-
-// Turnstile prefixes: treat all OUT-direction the same as unknown
-const turnstilePrefixList = [
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
-  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
-];
-
-function mapDoorToZone(door, direction) {
-  // 1) Turnstiles: IN→Reception, OUT→Unknown (so they remain counted)
-  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
-    return direction === 'InDirection'
-      ? 'Reception Area'
-      : 'Unknown Zone';
-  }
-
-  // 2) Exact mapping
-  if (doorZoneMap[door]) {
-    return doorZoneMap[door];
-  }
-
-  // 3) Fallback: any unmapped door → Unknown Zone
-  return 'Unknown Zone';
-}
-
-module.exports = mapDoorToZone;
-
-
-
-
-
-
-
-
-
-
-
-
-
-Read below file as well uploded file carefully.and update logic carefully.
-if in case we found Swipe but there is no zone spcified then dont remove their count 
-in that case create unknown zone and already we have floor details .
-
-kindly update each thing carefully and give me updated js file 
-
-
-// data/doorZoneMap.js
-
-const doorZoneMap = {
-  "APAC_IN-PUN-PODIUM-RED-RECREATION AREA FIRE EXIT 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door": "Red Zone",
-  "APAC_IN-PUN-PODIUM-MAIN PODIUM LEFT ENTRY-DOOR": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR": "Reception Area",
-  "APAC_IN-PUN-PODIUM-RED-RECEPTION TO WS ENTRY 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)": "Red Zone",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR": "Red Zone",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)": "Red Zone",
-  "APAC_IN-PUN-PODIUM-YELLOW- SERVICE PASSAGE 1 ENTRY-DOOR": "YELLOW Zone",
-  "APAC_IN-PUN-PODIUM-YELLOW-MAIN LIFT LOBBY-DOOR": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door": "GSOC",
-  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR": "GREEN Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR": "ORANGE Zone",
-  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74": "2nd Floor Pune",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO WORKSTATION DOOR_10:05:F0": "2nd Floor Pune",
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW": "Red Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW": "ORANGE Zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW": "YELLOW Zone",
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW": "Red Zone",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW": "Reception Area",
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST5_FIRE EXIT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_ST6_FIRE EXIT DOOR": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_IBMS ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_UPS ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_MDF ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_PAC ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_IT STORE ROOM": "TOWER B Pune",
-  "APAC_IN_PUN_TOWER B_GYM ROOM": "TOWER B Pune"
-};
-
-// Special door prefixes for dynamic direction-based mapping
-const turnstilePrefixList = [
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
-  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
-];
-
-function mapDoorToZone(door, direction) {
-  // Direction‐based rule for turnstiles
-  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
-    return direction === 'InDirection' ? 'Reception Area' : null;
-  }
-
-  // exact match, or fall back to the literal key lookup
-  return doorZoneMap[door] || 'Unknown Zone';
-}
-
-module.exports = mapDoorToZone;
-
-
