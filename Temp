@@ -18,6 +18,71 @@ export default function DashboardHome({
   const contractors = personnelSummary?.contractors ?? 0;
   const totalOccupancy = employees + contractors;
 
+  // Aggregate personnel counts
+  const personnelTypeCounts = {};
+  personnelBreakdown.forEach(({ zone, ...types }) => {
+    for (const [type, count] of Object.entries(types)) {
+      personnelTypeCounts[type] = (personnelTypeCounts[type] || 0) + count;
+    }
+  });
+
+  // Create chart data only for types with > 0 count
+  const chartData = Object.entries(personnelTypeCounts)
+    .filter(([, count]) => count > 0)
+    .map(([personnelType, count]) => ({ personnelType, count }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+// src/pages/DashboardHome.jsx
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
   // Aggregate personnel counts across all zones
   const personnelTypeCounts = {};
 
