@@ -1,146 +1,59 @@
-// src/components/PersonnelDonutChart.jsx
+Now read below file and give me updated js file carefully
+
+// src/pages/DashboardHome.jsx
 import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
 
-// Fixed color palette (can be customized)
-const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
 
-// Always include these personnel types
-const ALL_PERSONNEL_TYPES = ['Employee', 'Contractor', 'Property Management', 'Other'];
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
 
-export default function PersonnelDonutChart({ data = [] }) {
-  // Normalize data to ensure all types exist (even with zero)
-  const normalizedData = ALL_PERSONNEL_TYPES.map((type) => {
-    const existing = data.find((entry) => entry.personnelType === type);
-    return {
-      personnelType: type,
-      count: existing?.count || 0
-    };
-  });
-
-  const total = normalizedData.reduce((sum, entry) => sum + entry.count, 0);
-
-  if (total === 0) {
-    return <Card body>No personnel data available</Card>;
+  // Flatten personnelBreakdown into chart data:
+  const typeCounts = {};
+  for (const item of personnelBreakdown) {
+    for (const [key, val] of Object.entries(item)) {
+      if (key !== 'zone') typeCounts[key] = (typeCounts[key] || 0) + val;
+    }
   }
+  const chartData = Object.entries(typeCounts).map(([personnelType, count]) => ({
+    personnelType,
+    count
+  }));
 
   return (
-    <Card className="mb-4">
-      <Card.Header>Personnel Type Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={normalizedData}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={3}
-              labelLine={false}
-              label={({ percent }) =>
-                percent > 0 ? `${(percent * 100).toFixed(0)}%` : ''
-              }
-            >
-              {normalizedData.map((entry, idx) => (
-                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-              ))}
-              <Label
-                value={total}
-                position="center"
-                className="recharts-text recharts-label"
-                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
+    <Container fluid className="py-4">
+      {/* Summary cards */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      {/* three‐chart row */}
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
   );
 }
-
-
-
-
-
-
-
-Read carefully this file and give me updated file 
-
-
-// src/components/PersonnelDonutChart.jsx
-import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-const COLORS = ['#007bff', '#28a745', '#fd7e14', '#6f42c1'];
-
-export default function PersonnelDonutChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No personnel data</Card>;
-  }
-
-  const total = data.reduce((sum, entry) => sum + entry.count, 0);
-
-  return (
-    <Card className="mb-4">
-      <Card.Header>Personnel Type Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={4}
-              labelLine={false}
-            >
-              {data.map((entry, idx) => (
-                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-              ))}
-              {/* Center total label */}
-              <Label
-                value={total}
-                position="center"
-                className="recharts-text recharts-label"
-                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip formatter={(value) => [`${value}`, 'Count']} />
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ paddingTop: 10 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
