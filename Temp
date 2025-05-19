@@ -1,3 +1,66 @@
+const fs = require('fs');
+const path = require('path');
+const XLSX = require('xlsx');
+
+// 1. Load the Excel file
+const workbook = XLSX.readFile(path.resolve(__dirname, '../data/punedoor.xlsx'));
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+// 2. Build the mapping object from DoorID and Zone columns
+const doorZoneMap = {};
+rows.forEach(({ DoorID, Zone }) => {
+  if (DoorID && Zone) {
+    doorZoneMap[DoorID.trim()] = Zone.trim();
+  }
+});
+
+// 3. Template for final file output
+const outputContent = `
+// THIS FILE IS AUTO-GENERATED FROM EXCEL. DO NOT EDIT MANUALLY.
+const doorZoneMap = ${JSON.stringify(doorZoneMap, null, 2)};
+
+const turnstilePrefixList = [
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR",
+  "APAC_IN-PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR"
+];
+
+function mapDoorToZone(door, direction) {
+  if (turnstilePrefixList.some(prefix => door.startsWith(prefix))) {
+    return direction === 'InDirection' ? 'Reception Area' : 'Unknown Zone';
+  }
+
+  return doorZoneMap[door] || 'Unknown Zone';
+}
+
+module.exports = mapDoorToZone;
+`;
+
+// 4. Write to final destination
+const outPath = path.resolve(__dirname, '../src/data/doorZoneMap.js');
+fs.writeFileSync(outPath, outputContent, 'utf8');
+
+console.log(`✅ doorZoneMap.js generated with ${Object.keys(doorZoneMap).length} entries.`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // scripts/generateDoorZoneMap.js
 const fs = require('fs');
 const path = require('path');
