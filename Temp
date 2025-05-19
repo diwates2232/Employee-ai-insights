@@ -1,3 +1,51 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+const inputFilePath = path.join(__dirname, '../data/punedoor.xlsx');
+const outputFilePath = path.join(__dirname, '../data/zoneFloorMap.js');
+
+const workbook = xlsx.readFile(inputFilePath);
+const sheetName = workbook.SheetNames[0];
+const sheet = workbook.Sheets[sheetName];
+const data = xlsx.utils.sheet_to_json(sheet);
+
+const zoneSet = new Set();
+
+data.forEach((row, index) => {
+  const inZone  = row['IN Direction Zone Name']?.trim();
+  const outZone = row['OUT Direction Zone Name']?.trim();
+
+  if (inZone) zoneSet.add(inZone);
+  if (outZone) zoneSet.add(outZone);
+});
+
+const zoneMap = {};
+[...zoneSet].forEach(zone => {
+  zoneMap[zone] = 'Unknown Floor'; // Default floor
+});
+
+const fileContent = `// Auto-generated from punedoor.xlsx
+
+const zoneFloorMap = ${JSON.stringify(zoneMap, null, 2)};
+
+module.exports = zoneFloorMap;
+`;
+
+fs.writeFileSync(outputFilePath, fileContent, 'utf8');
+console.log(`✅ zoneFloorMap.js generated with ${zoneSet.size} zone entries.`);
+
+
+
+
+
+
+
+
+
+
+
+
 node scripts/generateDoorZoneMap.js
 
 
