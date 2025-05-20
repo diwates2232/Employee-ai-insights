@@ -1,61 +1,5 @@
-// Auto-generated from punedoor.xlsx
-// This file exports a plain object whose keys are "DoorName___Direction" 
-// and whose values are the matching zone.
-
-const doorZoneMap = {
-  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___OutDirection": "ST-1",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "GSOC",
-  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "YELLOW ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "GREEN ZONE",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR___InDirection": "ORANGE ZONE",
-  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
-  // …and so on for all your entries…
-};
-
-module.exports = doorZoneMap;
-
-
-
-
-
-
-
 // controllers/liveOccupancyController.js
+
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap      = require('../data/doorZoneMap');
 const zoneFloorMap     = require('../data/zoneFloorMap');
@@ -64,70 +8,6 @@ const zoneFloorMap     = require('../data/zoneFloorMap');
 function mapDoorToZone(doorName, direction) {
   const key = `${doorName}___${direction}`;
   return doorZoneMap[key] || 'Unknown Zone';
-}
-
-async function fetchNewEvents(since) {
-  // … your existing SQL + querying …
-}
-
-// … fetchTotalVisitedToday …
-
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, ObjectName1, PersonnelType,
-      CardNumber, Dateonly, Swipe_Time,
-      Direction, Door
-    } = evt;
-
-    const zone = mapDoorToZone(Door, Direction);
-    // if swipe‐out from “Out of office”, treat as leave
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      // remove both from current & from uniquePeople
-      const dedup = EmployeeID || CardNumber || ObjectName1;
-      delete current[EmployeeID];
-      uniquePeople.delete(dedup);
-      continue;
-    }
-
-    // build stable dedup key
-    const dedupKey = EmployeeID || CardNumber || ObjectName1;
-
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, { PersonnelType });
-      current[EmployeeID] = {
-        Dateonly, Swipe_Time, EmployeeID, ObjectName1,
-        CardNumber, PersonnelType, zone
-      };
-    } else { // any other swipe-out not "Out of office"
-      uniquePeople.delete(dedupKey);
-      delete current[EmployeeID];
-    }
-  }
-
-  // … rest of your aggregation logic (counts, zoneMap, floorMap) …
-}
-
-// … exports.getLiveOccupancy as before …
-
-
-
-
-
-
-// controllers/liveOccupancyController.js
-
-const { poolConnect, pool, sql } = require('../config/db');
-//const mapDoorToZone   = require('../data/doorZoneMap');
-const doorZoneMap=require('../data/doorZoneMap');
-const zoneFloorMap    = require('../data/zoneFloorMap');
-
-// Add this helper function to map door + direction to zone
-function mapDoorToZone(doorName, direction) {
-  return doorZoneMap[`${doorName}___${direction}`] || 'Unknown Zone';
 }
 
 async function fetchNewEvents(since) {
@@ -201,6 +81,7 @@ async function fetchTotalVisitedToday() {
       SELECT DISTINCT
         CASE 
           WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Visitor', 'Property Management') THEN p.Text9
           ELSE CAST(p.Int1 AS NVARCHAR)
         END AS EmployeeID
       FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
@@ -211,16 +92,20 @@ async function fetchTotalVisitedToday() {
         AND log.PartitionName2 = 'APAC.Default'
         AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
     )
-    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
+    SELECT COUNT(*) AS totalVisitedToday 
+    FROM DailyVisits;
   `);
 
   return result.recordset[0]?.totalVisitedToday || 0;
 }
 
-async function buildOccupancy(allEvents) {
 
-  const current      = {};              // keyed by EmployeeID
-  const uniquePeople = new Map();       // dedup key → person record
+
+// … fetchTotalVisitedToday …
+
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
 
   for (const evt of allEvents) {
     const {
@@ -229,23 +114,32 @@ async function buildOccupancy(allEvents) {
       Direction, Door
     } = evt;
 
-    const zone = mapDoorToZone(Door, Direction) || 'Unknown Zone';
-    
+    const zone = mapDoorToZone(Door, Direction);
+    // if swipe‐out from “Out of office”, treat as leave
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      // remove both from current & from uniquePeople
+      const dedup = EmployeeID || CardNumber || ObjectName1;
+      delete current[EmployeeID];
+      uniquePeople.delete(dedup);
+      continue;
+    }
 
-    // build a stable dedup key: EmployeeID → CardNumber → Name
+    // build stable dedup key
     const dedupKey = EmployeeID || CardNumber || ObjectName1;
 
     if (Direction === 'InDirection') {
-      // add / update
       uniquePeople.set(dedupKey, { PersonnelType });
-      current[EmployeeID] = {
+      current[dedupKey] = {
         Dateonly, Swipe_Time, EmployeeID, ObjectName1,
         CardNumber, PersonnelType, zone
       };
-    } else {
-      // remove
-      uniquePeople.delete(dedupKey);
-      delete current[EmployeeID];
+    } else { // any other swipe-out not "Out of office"
+      // uniquePeople.delete(dedupKey);
+      // delete current[EmployeeID];
+       uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+
+
     }
   }
 
@@ -262,11 +156,15 @@ async function buildOccupancy(allEvents) {
   }
 
   /* ------------ existing zone / floor aggregations ------------- */
+  // const zoneMap = {};
+  // Object.values(current).forEach(emp => {
+
   const zoneMap = {};
-  Object.values(current).forEach(emp => {
+  for (const emp of Object.values(current)) {
+
     zoneMap[emp.zone] = zoneMap[emp.zone] || [];
     zoneMap[emp.zone].push(emp);
-  });
+  };
 
   const zoneDetails = Object.fromEntries(
     Object.entries(zoneMap).map(([zone, emps]) => {
@@ -296,14 +194,11 @@ async function buildOccupancy(allEvents) {
  const personnelBreakdown = [];
 
 if (employeeCount > 0) {
-  personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
+  personnelBreakdown.push({ personnelType: 'Employee,Terminated Personnel', count: employeeCount });
 }
 if (contractorCount > 0) {
-  personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
+  personnelBreakdown.push({ personnelType: 'Contractor,Terminated Contractor,Property Management,Temp Badge,Visitor', count: contractorCount });
 }
-
-
-
 
 
   return {
@@ -366,132 +261,3 @@ exports.getLiveOccupancy = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
-
-
-
-
-
-file 2
-
-// Auto-generated from punedoor.xlsx  doorZonemap.js 
-
-function mapDoorToZone(door, direction) {
-  const key = `${door}___${direction}`;
-  return doorZoneMap[key];
-}
-
-const doorZoneMap = {
-  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___OutDirection": "ST-1",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR___InDirection": "Orange Zone",
-  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___OutDirection": "Out of office",
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___OutDirection": "ST-1",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___InDirection": "Green Zone- Pantry",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___OutDirection": "Green - Outer",
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow - Outer",
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone - Pantry",
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow - Outer",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___OutDirection": "Assembly Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___OutDirection": "Assembly Area",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR___OutDirection": "Out of Office",
-  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR___OutDirection": "Out of Office",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR___OutDirection": "Out of Office",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR___OutDirection": "Out of Office",
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___OutDirection": "Out of office",
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___OutDirection": "Out of office",
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___OutDirection": "ST - 6",
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___OutDirection": "ST - 6",
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___OutDirection": "ST - 5",
-  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___OutDirection": "ST - 5",
-  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___OutDirection": "Reception Area",
-  "APAC_IN_PUN_TOWER B_IBMS ROOM___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_UPS ROOM___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_MDF ROOM___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_PAC ROOM___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_IT STORE ROOM___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_GYM ROOM___InDirection": "Tower B"
-};
-
-module.exports = mapDoorToZone;
-
-
-
-
-file 3
-
-
-// Auto-generated from punedoor.xlsx   zoneFloorMap.js
-
-const zoneFloorMap = {
-  "RED ZONE": "Podium Floor",
-  "ST-1": "Podium Floor",
-  "Yellow zone": "Podium Floor",
-  "Reception Area": "Podium Floor",
-  "Green Zone": "Podium Floor",
-  "Orange Zone": "Podium Floor",
-  "2nd Floor, Pune": "2nd Floor",
-  "Green Zone- Pantry": "Podium Floor",
-  "Green - Outer": "Podium Floor",
-  "Yellow - Outer": "Podium Floor",
-  "Yellow zone - Pantry": "Podium Floor",
-  "Assembly Area": "Podium Floor",
-  "Tower B": "Tower B",
-  "ST - 6": "Tower B",
-  "ST - 5": "Tower B"
-};
-module.exports = zoneFloorMap;
