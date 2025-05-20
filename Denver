@@ -1,3 +1,14 @@
+SELECT DISTINCT
+  t1.ObjectName2 AS DoorName
+FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+WHERE 
+  t1.MessageType = 'CardAdmitted'
+  AND t1.ObjectName2 LIKE '%HQ%' -- only include Denver HQ
+ORDER BY DoorName;
+
+
+
+
 const { sql } = require('./db'); // reuse mssql import from db.js
 const punePool = require('./db').pool;
 
