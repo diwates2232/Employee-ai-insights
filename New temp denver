@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
 
+// Test route for Denver live occupancy
+router.get('/live-occupancy/denver', getDenverLiveOccupancy);
+
+module.exports = router;
+
+
+
+
+
+
+
+
+
+const express = require('express');
+const router = express.Router();
+const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
+
 // Temporary test route
 router.get('/live-occupancy/denver', getDenverLiveOccupancy);
 
