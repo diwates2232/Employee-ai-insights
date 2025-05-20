@@ -1,3 +1,45 @@
+// scripts/generateDenverDoorFloorMap.js
+
+const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
+
+const inputPath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const outputPath = path.join(__dirname, '..', 'config', 'denverDoorFloorMap.js');
+
+const workbook = xlsx.readFile(inputPath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+// Adjust the column names below to match exactly what's in your Excel
+const rows = xlsx.utils.sheet_to_json(sheet);
+
+const doorToFloorMap = {};
+rows.forEach(row => {
+  const door = row['Door Name']?.trim();
+  const floor = row['Floor']?.trim();
+  if (door && floor) {
+    doorToFloorMap[door] = floor;
+  }
+});
+
+const fileContent = `// Auto-generated from doorDenver.xlsx\nmodule.exports = ${JSON.stringify(doorToFloorMap, null, 2)};\n`;
+
+fs.writeFileSync(outputPath, fileContent, 'utf-8');
+console.log(`✅ Denver door-to-floor map saved to: ${outputPath}`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 node scripts/generateDenverDoorFloorMap.js
 
 
