@@ -1,3 +1,58 @@
+--- a/controllers/liveOccupancyController.js
++++ b/controllers/liveOccupancyController.js
+@@ async function buildOccupancy(allEvents) {
+-  const current      = {};
++  const current      = {};  // now keyed by dedupKey, not EmployeeID
+   const uniquePeople = new Map();
+
+   for (const evt of allEvents) {
+     const {
+       EmployeeID, ObjectName1, PersonnelType,
+       CardNumber, Dateonly, Swipe_Time,
+       Direction, Door
+     } = evt;
+
+-    const zone = mapDoorToZone(Door, Direction);
++    const zone = mapDoorToZone(Door, Direction);
+
+     // build stable dedup key
+-    const dedupKey = EmployeeID || CardNumber || ObjectName1;
++    const dedupKey = EmployeeID || CardNumber || ObjectName1;
+
+     if (Direction === 'InDirection') {
+       uniquePeople.set(dedupKey, { PersonnelType });
+-      current[EmployeeID] = {
++      current[dedupKey] = {
+         Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+         CardNumber, PersonnelType, zone
+       };
+     } else {
+       // remove both on swipe‐out
+-      uniquePeople.delete(dedupKey);
+-      delete current[EmployeeID];
++      uniquePeople.delete(dedupKey);
++      delete current[dedupKey];
+     }
+   }
+
+   /* ---- employee vs contractor live counts (summary cards) ---- */
+@@   /* ------------ existing zone / floor aggregations ------------- */
+-  const zoneMap = {};
+-  Object.values(current).forEach(emp => {
++  const zoneMap = {};
++  // current is now keyed by dedupKey, so values() gives one record per person
++  for (const emp of Object.values(current)) {
+     zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+     zoneMap[emp.zone].push(emp);
+   });
+
+   // ... rest of buildOccupancy unchanged ...
+
+
+
+
+
+
 read all Backend file carefully.Our issue is Zone Wise Floor Wise Employee and Contractors Count is not match.
 find the root cause and Why count is not getting correct .solve this issue carefully.
 If need make changes in below file and give me updated js file carefully.
