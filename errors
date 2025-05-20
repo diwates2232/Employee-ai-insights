@@ -1,3 +1,76 @@
+// src/pages/DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown  // ← this now is an array of { personnelType, count }
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+-  // (old) merging everybody else by zone, etc… too much!
+-  const personnelTypeCounts = {
+-    Employee: employees,
+-    Contractor: contractors
+-  };
+-
+-  personnelBreakdown.forEach(({ zone, ...types }) => {
+-    for (const [type, count] of Object.entries(types)) {
+-      personnelTypeCounts[type] = (personnelTypeCounts[type] || 0);
+-    }
+-  });
+-
+-  const chartData = Object.entries(personnelTypeCounts)
+-    .filter(([, count]) => count > 0)
+-    .map(([personnelType, count]) => ({ personnelType, count }));
++  // now just use the backend’s two‐entry array directly
++  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
++    personnelType,
++    count
++  }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+      />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
 
 // controllers/liveOccupancyController.js
 
