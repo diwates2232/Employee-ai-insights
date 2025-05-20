@@ -1,0 +1,29 @@
+const { denver } = require('../config/siteConfig');
+const sql = require('mssql');
+
+async function getDenverLiveOccupancy(req, res) {
+  try {
+    const pool = await denver.pool.connect();
+    const result = await pool.request().query(`
+      -- Your Denver SQL Query Here
+    `);
+
+    const records = result.recordset;
+
+    // TODO: Process records to compute live occupancy summary
+
+    res.json({
+      site: 'Denver',
+      lastUpdated: new Date(),
+      data: records // temporary response
+    });
+
+  } catch (error) {
+    console.error('Error fetching Denver live occupancy:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+module.exports = {
+  getDenverLiveOccupancy
+};
