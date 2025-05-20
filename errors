@@ -1,279 +1,106 @@
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
+lets see read App.js file carefully and give me updated js file carefully
 
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,   // <-- number from backend
-  visitedToday,        // <-- { employees, contractors, total }
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
-  // use the backend’s two‐entry array directly for the donut
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
+import DashboardHome from './pages/DashboardHome';
 
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
 }
 
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
 
-
-
-
-
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa';
-
-const SummaryCards = ({
-  totalOccupancy,
-  employeeCount,
-  contractorCount,
-  totalVisitedToday,
-  employeesVisitedToday,
-  contractorsVisitedToday
-}) => {
-  const cards = [
-    {
-      title: 'Total Occupancy',
-      value: totalOccupancy,
-      icon: <FaUsers size={24} />,
-      color: '#007bff'
-    },
-    {
-      title: 'Employees Occupancy',
-      value: employeeCount,
-      icon: <FaUserTie size={24} />,
-      color: '#28a745'
-    },
-    {
-      title: 'Contractors Occupancy',
-      value: contractorCount,
-      icon: <FaHardHat size={24} />,
-      color: '#fd7e14'
-    },
-    {
-      title: 'Total Visited Today',
-      value: totalVisitedToday,
-      icon: <FaUsers size={24} />,
-      color: '#6f42c1'
-    },
-    {
-      title: 'Employees Visited Today',
-      value: employeesVisitedToday,
-      icon: <FaUserTie size={24} />,
-      color: '#20c997'
-    },
-    {
-      title: 'Contractors Visited Today',
-      value: contractorsVisitedToday,
-      icon: <FaHardHat size={24} />,
-      color: '#ffc107'
-    }
-  ];
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <Row className="mb-4">
-      {cards.map((card, idx) => (
-        <Col key={idx} sm={6} md={3} className="mb-3">
-          <Card
-            className="text-center shadow-sm"
-            style={{ borderLeft: `5px solid ${card.color}` }}
-          >
-            <Card.Body>
-              <div className="mb-2" style={{ color: card.color }}>
-                {card.icon}
-              </div>
-              <Card.Title>{card.title}</Card.Title>
-              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
-                {card.value}
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-      ))}
-    </Row>
-  );
-};
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Pune
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
 
-export default SummaryCards;
-
-
-
-
-
-
-
-
-
-
-
-Let check both file carefully and give me u[pdated files carefuly.
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
- // now just use the backend’s two‐entry array directly
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-     <SummaryCards
-     totalOccupancy={totalOccupancy}
-    employeeCount={employees}
-    contractorCount={contractors}
-    totalVisitedToday={totalVisitedToday?.total ?? 0}
-    employeesVisitedToday={totalVisitedToday?.employees ?? 0}
-    contractorsVisitedToday={totalVisitedToday?.contractors ?? 0}
-    />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                zoneSummaryData={summaryData}           // <--- fixed prop name here
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary}
+              />
+            }
+          />
+          <Route
+            path="/details"
+            element={<ZoneDetailsPage detailsData={detailsData} />}
+          />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
-
-
-sumaryCards.jsx
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
-
-const SummaryCards = ({
-  totalOccupancy,
-  employeeCount,
-  contractorCount,
-  totalVisitedToday,
-  employeesVisitedToday,
-  contractorsVisitedToday
-}) => {
-  const cards = [
-   {
-      title: 'Total Occupancy',
-      value: totalOccupancy,
-      icon: <FaUsers size={24} />,
-      color: '#007bff'
-    },
-    {
-      title: 'Employees Occupancy',
-      value: employeeCount,
-      icon: <FaUserTie size={24} />,
-      color: '#28a745'
-    },
-    {
-      title: 'Contractors Occupancy',
-      value: contractorCount,
-      icon: <FaHardHat size={24} />,
-      color: '#fd7e14'
-    },
-    {
-      title: 'Total Visited Today',
-      value: totalVisitedToday,
-      icon: <FaUsers size={24} />,
-      color: '#6f42c1'
-    },
-    {
-      title: 'Employees Visited Today',
-      value: employeesVisitedToday,
-      icon: <FaUserTie size={24} />,
-      color: '#20c997'
-    },
-    {
-      title: 'Contractors Visited Today',
-      value: contractorsVisitedToday,
-      icon: <FaHardHat size={24} />,
-      color: '#ffc107'
-    }
-  ];
-  
-  return (
-    <Row className="mb-4">
-      {cards.map((card, idx) => (
-        <Col key={idx} sm={6} md={3} className="mb-3">
-          <Card className="text-center shadow-sm" style={{ borderLeft: `5px solid ${card.color}` }}>
-            <Card.Body>
-              <div className="mb-2" style={{ color: card.color }}>{card.icon}</div>
-              <Card.Title>{card.title}</Card.Title>
-              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
-                {card.value}
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-      ))}
-    </Row>
-  );
-};
-
-export default SummaryCards;
-
-
+export default App;
 
 
