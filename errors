@@ -1,3 +1,18 @@
+<SummaryCards
+  totalOccupancy={totalOccupancy}
+  employeeCount={employees}
+  contractorCount={contractors}
+  totalVisitedToday={totalVisitedToday?.total ?? 0}
+  employeesVisitedToday={totalVisitedToday?.employees ?? 0}
+  contractorsVisitedToday={totalVisitedToday?.contractors ?? 0}
+/>
+
+
+
+
+
+
+
 Now let see this file and update this count
 "totalVisitedToday":926,"visitedToday":{"employees":856,"contractors":70,"total":926}}
 in Summarycards.
