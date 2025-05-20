@@ -1,3 +1,10 @@
+node scripts/generateDenverDoorFloorMap.js
+
+
+
+
+
+
 // scripts/generateDenverDoorFloorMap.js
 const xlsx = require('xlsx');
 const fs = require('fs');
