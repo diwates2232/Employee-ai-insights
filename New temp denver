@@ -1,4 +1,14 @@
 const express = require('express');
+const app = express();
+
+const occupancyDenverRoutes = require('./routes/occupancyDenverRoutes');
+app.use('/api', occupancyDenverRoutes);
+
+
+
+
+
+const express = require('express');
 const router = express.Router();
 const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
 
