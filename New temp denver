@@ -1,3 +1,61 @@
+// server.js
+const express = require('express');
+const cors    = require('cors');
+const path    = require('path');
+
+const employeeRoutes        = require('./routes/employeeRoutes');
+const liveOccupancyRoutes   = require('./routes/liveOccupancyRoutes');
+const occupancyDenverRoutes = require('./routes/occupancyDenverRoutes');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// simple sanity-check
+app.get('/ping', (req, res) => res.send('pong'));
+
+// mount your routers under /api
+app.use('/api', employeeRoutes);           // /api/employees
+app.use('/api', liveOccupancyRoutes);      // /api/live-occupancy
+app.use('/api', occupancyDenverRoutes);    // /api/live-occupancy/denver
+
+// debug: list registered endpoints
+if (app._router && Array.isArray(app._router.stack)) {
+  console.log('\n📋 Registered endpoints:');
+  app._router.stack.forEach(layer => {
+    if (layer.route && layer.route.path) {
+      const methods = Object
+        .keys(layer.route.methods)
+        .map(m => m.toUpperCase())
+        .join(',');
+      console.log(`  ${methods}\t${layer.route.path}`);
+    }
+  });
+}
+
+// serve React build (if any)
+const buildPath = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildPath));
+
+// health check
+app.get('/health', (req, res) => res.send('OK'));
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // routes/occupancyDenverRoutes.js
 const router = require('express').Router();
 const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
