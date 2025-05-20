@@ -1,3 +1,147 @@
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,   // <-- number from backend
+  visitedToday,        // <-- { employees, contractors, total }
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees       = personnelSummary?.employees   ?? 0;
+  const contractors     = personnelSummary?.contractors ?? 0;
+  const totalOccupancy  = employees + contractors;
+
+  // use the backend’s two‐entry array directly for the donut
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees   ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa';
+
+const SummaryCards = ({
+  totalOccupancy,
+  employeeCount,
+  contractorCount,
+  totalVisitedToday,
+  employeesVisitedToday,
+  contractorsVisitedToday
+}) => {
+  const cards = [
+    {
+      title: 'Total Occupancy',
+      value: totalOccupancy,
+      icon: <FaUsers size={24} />,
+      color: '#007bff'
+    },
+    {
+      title: 'Employees Occupancy',
+      value: employeeCount,
+      icon: <FaUserTie size={24} />,
+      color: '#28a745'
+    },
+    {
+      title: 'Contractors Occupancy',
+      value: contractorCount,
+      icon: <FaHardHat size={24} />,
+      color: '#fd7e14'
+    },
+    {
+      title: 'Total Visited Today',
+      value: totalVisitedToday,
+      icon: <FaUsers size={24} />,
+      color: '#6f42c1'
+    },
+    {
+      title: 'Employees Visited Today',
+      value: employeesVisitedToday,
+      icon: <FaUserTie size={24} />,
+      color: '#20c997'
+    },
+    {
+      title: 'Contractors Visited Today',
+      value: contractorsVisitedToday,
+      icon: <FaHardHat size={24} />,
+      color: '#ffc107'
+    }
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((card, idx) => (
+        <Col key={idx} sm={6} md={3} className="mb-3">
+          <Card
+            className="text-center shadow-sm"
+            style={{ borderLeft: `5px solid ${card.color}` }}
+          >
+            <Card.Body>
+              <div className="mb-2" style={{ color: card.color }}>
+                {card.icon}
+              </div>
+              <Card.Title>{card.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
+                {card.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+};
+
+export default SummaryCards;
+
+
+
+
+
+
+
+
+
+
 
 Let check both file carefully and give me u[pdated files carefuly.
 
