@@ -1,3 +1,8 @@
+const rows = xlsx.utils.sheet_to_json(sheet);
+console.log('Rows read from Excel:', rows); // <-- add this line
+
+
+
 // scripts/generateDenverDoorFloorMap.js
 
 const xlsx = require('xlsx');
