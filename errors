@@ -7,6 +7,53 @@
   contractorsVisitedToday={totalVisitedToday?.contractors ?? 0}
 />
 
+const SummaryCards = ({
+  totalOccupancy,
+  employeeCount,
+  contractorCount,
+  totalVisitedToday,
+  employeesVisitedToday,
+  contractorsVisitedToday
+}) => {
+  const cards = [
+    {
+      title: 'Total Occupancy',
+      value: totalOccupancy,
+      icon: <FaUsers size={24} />,
+      color: '#007bff'
+    },
+    {
+      title: 'Employees Occupancy',
+      value: employeeCount,
+      icon: <FaUserTie size={24} />,
+      color: '#28a745'
+    },
+    {
+      title: 'Contractors Occupancy',
+      value: contractorCount,
+      icon: <FaHardHat size={24} />,
+      color: '#fd7e14'
+    },
+    {
+      title: 'Total Visited Today',
+      value: totalVisitedToday,
+      icon: <FaUsers size={24} />,
+      color: '#6f42c1'
+    },
+    {
+      title: 'Employees Visited Today',
+      value: employeesVisitedToday,
+      icon: <FaUserTie size={24} />,
+      color: '#20c997'
+    },
+    {
+      title: 'Contractors Visited Today',
+      value: contractorsVisitedToday,
+      icon: <FaHardHat size={24} />,
+      color: '#ffc107'
+    }
+  ];
+
 
 
 
