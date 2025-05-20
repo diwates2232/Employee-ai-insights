@@ -1,70 +1,373 @@
-{
-  "scripts": {
-    "start": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && react-scripts start",
-    "build": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && react-scripts build",
-    // … other scripts
+Read below file carefully and Solve the error.
+Dont make unneccesarry changes in this file .
+
+
+
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap      = require('../data/doorZoneMap');
+const zoneFloorMap     = require('../data/zoneFloorMap');
+
+
+// Local helper: look up door+dir in the raw map object
+function mapDoorToZone(doorName, direction) {
+  const key = `${doorName}___${direction}`;
+  return doorZoneMap[key] || 'Unknown Zone';
+}
+
+async function fetchNewEvents(since) {
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+  const result = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE 
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          SCard.[value]
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value   AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
+        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
+        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, [value]
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE [Name] IN ('Card','CHUID')
+      ) AS SCard
+        ON t1.XmlGUID = SCard.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return result.recordset;
+}
+
+// New function to count total employees who visited today
+async function fetchTotalVisitedToday() {
+  const req = pool.request();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  req.input('start', sql.DateTime2, todayStart);
+
+  const result = await req.query(`
+    WITH DailyVisits AS (
+      SELECT DISTINCT
+        CASE 
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge' , 'Visitor') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID, 
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      LEFT JOIN [ACVSCore].[Access].[Personnel] p ON log.ObjectIdentity1 = p.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
+      WHERE 
+        log.MessageType = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+    )
+    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
+  `);
+
+  return result.recordset[0]?.totalVisitedToday || 0;
+}
+
+
+
+// … fetchTotalVisitedToday …
+
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, ObjectName1, PersonnelType,
+      CardNumber, Dateonly, Swipe_Time,
+      Direction, Door
+    } = evt;
+
+    const zone = mapDoorToZone(Door, Direction);
+    // if swipe‐out from “Out of office”, treat as leave
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      // remove both from current & from uniquePeople
+      const dedup = EmployeeID || CardNumber || ObjectName1;
+      delete current[EmployeeID];
+      uniquePeople.delete(dedup);
+      continue;
+    }
+
+    // build stable dedup key
+    const dedupKey = EmployeeID || CardNumber || ObjectName1;
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, { PersonnelType });
+      current[EmployeeID] = {
+        Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+        CardNumber, PersonnelType, zone
+      };
+    } else { // any other swipe-out not "Out of office"
+      uniquePeople.delete(dedupKey);
+      delete current[EmployeeID];
+    }
   }
+
+  /* ---- employee vs contractor live counts (summary cards) ---- */
+  let employeeCount    = 0;
+  let contractorCount  = 0;
+
+  for (const { PersonnelType } of uniquePeople.values()) {
+    if (PersonnelType === 'Employee' || PersonnelType === 'Terminated Personnel') {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
+  }
+
+  /* ------------ existing zone / floor aggregations ------------- */
+  const zoneMap = {};
+  Object.values(current).forEach(emp => {
+    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+    zoneMap[emp.zone].push(emp);
+  });
+
+  const zoneDetails = Object.fromEntries(
+    Object.entries(zoneMap).map(([zone, emps]) => {
+      const byType = emps.reduce((acc, { PersonnelType }) => {
+        acc[PersonnelType] = (acc[PersonnelType] || 0) + 1;
+        return acc;
+      }, {});
+      return [zone, { total: emps.length, byPersonnelType: byType, employees: emps }];
+    })
+  );
+
+  const floorMap = {};
+  for (const [zone, d] of Object.entries(zoneDetails)) {
+    const floor = zoneFloorMap[zone] || 'Unknown Floor';
+    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
+    floorMap[floor].total += d.total;
+    for (const [pt, c] of Object.entries(d.byPersonnelType)) {
+      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt] || 0) + c;
+    }
+  }
+
+  const summary        = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, count: d.total }));
+  const zoneBreakdown  = Object.entries(zoneDetails).map(([z, d]) => ({ zone: z, ...d.byPersonnelType, total: d.total }));
+  const floorBreakdown = Object.entries(floorMap).map(([f, d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
+
+
+ const personnelBreakdown = [];
+
+if (employeeCount > 0) {
+  personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
+}
+if (contractorCount > 0) {
+  personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
 }
 
 
 
-cd C:\Users\W0024618\Desktop\swipeData\client
-set NODE_OPTIONS=--openssl-legacy-provider
-npm start
 
 
-
-Again We got this error
-
-C:\Users\W0024618\Desktop\swipeData\client>npm start
-
-> client@0.1.0 start
-> react-scripts start
-? Something is already running on port 3000.
-
-Would you like to run the app on another port instead? Yes
-i ｢wds｣: Project is running at http://10.199.29.107/
-i ｢wds｣: webpack output is served from
-i ｢wds｣: Content not from webpack is served from C:\Users\W0024618\Desktop\swipeData\client\public
-i ｢wds｣: 404s will fallback to /
-Starting the development server...
-
-Error: error:0308010C:digital envelope routines::unsupported
-    at new Hash (node:internal/crypto/hash:79:19)
-    at Object.createHash (node:crypto:139:10)
-    at module.exports (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\util\createHash.js:135:53)
-    at NormalModule._initBuildHash (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:417:16)
-    at handleParseError (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:471:10)
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:503:5
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:358:12
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:373:3
-    at iterateNormalLoaders (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:214:10)
-    at iterateNormalLoaders (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:221:10)
-C:\Users\W0024618\Desktop\swipeData\client\node_modules\react-scripts\scripts\start.js:19
-  throw err;
-  ^
-
-Error: error:0308010C:digital envelope routines::unsupported
-    at new Hash (node:internal/crypto/hash:79:19)
-    at Object.createHash (node:crypto:139:10)
-    at module.exports (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\util\createHash.js:135:53)
-    at NormalModule._initBuildHash (C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:417:16)
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:452:10
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\webpack\lib\NormalModule.js:323:13
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:367:11
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:233:18
-    at context.callback (C:\Users\W0024618\Desktop\swipeData\client\node_modules\loader-runner\lib\LoaderRunner.js:111:13)
-    at C:\Users\W0024618\Desktop\swipeData\client\node_modules\babel-loader\lib\index.js:59:103 {
-  opensslErrorStack: [
-    'error:03000086:digital envelope routines::initialization error',
-    'error:0308010C:digital envelope routines::unsupported'
-  ],
-  library: 'digital envelope routines',
-  reason: 'unsupported',
-  code: 'ERR_OSSL_EVP_UNSUPPORTED'
+  return {
+    asOf: new Date().toISOString(),
+    summary,
+    zoneBreakdown,
+    floorBreakdown,
+    details: zoneMap,
+    personnelSummary: { employees: employeeCount, contractors: contractorCount }, // NEW
+      personnelBreakdown,
+  
+  };
 }
 
-Node.js v22.15.0
 
-C:\Users\W0024618\Desktop\swipeData\client>
+/* --------------------- SSE controller ------------------------ */
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':   'keep-alive'
+    });
+    res.write('\n');
+
+    let lastSeen  = new Date(Date.now() - 1000 * 60 * 60 *24); // 1 h agonode scripts/generateDoorZoneMap.js
+    const events  = [];
+
+    /* helper to push updates */
+    const push = async () => {
+      const fresh = await fetchNewEvents(lastSeen);
+      if (fresh.length) {
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+        events.push(...fresh);
+        const payload = await buildOccupancy(events);
+        payload.totalVisitedToday = await fetchTotalVisitedToday(); // <-- ADD THIS LINE
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      }
+    };
+
+    /* initial payload */
+    {
+      const recent = await fetchNewEvents(lastSeen);
+      if (recent.length) {
+        lastSeen = recent[recent.length - 1].LocaleMessageTime;
+        events.push(...recent);
+      }
+      const initial = await buildOccupancy(events);
+      initial.totalVisitedToday = await fetchTotalVisitedToday(); // <-- ADD THIS LINE
+      res.write(`data: ${JSON.stringify(initial)}\n\n`);
+    }
+
+    const timer = setInterval(push, 1000);
+    req.on('close', () => clearInterval(timer));
+
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+error message
+
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+⚠️ No routes found in app._router.stack
+Server running at http://localhost:5000
+✅ MSSQL pool connected
+Live occupancy SSE error: RequestError: Incorrect syntax near the keyword 'FROM'.
+    at handleError (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\request.js:384:15)
+    at Connection.emit (node:events:518:28)
+    at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+    at RequestTokenHandler.onErrorMessage (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\handler.js:284:21)
+    at Readable.<anonymous> (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\token-stream-parser.js:19:33)
+    at Readable.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+    at Readable.push (node:internal/streams/readable:393:5)
+    at nextAsync (node:internal/streams/from:194:22) {
+  code: 'EREQUEST',
+  originalError: Error: Incorrect syntax near the keyword 'FROM'.
+      at handleError (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\request.js:382:19)
+      at Connection.emit (node:events:518:28)
+      at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+      at RequestTokenHandler.onErrorMessage (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\handler.js:284:21)
+      at Readable.<anonymous> (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\token-stream-parser.js:19:33)
+      at Readable.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+      at Readable.push (node:internal/streams/readable:393:5)
+      at nextAsync (node:internal/streams/from:194:22) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 156,
+      state: 1,
+      class: 15,
+      message: "Incorrect syntax near the keyword 'FROM'.",
+      serverName: 'SRVWUPNQ0986V',
+      procName: '',
+      lineNumber: 9
+    }
+  },
+  number: 156,
+  lineNumber: 9,
+  state: 1,
+  class: 15,
+  serverName: 'SRVWUPNQ0986V',
+  procName: '',
+  precedingErrors: []
+}
+Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+    at ServerResponse.setHeader (node:_http_outgoing:699:11)
+    at ServerResponse.header (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:684:10)
+    at ServerResponse.send (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:161:12)
+    at ServerResponse.json (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:250:15)
+    at exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:452:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+Live occupancy SSE error: RequestError: Incorrect syntax near the keyword 'FROM'.
+    at handleError (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\request.js:384:15)
+    at Connection.emit (node:events:518:28)
+    at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+    at RequestTokenHandler.onErrorMessage (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\handler.js:284:21)
+    at Readable.<anonymous> (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\token-stream-parser.js:19:33)
+    at Readable.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+    at Readable.push (node:internal/streams/readable:393:5)
+    at nextAsync (node:internal/streams/from:194:22) {
+  code: 'EREQUEST',
+  originalError: Error: Incorrect syntax near the keyword 'FROM'.
+      at handleError (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\request.js:382:19)
+      at Connection.emit (node:events:518:28)
+      at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+      at RequestTokenHandler.onErrorMessage (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\handler.js:284:21)
+      at Readable.<anonymous> (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\token\token-stream-parser.js:19:33)
+      at Readable.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+      at Readable.push (node:internal/streams/readable:393:5)
+      at nextAsync (node:internal/streams/from:194:22) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 156,
+      state: 1,
+      class: 15,
+      message: "Incorrect syntax near the keyword 'FROM'.",
+      serverName: 'SRVWUPNQ0986V',
+      procName: '',
+      lineNumber: 9
+    }
+  },
+  number: 156,
+  lineNumber: 9,
+  state: 1,
+  class: 15,
+  serverName: 'SRVWUPNQ0986V',
+  procName: '',
+  precedingErrors: []
+}
+Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+    at ServerResponse.setHeader (node:_http_outgoing:699:11)
+    at ServerResponse.header (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:684:10)
+    at ServerResponse.send (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:161:12)
+    at ServerResponse.json (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\express\lib\response.js:250:15)
+    at exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:452:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> npm start
 
