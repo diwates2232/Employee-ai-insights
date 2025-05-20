@@ -1,37 +1,7 @@
 // Auto-generated from punedoor.xlsx
-const zoneFloorMap = {
-  "RED ZONE": "Podium Floor",
-  "Yellow zone": "Podium Floor",
-  "Reception Area": "Podium Floor",
-  "Green Zone": "Podium Floor",
-  "Orange Zone": "Podium Floor",
-  "2nd Floor, Pune": "2nd Floor",
-  "Green - Outer": "Podium Floor",
-  "Yellow - Outer": "Podium Floor",
-  "Assembly Area": "Podium Floor",
-  "Tower B": "Tower B",
-  "Reception Area Tower B": "Tower B",
-  "Tower B GYM": "Tower B",
-  
-  // ensure your “Unknown Zone” rolls up into Podium, too:
-  "Unknown Zone": "Podium Floor"
-};
 
-module.exports = zoneFloorMap;
-
-
-
-
-
-
-
-
-
-File DoorZoneMp.js
-
-
-function mapDoorToZone(door, direction) {
-  const key = `${door}___${direction}`;
+function mapDoorToZone(door, direction,zone) {
+  const key = `${door}___${direction}__${zone}`;
   return doorZoneMap[key];
 }
 
@@ -209,10 +179,11 @@ module.exports = doorZoneMap;
 
 
 
-ZoneFloorMap.js
 
 
-// Auto-generated from punedoor.xlsx
+
+
+
 const zoneFloorMap = {
   "RED ZONE": "Podium Floor",
   "Yellow zone": "Podium Floor",
@@ -225,6 +196,14 @@ const zoneFloorMap = {
   "Assembly Area": "Podium Floor",
   "Tower B": "Tower B",
   "Reception Area Tower B": "Tower B",
-  "Tower B GYM":"Tower B"
+  "Tower B GYM": "Tower B",
+  
+  // ensure your “Unknown Zone” rolls up into Podium, too:
+  "Unknown Zone": "Podium Floor"
 };
+
 module.exports = zoneFloorMap;
+
+
+
+ 
