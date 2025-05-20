@@ -1,11 +1,66 @@
-<SummaryCards
-  totalOccupancy={totalOccupancy}
-  employeeCount={employees}
-  contractorCount={contractors}
-  totalVisitedToday={totalVisitedToday?.total ?? 0}
-  employeesVisitedToday={totalVisitedToday?.employees ?? 0}
-  contractorsVisitedToday={totalVisitedToday?.contractors ?? 0}
-/>
+
+Let check both file carefully and give me u[pdated files carefuly.
+
+// src/pages/DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import SummaryChart from '../components/SummaryChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+ // now just use the backend’s two‐entry array directly
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+     <SummaryCards
+     totalOccupancy={totalOccupancy}
+    employeeCount={employees}
+    contractorCount={contractors}
+    totalVisitedToday={totalVisitedToday?.total ?? 0}
+    employeesVisitedToday={totalVisitedToday?.employees ?? 0}
+    contractorsVisitedToday={totalVisitedToday?.contractors ?? 0}
+    />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+sumaryCards.jsx
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
 
 const SummaryCards = ({
   totalOccupancy,
@@ -16,7 +71,7 @@ const SummaryCards = ({
   contractorsVisitedToday
 }) => {
   const cards = [
-    {
+   {
       title: 'Total Occupancy',
       value: totalOccupancy,
       icon: <FaUsers size={24} />,
@@ -53,103 +108,7 @@ const SummaryCards = ({
       color: '#ffc107'
     }
   ];
-
-
-
-
-
-
-
-Now let see this file and update this count
-"totalVisitedToday":926,"visitedToday":{"employees":856,"contractors":70,"total":926}}
-in Summarycards.
-then we we will segrigate SummaryCards like Employee Current present in office, Zone ,flooor Wise First update Summary cards
-
-
-
-// src/pages/DashboardHome.jsx
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees = personnelSummary?.employees ?? 0;
-  const contractors = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
- // now just use the backend’s two‐entry array directly
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
-  );
-}
-
-
-
-
-File SummaryCard.jsx
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa'; // Importing icons
-
-const SummaryCards = ({ totalOccupancy,totalOtotalVisitedToday, employeeCount, contractorCount }) => {
-  const cards = [
-    {
-      title: 'Total Occupancy',
-      value: totalOccupancy,
-      icon: <FaUsers size={24} />,
-      color: '#007bff' // Blue
-    },
-
-    {
-      title: 'Employees Occupancy',
-      value: employeeCount,
-      icon: <FaUserTie size={24} />,
-      color: '#28a745' // Green
-    },
-    {
-      title: 'Contractors Occupancy',
-      value: contractorCount,
-      icon: <FaHardHat size={24} />,
-      color: '#fd7e14' // Orange
-    }
-  ];
-
+  
   return (
     <Row className="mb-4">
       {cards.map((card, idx) => (
@@ -170,5 +129,7 @@ const SummaryCards = ({ totalOccupancy,totalOtotalVisitedToday, employeeCount, c
 };
 
 export default SummaryCards;
+
+
 
 
