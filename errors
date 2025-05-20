@@ -1,3 +1,77 @@
+async function fetchVisitedTodayBreakdown() {
+  const req = pool.request();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  req.input('start', sql.DateTime2, today);
+
+  const result = await req.query(`
+    WITH CombinedEmployeeData AS (
+        SELECT
+            CASE
+                WHEN pt.Name IN ('Contractor', 'Terminated Contractor') THEN p.Text12
+                WHEN pt.Name IN ('Temp Badge', 'Visitor', 'Property Management') THEN p.Text9
+                ELSE CAST(p.Int1 AS NVARCHAR)
+            END AS EmployeeID,
+            pt.Name AS PersonnelType,
+            DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) AS LocaleMessageTime
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS log
+        INNER JOIN [ACVSCore].[Access].[Personnel] AS p ON log.ObjectIdentity1 = p.GUID
+        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS pt ON p.PersonnelTypeID = pt.ObjectID
+        WHERE
+            log.MessageType = 'CardAdmitted'
+            AND log.PartitionName2 = 'APAC.Default'
+            AND DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) >= @start
+    ),
+    RankedEmployeeData AS (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY EmployeeID
+                ORDER BY LocaleMessageTime DESC
+            ) AS rn
+        FROM CombinedEmployeeData
+        WHERE EmployeeID IS NOT NULL
+    )
+    SELECT
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END AS bucket,
+        COUNT(*) AS cnt
+    FROM RankedEmployeeData
+    WHERE rn = 1
+    GROUP BY
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END;
+  `);
+
+  const breakdown = { employees: 0, contractors: 0 };
+  for (const { bucket, cnt } of result.recordset) {
+    if (bucket === 'Employee') breakdown.employees = cnt;
+    else if (bucket === 'Contractor') breakdown.contractors = cnt;
+  }
+  breakdown.total = breakdown.employees + breakdown.contractors;
+  return breakdown;
+}
+
+
+
+
+
+
+
+
+
+
 this is query to count headcount  let check all logic and find out the where is issue.
 
 
