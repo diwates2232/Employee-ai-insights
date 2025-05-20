@@ -1,10 +1,4 @@
-
-
-
-
-
-
-// controllers/liveOccupancyController.js
+m// controllers/liveOccupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap      = require('../data/doorZoneMap');
