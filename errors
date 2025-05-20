@@ -1,3 +1,23 @@
+let employeeCount   = 0;
+let contractorCount = 0;
+
+for (const { PersonnelType } of uniquePeople.values()) {
+  if (['Employee', 'Terminated Personnel'].includes(PersonnelType)) {
+    employeeCount++;
+  } else if (
+    ['Contractor', 'None', 'Property Management', 'Temp Badge', 'Terminated Contractor', 'Visitor'].includes(PersonnelType)
+  ) {
+    contractorCount++;
+  }
+}
+
+
+
+
+
+
+
+
 // controllers/liveOccupancyController.js
 
 const { poolConnect, pool, sql } = require('../config/db');
