@@ -1,3 +1,14 @@
+const dedupKey = EmployeeID
+  ? `EID_${EmployeeID}`
+  : `CARD_${CardNumber || ObjectName1}`;
+
+
+
+
+
+
+
+
 Lets Check file carefully and solve this issue carefully
 
 // controllers/liveOccupancyController.js
