@@ -1,153 +1,27 @@
-async function fetchVisitedTodayBreakdown() {
-  const req = pool.request();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  req.input('start', sql.DateTime2, today);
-
-  const result = await req.query(`
-    WITH CombinedEmployeeData AS (
-        SELECT
-            CASE
-                WHEN pt.Name IN ('Contractor', 'Terminated Contractor') THEN p.Text12
-                WHEN pt.Name IN ('Temp Badge', 'Visitor', 'Property Management') THEN p.Text9
-                ELSE CAST(p.Int1 AS NVARCHAR)
-            END AS EmployeeID,
-            pt.Name AS PersonnelType,
-            DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) AS LocaleMessageTime
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS log
-        INNER JOIN [ACVSCore].[Access].[Personnel] AS p ON log.ObjectIdentity1 = p.GUID
-        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS pt ON p.PersonnelTypeID = pt.ObjectID
-        WHERE
-            log.MessageType = 'CardAdmitted'
-            AND log.PartitionName2 = 'APAC.Default'
-            AND DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) >= @start
-    ),
-    RankedEmployeeData AS (
-        SELECT *,
-            ROW_NUMBER() OVER (
-                PARTITION BY EmployeeID
-                ORDER BY LocaleMessageTime DESC
-            ) AS rn
-        FROM CombinedEmployeeData
-        WHERE EmployeeID IS NOT NULL
-    )
-    SELECT
-        CASE
-            WHEN PersonnelType IN (
-                'Contractor', 'Terminated Contractor',
-                'None', 'Property Management',
-                'Temp Badge', 'Visitor'
-            ) THEN 'Contractor'
-            ELSE 'Employee'
-        END AS bucket,
-        COUNT(*) AS cnt
-    FROM RankedEmployeeData
-    WHERE rn = 1
-    GROUP BY
-        CASE
-            WHEN PersonnelType IN (
-                'Contractor', 'Terminated Contractor',
-                'None', 'Property Management',
-                'Temp Badge', 'Visitor'
-            ) THEN 'Contractor'
-            ELSE 'Employee'
-        END;
-  `);
-
-  const breakdown = { employees: 0, contractors: 0 };
-  for (const { bucket, cnt } of result.recordset) {
-    if (bucket === 'Employee') breakdown.employees = cnt;
-    else if (bucket === 'Contractor') breakdown.contractors = cnt;
-  }
-  breakdown.total = breakdown.employees + breakdown.contractors;
-  return breakdown;
-}
-
-
-
-
-
-
-
-
-
-
-this is query to count headcount  let check all logic and find out the where is issue.
-
-
-WITH CombinedEmployeeData AS (
-    SELECT
-        t1.[ObjectName1],
-        t1.[ObjectName2],
-        CASE
-            WHEN t2.[Int1] = 0 THEN t2.[Text12]
-            ELSE CAST(t2.[Int1] AS NVARCHAR)
-        END AS EmployeeID,
-        t2.[PersonnelTypeID],
-        t3.[Name] AS PersonnelTypeName,
-  t1.Objectidentity1 AS EmployeeIdentity,
-        CASE
-            WHEN t1.ObjectName2 LIKE 'APAC_PI%' THEN 'Taguig City'
-            WHEN t1.ObjectName2 LIKE 'APAC_PH%' THEN 'Quezon City'
-            WHEN t1.ObjectName2 LIKE '%PUN%' THEN 'Pune'
-            ELSE t1.PartitionName2
-        END AS Location,
-        t1.PartitionName2,
-        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-        t1.MessageType
-    FROM
-        [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS t1
-        INNER JOIN [ACVSCore].[Access].[Personnel] AS t2 ON t1.ObjectIdentity1 = t2.GUID
-        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS t3 ON t2.PersonnelTypeID = t3.ObjectID
-    WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 IN ('APAC.Default')
-        AND CONVERT(DATE, DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC])) = '2025-05-20'
-),
-RankedEmployeeData AS (
-    SELECT *,
-        ROW_NUMBER() OVER (PARTITION BY EmployeeIdentity, CONVERT(DATE, LocaleMessageTime) ORDER BY LocaleMessageTime DESC) AS rn
-    FROM
-        CombinedEmployeeData
-)
-SELECT
-    [ObjectName1],
-    PersonnelTypeName,
-    EmployeeID,
-    Location,
-    MessageType,
-    CONVERT(DATE, LocaleMessageTime) AS Date
-FROM
-    RankedEmployeeData
-WHERE
-    rn = 1;
-
- --DROP Table #CombinedEmployeeData;
-
-
-
-
-
-
-
-
-
+Lets Check file carefully and solve this issue carefully
 
 // controllers/liveOccupancyController.js
 const { poolConnect, pool, sql } = require('../config/db');
-const doorZoneMap      = require('../data/doorZoneMap');
-const zoneFloorMap     = require('../data/zoneFloorMap');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
 
-// helper: look up door+direction in the raw map object
+// helper: map door + direction to zone, with fallback for APAC_IN_PUN
 function mapDoorToZone(doorName, direction) {
   const key = `${doorName}___${direction}`;
-  return doorZoneMap[key] || 'Unknown Zone';
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+  if (doorName.startsWith('APAC_IN_PUN')) {
+    return 'Unknown Zone';
+  }
+  return 'Unknown Zone';
 }
 
 async function fetchNewEvents(since) {
   const req = pool.request();
   req.input('since', sql.DateTime2, since);
   const result = await req.query(`
+
     WITH CombinedQuery AS (
       SELECT 
         DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
@@ -216,7 +90,7 @@ async function fetchTotalVisitedToday() {
       SELECT DISTINCT
         CASE 
           WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
+          WHEN pt.Name IN ('Temp Badge','Property Management') THEN p.Text9
           ELSE CAST(p.Int1 AS NVARCHAR)
         END AS EmployeeID
       FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
@@ -235,48 +109,61 @@ async function fetchTotalVisitedToday() {
   return result.recordset[0]?.totalVisitedToday || 0;
 }
 
-// new: distinct visited‐today broken out by Employee vs Contractor
+
 async function fetchVisitedTodayBreakdown() {
   const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  req.input('start', sql.DateTime2, todayStart);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  req.input('start', sql.DateTime2, today);
 
   const result = await req.query(`
+    WITH CombinedEmployeeData AS (
+        SELECT
+            CASE
+                WHEN pt.Name IN ('Contractor', 'Terminated Contractor') THEN p.Text12
+                WHEN pt.Name IN ('Temp Badge', 'Visitor', 'Property Management') THEN p.Text9
+                ELSE CAST(p.Int1 AS NVARCHAR)
+            END AS EmployeeID,
+            pt.Name AS PersonnelType,
+            DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) AS LocaleMessageTime
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS log
+        INNER JOIN [ACVSCore].[Access].[Personnel] AS p ON log.ObjectIdentity1 = p.GUID
+        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS pt ON p.PersonnelTypeID = pt.ObjectID
+        WHERE
+            log.MessageType = 'CardAdmitted'
+            AND log.PartitionName2 = 'APAC.Default'
+            AND DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) >= @start
+    ),
+    RankedEmployeeData AS (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY EmployeeID
+                ORDER BY LocaleMessageTime DESC
+            ) AS rn
+        FROM CombinedEmployeeData
+        WHERE EmployeeID IS NOT NULL
+    )
     SELECT
-      CASE 
-        WHEN pt.Name IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END AS bucket,
-      COUNT(DISTINCT
-        CASE 
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END
-      ) AS cnt
-    FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-    LEFT JOIN [ACVSCore].[Access].[Personnel] p 
-      ON log.ObjectIdentity1 = p.GUID
-    LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt 
-      ON p.PersonnelTypeId = pt.ObjectID
-    WHERE
-      log.MessageType = 'CardAdmitted'
-      AND log.PartitionName2 = 'APAC.Default'
-      AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END AS bucket,
+        COUNT(*) AS cnt
+    FROM RankedEmployeeData
+    WHERE rn = 1
     GROUP BY
-      CASE 
-        WHEN pt.Name IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END;
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END;
   `);
 
   const breakdown = { employees: 0, contractors: 0 };
@@ -290,12 +177,10 @@ async function fetchVisitedTodayBreakdown() {
 
 
 
-
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
 
-  // process each swipe event
   for (const evt of allEvents) {
     const {
       EmployeeID, ObjectName1, PersonnelType,
@@ -303,10 +188,9 @@ async function buildOccupancy(allEvents) {
       Direction, Door
     } = evt;
 
-    const zone     = mapDoorToZone(Door, Direction);
     const dedupKey = EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
 
-    // handle out-of-office leaves
     if (Direction === 'OutDirection' && zone === 'Out of office') {
       delete current[dedupKey];
       uniquePeople.delete(dedupKey);
@@ -325,26 +209,19 @@ async function buildOccupancy(allEvents) {
     }
   }
 
+  // live personnel count
+  let employeeCount = 0;
+  let contractorCount = 0;
 
-
-
-let employeeCount   = 0;
-let contractorCount = 0;
-
-for (const { PersonnelType } of uniquePeople.values()) {
-  if (['Employee', 'Terminated Personnel'].includes(PersonnelType)) {
-    employeeCount++;
-  } else if (
-    ['Contractor', 'None', 'Property Management', 'Temp Badge', 'Terminated Contractor', 'Visitor'].includes(PersonnelType)
-  ) {
-    contractorCount++;
+  for (const { PersonnelType } of uniquePeople.values()) {
+    if (['Employee', 'Terminated Personnel'].includes(PersonnelType)) {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
   }
-}
 
-
-
-
-  // build zone & floor aggregates
+  // group by zone
   const zoneMap = {};
   for (const emp of Object.values(current)) {
     zoneMap[emp.zone] = zoneMap[emp.zone] || [];
@@ -354,28 +231,29 @@ for (const { PersonnelType } of uniquePeople.values()) {
   const zoneDetails = Object.fromEntries(
     Object.entries(zoneMap).map(([zone, emps]) => {
       const byType = emps.reduce((acc, { PersonnelType }) => {
-        acc[PersonnelType] = (acc[PersonnelType]||0) + 1;
+        acc[PersonnelType] = (acc[PersonnelType] || 0) + 1;
         return acc;
       }, {});
       return [zone, { total: emps.length, byPersonnelType: byType, employees: emps }];
     })
   );
 
+  // group by floor
   const floorMap = {};
   for (const [zone, d] of Object.entries(zoneDetails)) {
     const floor = zoneFloorMap[zone] || 'Unknown Floor';
     floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
     floorMap[floor].total += d.total;
     for (const [pt, c] of Object.entries(d.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
+      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt] || 0) + c;
     }
   }
 
+  // breakdowns
   const summary        = Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, count: d.total }));
   const zoneBreakdown  = Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, ...d.byPersonnelType, total: d.total }));
   const floorBreakdown = Object.entries(floorMap).map(([f,d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
 
-  // **now only two lines changed here**:
   const personnelBreakdown = [];
   if (employeeCount)   personnelBreakdown.push({ personnelType: 'Employee',   count: employeeCount });
   if (contractorCount) personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
@@ -411,22 +289,21 @@ exports.getLiveOccupancy = async (req, res) => {
         events.push(...fresh);
 
         const payload = await buildOccupancy(events);
-        // old combined total
         payload.totalVisitedToday = await fetchTotalVisitedToday();
-        // new breakdown
         payload.visitedToday      = await fetchVisitedTodayBreakdown();
 
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
       }
     };
 
-    // initial payload
+    // Initial load
     {
       const recent = await fetchNewEvents(lastSeen);
       if (recent.length) {
         lastSeen = recent[recent.length - 1].LocaleMessageTime;
         events.push(...recent);
       }
+
       const initial = await buildOccupancy(events);
       initial.totalVisitedToday = await fetchTotalVisitedToday();
       initial.visitedToday      = await fetchVisitedTodayBreakdown();
@@ -441,3 +318,4 @@ exports.getLiveOccupancy = async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
