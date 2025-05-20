@@ -1,0 +1,32 @@
+const { sql } = require('./db'); // reuse mssql import from db.js
+const punePool = require('./db').pool;
+
+// Create Denver connection
+const denverPool = new sql.ConnectionPool({
+  user:     'DENVER_USER',
+  password: 'DENVER_PASSWORD',
+  server:   'DENVER_SERVER',
+  database: 'DENVER_DATABASE',
+  options: {
+    encrypt: true,
+    trustServerCertificate: true
+  }
+});
+
+denverPool.connect();
+
+module.exports = {
+  pune: {
+    name: 'Pune',
+    pool: punePool,
+    doorZoneMap: require('../data/puneDoorZoneMap'),
+    zoneFloorMap: require('../data/puneZoneFloorMap')
+  },
+  denver: {
+    name: 'Denver',
+    pool: denverPool,
+    doorZoneMap: require('../data/denverDoorZoneMap'),
+    zoneFloorMap: require('../data/denverZoneFloorMap')
+  }
+};
+
