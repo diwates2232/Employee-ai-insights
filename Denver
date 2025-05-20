@@ -1,3 +1,40 @@
+// scripts/generateDenverDoorFloorMap.js
+const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
+
+const inputPath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const outputPath = path.join(__dirname, '..', 'config', 'denverDoorFloorMap.js');
+
+const workbook = xlsx.readFile(inputPath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+const jsonData = xlsx.utils.sheet_to_json(sheet);
+
+const doorToFloorMap = {};
+jsonData.forEach(row => {
+  const doorName = row['Door Name']?.trim();
+  const floorName = row['Floor']?.trim();
+  if (doorName && floorName) {
+    doorToFloorMap[doorName] = floorName;
+  }
+});
+
+const output = `module.exports = ${JSON.stringify(doorToFloorMap, null, 2)};\n`;
+
+fs.writeFileSync(outputPath, output, 'utf-8');
+console.log(`✅ Denver Door-to-Floor map generated at: ${outputPath}`);
+
+
+
+
+
+
+
+
+
+
+
 SELECT DISTINCT
   t1.ObjectName2 AS DoorName
 FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
