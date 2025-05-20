@@ -1,3 +1,5 @@
+Lets check all file and explainme each function what excatly works then we will find Where is issue
+
 // controllers/liveOccupancyController.js
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap    = require('../data/doorZoneMap');
@@ -19,12 +21,64 @@ async function fetchNewEvents(since) {
   const req = pool.request();
   req.input('since', sql.DateTime2, since);
   const result = await req.query(`
-    -- query unchanged …
-    -- (same as your provided fetchNewEvents)
+
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE 
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          SCard.[value]
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value   AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
+        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
+        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, [value]
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE [Name] IN ('Card','CHUID')
+      ) AS SCard
+        ON t1.XmlGUID = SCard.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
   `);
+
   return result.recordset;
 }
 
+
+// legacy: total distinct visited today (all types combined)
 async function fetchTotalVisitedToday() {
   const req = pool.request();
   const todayStart = new Date();
@@ -32,10 +86,29 @@ async function fetchTotalVisitedToday() {
   req.input('start', sql.DateTime2, todayStart);
 
   const result = await req.query(`
-    -- query unchanged …
+    WITH DailyVisits AS (
+      SELECT DISTINCT
+        CASE 
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Property Management') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      LEFT JOIN [ACVSCore].[Access].[Personnel] p 
+        ON log.ObjectIdentity1 = p.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt 
+        ON p.PersonnelTypeId = pt.ObjectID
+      WHERE
+        log.MessageType = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+    )
+    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
   `);
+
   return result.recordset[0]?.totalVisitedToday || 0;
 }
+
 
 async function fetchVisitedTodayBreakdown() {
   const req = pool.request();
@@ -44,7 +117,53 @@ async function fetchVisitedTodayBreakdown() {
   req.input('start', sql.DateTime2, today);
 
   const result = await req.query(`
-    -- query unchanged …
+    WITH CombinedEmployeeData AS (
+        SELECT
+            CASE
+                WHEN pt.Name IN ('Contractor', 'Terminated Contractor') THEN p.Text12
+                WHEN pt.Name IN ('Temp Badge', 'Visitor', 'Property Management') THEN p.Text9
+                ELSE CAST(p.Int1 AS NVARCHAR)
+            END AS EmployeeID,
+            pt.Name AS PersonnelType,
+            DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) AS LocaleMessageTime
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS log
+        INNER JOIN [ACVSCore].[Access].[Personnel] AS p ON log.ObjectIdentity1 = p.GUID
+        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS pt ON p.PersonnelTypeID = pt.ObjectID
+        WHERE
+            log.MessageType = 'CardAdmitted'
+            AND log.PartitionName2 = 'APAC.Default'
+            AND DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) >= @start
+    ),
+    RankedEmployeeData AS (
+        SELECT *,
+            ROW_NUMBER() OVER (
+                PARTITION BY EmployeeID
+                ORDER BY LocaleMessageTime DESC
+            ) AS rn
+        FROM CombinedEmployeeData
+        WHERE EmployeeID IS NOT NULL
+    )
+    SELECT
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END AS bucket,
+        COUNT(*) AS cnt
+    FROM RankedEmployeeData
+    WHERE rn = 1
+    GROUP BY
+        CASE
+            WHEN PersonnelType IN (
+                'Contractor', 'Terminated Contractor',
+                'None', 'Property Management',
+                'Temp Badge', 'Visitor'
+            ) THEN 'Contractor'
+            ELSE 'Employee'
+        END;
   `);
 
   const breakdown = { employees: 0, contractors: 0 };
@@ -55,6 +174,8 @@ async function fetchVisitedTodayBreakdown() {
   breakdown.total = breakdown.employees + breakdown.contractors;
   return breakdown;
 }
+
+
 
 async function buildOccupancy(allEvents) {
   const current      = {};
@@ -202,335 +323,213 @@ exports.getLiveOccupancy = async (req, res) => {
 
 
 
+file 2
 
+doorZoneMap
 
+// Auto-generated from punedoor.xlsx
 
-
-
-
-
-
-
-
-
-
-// controllers/liveOccupancyController.js
-const { poolConnect, pool, sql } = require('../config/db');
-const doorZoneMap      = require('../data/doorZoneMap');
-const zoneFloorMap     = require('../data/zoneFloorMap');
-
-// helper: look up door+direction in the raw map object
-function mapDoorToZone(doorName, direction) {
-  const key = `${doorName}___${direction}`;
-  return doorZoneMap[key] || 'Unknown Zone';
+function mapDoorToZone(door, direction) {
+  const key = `${door}___${direction}`;
+  return doorZoneMap[key];
 }
 
-async function fetchNewEvents(since) {
-  const req = pool.request();
-  req.input('since', sql.DateTime2, since);
-  const result = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT 
-        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE 
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.[value]
-        ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
-        t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, [value]
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE [Name] IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
+const doorZoneMap = {
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
+  
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___OutDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
 
-  return result.recordset;
-}
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___OutDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
 
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
 
-// legacy: total distinct visited today (all types combined)
-async function fetchTotalVisitedToday() {
-  const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  req.input('start', sql.DateTime2, todayStart);
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "Yellow zone",
 
-  const result = await req.query(`
-    WITH DailyVisits AS (
-      SELECT DISTINCT
-        CASE 
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      LEFT JOIN [ACVSCore].[Access].[Personnel] p 
-        ON log.ObjectIdentity1 = p.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt 
-        ON p.PersonnelTypeId = pt.ObjectID
-      WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
-    )
-    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
-  `);
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "Yellow zone",
 
-  return result.recordset[0]?.totalVisitedToday || 0;
-}
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "Yellow zone",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___OutDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___OutDirection": "Green Zone",
+
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___OutDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___OutDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "Orange Zone",
+  
+
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
+  
 
 
-async function fetchVisitedTodayBreakdown() {
-  const req = pool.request();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  req.input('start', sql.DateTime2, today);
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
+  
 
-  const result = await req.query(`
-    WITH CombinedEmployeeData AS (
-        SELECT
-            CASE
-                WHEN pt.Name IN ('Contractor', 'Terminated Contractor') THEN p.Text12
-                WHEN pt.Name IN ('Temp Badge', 'Visitor', 'Property Management') THEN p.Text9
-                ELSE CAST(p.Int1 AS NVARCHAR)
-            END AS EmployeeID,
-            pt.Name AS PersonnelType,
-            DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) AS LocaleMessageTime
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] AS log
-        INNER JOIN [ACVSCore].[Access].[Personnel] AS p ON log.ObjectIdentity1 = p.GUID
-        INNER JOIN [ACVSCore].[Access].[PersonnelType] AS pt ON p.PersonnelTypeID = pt.ObjectID
-        WHERE
-            log.MessageType = 'CardAdmitted'
-            AND log.PartitionName2 = 'APAC.Default'
-            AND DATEADD(MINUTE, -1 * log.[MessageLocaleOffset], log.[MessageUTC]) >= @start
-    ),
-    RankedEmployeeData AS (
-        SELECT *,
-            ROW_NUMBER() OVER (
-                PARTITION BY EmployeeID
-                ORDER BY LocaleMessageTime DESC
-            ) AS rn
-        FROM CombinedEmployeeData
-        WHERE EmployeeID IS NOT NULL
-    )
-    SELECT
-        CASE
-            WHEN PersonnelType IN (
-                'Contractor', 'Terminated Contractor',
-                'None', 'Property Management',
-                'Temp Badge', 'Visitor'
-            ) THEN 'Contractor'
-            ELSE 'Employee'
-        END AS bucket,
-        COUNT(*) AS cnt
-    FROM RankedEmployeeData
-    WHERE rn = 1
-    GROUP BY
-        CASE
-            WHEN PersonnelType IN (
-                'Contractor', 'Terminated Contractor',
-                'None', 'Property Management',
-                'Temp Badge', 'Visitor'
-            ) THEN 'Contractor'
-            ELSE 'Employee'
-        END;
-  `);
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
 
-  const breakdown = { employees: 0, contractors: 0 };
-  for (const { bucket, cnt } of result.recordset) {
-    if (bucket === 'Employee') breakdown.employees = cnt;
-    else if (bucket === 'Contractor') breakdown.contractors = cnt;
-  }
-  breakdown.total = breakdown.employees + breakdown.contractors;
-  return breakdown;
-}
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___OutDirection": "2nd Floor, Pune",
+
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___OutDirection": "Out of office",
+
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___OutDirection": "Yellow Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___OutDirection": "Green Zone - Outer Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
+
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
 
 
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___OutDirection": "Assembly Area -Podium",
 
-  // process each swipe event
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, ObjectName1, PersonnelType,
-      CardNumber, Dateonly, Swipe_Time,
-      Direction, Door
-    } = evt;
 
-    const zone     = mapDoorToZone(Door, Direction);
-    const dedupKey = EmployeeID || CardNumber || ObjectName1;
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___OutDirection": "Assembly Area - Podium",
 
-    // handle out-of-office leaves
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      delete current[dedupKey];
-      uniquePeople.delete(dedupKey);
-      continue;
-    }
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR___OutDirection": "Out of Office",
 
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, { PersonnelType });
-      current[dedupKey] = {
-        Dateonly, Swipe_Time, EmployeeID, ObjectName1,
-        CardNumber, PersonnelType, zone
-      };
-    } else {
-      delete current[dedupKey];
-      uniquePeople.delete(dedupKey);
-    }
-  }
+
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR___OutDirection": "Out of Office",
+
+
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR___OutDirection": "Out of Office",
+
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR___OutDirection": "Out of Office",
+
+
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___OutDirection": "Out of office",
+
+
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___OutDirection": "Out of office",
+
+
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___OutDirection": "Tower B",
+
+
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___OutDirection": "Tower B",
+
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___OutDirection": "Tower B",
+
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_WKS SIDE DOOR___OutDirection": "Tower B",
+
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION LEFT DOOR___OutDirection": "Reception Area Tower B",
+
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_RECEPTION RIGHT DOOR___OutDirection": "Reception Area Tower B",
+
+  "APAC_IN_PUN_TOWER B_IBMS ROOM___InDirection": "Tower B",
+
+
+  "APAC_IN_PUN_TOWER B_UPS ROOM___InDirection": "Tower B",
+
+
+  "APAC_IN_PUN_TOWER B_MDF ROOM___InDirection": "Tower B",
 
 
 
-
-let employeeCount   = 0;
-let contractorCount = 0;
-
-for (const { PersonnelType } of uniquePeople.values()) {
-  if (['Employee', 'Terminated Personnel'].includes(PersonnelType)) {
-    employeeCount++;
-  } else if (
-    ['Contractor', 'None', 'Property Management', 'Temp Badge', 'Terminated Contractor', 'Visitor'].includes(PersonnelType)
-  ) {
-    contractorCount++;
-  }
-}
+  "APAC_IN_PUN_TOWER B_PAC ROOM___InDirection": "Tower B",
+  
 
 
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM___InDirection": "Tower B",
+  
 
-
-  // build zone & floor aggregates
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([zone, emps]) => {
-      const byType = emps.reduce((acc, { PersonnelType }) => {
-        acc[PersonnelType] = (acc[PersonnelType]||0) + 1;
-        return acc;
-      }, {});
-      return [zone, { total: emps.length, byPersonnelType: byType, employees: emps }];
-    })
-  );
-
-  const floorMap = {};
-  for (const [zone, d] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[zone] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += d.total;
-    for (const [pt, c] of Object.entries(d.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
-    }
-  }
-
-  const summary        = Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, count: d.total }));
-  const zoneBreakdown  = Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, ...d.byPersonnelType, total: d.total }));
-  const floorBreakdown = Object.entries(floorMap).map(([f,d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
-
-  // **now only two lines changed here**:
-  const personnelBreakdown = [];
-  if (employeeCount)   personnelBreakdown.push({ personnelType: 'Employee',   count: employeeCount });
-  if (contractorCount) personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
-
-  return {
-    asOf:               new Date().toISOString(),
-    summary,
-    zoneBreakdown,
-    floorBreakdown,
-    details:            zoneMap,
-    personnelSummary:   { employees: employeeCount, contractors: contractorCount },
-    personnelBreakdown
-  };
-}
-
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive'
-    });
-    res.write('\n');
-
-    let lastSeen = new Date(Date.now() - 1000 * 60 * 60 * 24);
-    const events = [];
-
-    const push = async () => {
-      const fresh = await fetchNewEvents(lastSeen);
-      if (fresh.length) {
-        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
-        events.push(...fresh);
-
-        const payload = await buildOccupancy(events);
-        // old combined total
-        payload.totalVisitedToday = await fetchTotalVisitedToday();
-        // new breakdown
-        payload.visitedToday      = await fetchVisitedTodayBreakdown();
-
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
-      }
-    };
-
-    // initial payload
-    {
-      const recent = await fetchNewEvents(lastSeen);
-      if (recent.length) {
-        lastSeen = recent[recent.length - 1].LocaleMessageTime;
-        events.push(...recent);
-      }
-      const initial = await buildOccupancy(events);
-      initial.totalVisitedToday = await fetchTotalVisitedToday();
-      initial.visitedToday      = await fetchVisitedTodayBreakdown();
-      res.write(`data: ${JSON.stringify(initial)}\n\n`);
-    }
-
-    const timer = setInterval(push, 1000);
-    req.on('close', () => clearInterval(timer));
-
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
-  }
+  "APAC_IN_PUN_TOWER B_GYM ROOM___InDirection": "Tower B GYM",
+  "APAC_IN_PUN_TOWER B_GYM ROOM___OutDirection": "Tower B GYM"
 };
+
+module.exports = doorZoneMap;
+
+ 
+
+
+
+
+file floorZoneMap
+
+
+const zoneFloorMap = {
+  "RED ZONE": "Podium Floor",
+  "Yellow zone": "Podium Floor",
+  "Reception Area": "Podium Floor",
+  "Green Zone": "Podium Floor",
+  "Orange Zone": "Podium Floor",
+  "2nd Floor, Pune": "2nd Floor",
+  "Green - Outer": "Podium Floor",
+  "Yellow - Outer": "Podium Floor",
+  "Assembly Area": "Podium Floor",
+  "Tower B": "Tower B",
+  "Reception Area Tower B": "Tower B",
+  "Tower B GYM": "Tower B",
+  
+  // ensure your “Unknown Zone” rolls up into Podium, too:
+  "Unknown Zone": "Podium Floor"
+};
+
+module.exports = zoneFloorMap;
+
 
