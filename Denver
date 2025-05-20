@@ -3,10 +3,10 @@ const punePool = require('./db').pool;
 
 // Create Denver connection
 const denverPool = new sql.ConnectionPool({
-  user:     'DENVER_USER',
-  password: 'DENVER_PASSWORD',
-  server:   'DENVER_SERVER',
-  database: 'DENVER_DATABASE',
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
   options: {
     encrypt: true,
     trustServerCertificate: true
@@ -29,4 +29,3 @@ module.exports = {
     zoneFloorMap: require('../data/denverZoneFloorMap')
   }
 };
-
