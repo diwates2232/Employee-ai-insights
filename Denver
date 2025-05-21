@@ -1,34 +1,4 @@
-const rawDoor    = String(row['Your Actual Door Column Name'] || '').trim();
-const inDirKey   = String(row['Your Actual In Direction Column'] || '').trim();
-const outDirKey  = String(row['Your Actual Out Direction Column'] || '').trim();
-const floor      = String(row['Your Actual Floor Column Name'] || '').trim();
-
-
-
-
-
-
-
-
-node scripts/debugDenverColumns.js
-
-// scripts/debugDenverColumns.js
-
-const path = require('path');
-const xlsx = require('xlsx');
-
-const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
-const workbook = xlsx.readFile(filePath);
-const sheet    = workbook.Sheets[workbook.SheetNames[0]];
-
-const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
-console.log('Header Row:', rows[0]);
-
-
-
-
-
-
+This is my Current fuile then give me Updated js file carefully
 
 // scripts/generateDenverDoorFloorMap.js
 
@@ -53,10 +23,10 @@ console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
 const doorFloorMap = {};
 
 rows.forEach(row => {
-  const rawDoor    = String(row['Door Name'] || '').trim();
-  const inDirKey   = String(row['In Direction'] || '').trim();
-  const outDirKey  = String(row['Out Direction'] || '').trim();
-  const floor      = String(row['Floor'] || '').trim();
+  const rawDoor    = String(row['Your Actual Door Column Name'] || '').trim();
+const inDirKey   = String(row['Your Actual In Direction Column'] || '').trim();
+const outDirKey  = String(row['Your Actual Out Direction Column'] || '').trim();
+const floor      = String(row['Your Actual Floor Column Name'] || '').trim();
 
   if (!rawDoor || !floor) {
     console.warn('Skipping row (missing Door Name or Floor):', row);
@@ -90,147 +60,3 @@ console.log('✅ Denver door-to-floor map written to:', outputPath);
 
 
 
-
-node scripts/generateDenverDoorFloorMap.js
-
-
-
-
-
-
-
-
-
-const rows = xlsx.utils.sheet_to_json(sheet);
-console.log('Rows read from Excel:', rows); // <-- add this line
-
-
-
-// scripts/generateDenverDoorFloorMap.js
-
-const xlsx = require('xlsx');
-const fs = require('fs');
-const path = require('path');
-
-const inputPath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
-const outputPath = path.join(__dirname, '..', 'config', 'denverDoorFloorMap.js');
-
-const workbook = xlsx.readFile(inputPath);
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-// Adjust the column names below to match exactly what's in your Excel
-const rows = xlsx.utils.sheet_to_json(sheet);
-
-const doorToFloorMap = {};
-rows.forEach(row => {
-  const door = row['Door Name']?.trim();
-  const floor = row['Floor']?.trim();
-  if (door && floor) {
-    doorToFloorMap[door] = floor;
-  }
-});
-
-const fileContent = `// Auto-generated from doorDenver.xlsx\nmodule.exports = ${JSON.stringify(doorToFloorMap, null, 2)};\n`;
-
-fs.writeFileSync(outputPath, fileContent, 'utf-8');
-console.log(`✅ Denver door-to-floor map saved to: ${outputPath}`);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-node scripts/generateDenverDoorFloorMap.js
-
-
-
-
-
-
-// scripts/generateDenverDoorFloorMap.js
-const xlsx = require('xlsx');
-const fs = require('fs');
-const path = require('path');
-
-const inputPath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
-const outputPath = path.join(__dirname, '..', 'config', 'denverDoorFloorMap.js');
-
-const workbook = xlsx.readFile(inputPath);
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-const jsonData = xlsx.utils.sheet_to_json(sheet);
-
-const doorToFloorMap = {};
-jsonData.forEach(row => {
-  const doorName = row['Door Name']?.trim();
-  const floorName = row['Floor']?.trim();
-  if (doorName && floorName) {
-    doorToFloorMap[doorName] = floorName;
-  }
-});
-
-const output = `module.exports = ${JSON.stringify(doorToFloorMap, null, 2)};\n`;
-
-fs.writeFileSync(outputPath, output, 'utf-8');
-console.log(`✅ Denver Door-to-Floor map generated at: ${outputPath}`);
-
-
-
-
-
-
-
-
-
-
-
-SELECT DISTINCT
-  t1.ObjectName2 AS DoorName
-FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-WHERE 
-  t1.MessageType = 'CardAdmitted'
-  AND t1.ObjectName2 LIKE '%HQ%' -- only include Denver HQ
-ORDER BY DoorName;
-
-
-
-
-const { sql } = require('./db'); // reuse mssql import from db.js
-const punePool = require('./db').pool;
-
-// Create Denver connection
-const denverPool = new sql.ConnectionPool({
-  user:     'GSOC_Test',
-  password: 'Westerngsoc@2025',
-  server:   'SRVWUDEN0891V',
-  database: 'ACVSUJournal_00010027',
-  options: {
-    encrypt: true,
-    trustServerCertificate: true
-  }
-});
-
-denverPool.connect();
-
-module.exports = {
-  pune: {
-    name: 'Pune',
-    pool: punePool,
-    doorZoneMap: require('../data/puneDoorZoneMap'),
-    zoneFloorMap: require('../data/puneZoneFloorMap')
-  },
-  denver: {
-    name: 'Denver',
-    pool: denverPool,
-    doorZoneMap: require('../data/denverDoorZoneMap'),
-    zoneFloorMap: require('../data/denverZoneFloorMap')
-  }
-};
