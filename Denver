@@ -1,5 +1,21 @@
 node scripts/debugDenverColumns.js
 
+// scripts/debugDenverColumns.js
+
+const path = require('path');
+const xlsx = require('xlsx');
+
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+
+const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+console.log('Header Row:', rows[0]);
+
+
+
+
+
 
 
 // scripts/generateDenverDoorFloorMap.js
