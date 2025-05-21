@@ -1,35 +1,4 @@
-const key = `${doorName}___${direction}`;
-const floor = doorToFloorMap[key];
-
-
-
-function normalizeDoorKey(rawDoorName, rawDirection) {
-  const door = rawDoorName.trim().replace(/\s+/g, ' ').toUpperCase(); // trim + standardize spaces + uppercase
-  const direction = rawDirection.toUpperCase().includes('IN') ? 'IN' : 'OUT'; // convert any direction to 'IN' or 'OUT'
-  return `${door}___${direction}`;
-}
-
-
-
-
-const key = normalizeDoorKey(doorName, direction);
-const floor = doorToFloorMap[key];
-
-if (!floor) {
-  console.warn(`Unmapped door-floor key: "${key}" (raw: "${doorName}", dir: "${direction}")`);
-}
-
-
-
-
-
-
-
-
-
-
-
-
+// controllers/denverLiveOccupancyController.js
 
 // controllers/denverLiveOccupancyController.js
 
@@ -42,6 +11,16 @@ const sql          = require('mssql');
  * then look up in the map. If missing, try to auto‐extract the floor
  * from the door name (e.g. "US.CO.HQ. 12. …" → "Floor 12").
  */
+
+
+function normalizeDoorKey(rawDoorName, rawDirection) {
+  const door = rawDoorName.trim().replace(/\s+/g, ' ').toUpperCase(); // trim + standardize spaces + uppercase
+  const direction = rawDirection.toUpperCase().includes('IN') ? 'IN' : 'OUT'; // convert any direction to 'IN' or 'OUT'
+  return `${door}___${direction}`;
+}
+
+
+
 function mapDoorToFloor(rawDoor, direction) {
   // 1) Normalize direction suffix
   let suffix;
@@ -72,8 +51,8 @@ function mapDoorToFloor(rawDoor, direction) {
   return 'Unknown Floor';
 }
 
-// --- shared query helpers as before ---
 
+// 1) fetch all new swipe events since `since`
 async function fetchNewEvents(since) {
   const pool = await denver.pool.connect();
   const req  = pool.request();
@@ -286,202 +265,4 @@ exports.getDenverLiveOccupancy = async (req, res) => {
   const timer = setInterval(push, 1000);
   req.on('close', () => clearInterval(timer));
 };
-
-
-
-
-
-
-
-
-
-
-lets compare both and update logic for Denver door
-
-// Auto-generated from data/doorDenver.xlsx
-//module.exports
- const doorToFloorMap= {
-  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___IN": "Floor 12",
-  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___OUT": "Out of office",
-  "US.CO.HQ. 12. IDF RESTRICTED DOOR___IN": "Floor 12",
-  "US.CO.HQ. 12. IDF RESTRICTED DOOR___OUT": "Out of office",
-  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___IN": "Floor 12",
-  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___OUT": "Out of office",
-  "US.CO.HQ. 12. NORTH STAIRWELL-IN___IN": "Floor 12",
-  "US.CO.HQ. 12. NORTH STAIRWELL-IN___OUT": "Out of office",
-  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___IN": "Floor 14",
-  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___OUT": "Out of office"
-};
-
-
-
-
-
-this is Pune door
-
-
-
-function mapDoorToZone(door, direction,zone) {
-  const key = `${door}___${direction}__${zone}`;
-  return doorZoneMap[key];
-}
-
-const doorZoneMap = {
-  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
-  
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___OutDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
-  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
-
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___OutDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
-  
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
-  
-  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "Yellow zone",
-
-  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-
-  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "Yellow zone",
-
-  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "Yellow zone",
-  
-  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-  
-  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "Yellow zone",
-  
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "Yellow zone",
-  
-  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "Green Zone",
-  
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "Green Zone",
-  
-  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "Green Zone",
-  
-  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "Green Zone",
-  
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "Green Zone",
-  
-  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "Orange Zone",
-
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___OutDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___OutDirection": "Green Zone",
-
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___OutDirection": "Orange Zone",
-
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "Orange Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___OutDirection": "Orange Zone",
-
-  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "Orange Zone",
-  
-
-  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
-  
-
-
-  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
-  
-
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
-
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
-  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___OutDirection": "2nd Floor, Pune",
-
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection": "Reception Area",
-
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___OutDirection": "Out of office",
-
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___OutDirection": "Yellow Zone",
-
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___InDirection": "Green Zone",
-  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___OutDirection": "Green Zone - Outer Area",
-
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone",
-  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
-
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "RED ZONE",
-  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
-
-
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___OutDirection": "Assembly Area -Podium",
-
-
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___InDirection": "Reception Area",
-  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___OutDirection": "Assembly Area - Podium",
-
-  
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR___OutDirection": "Out of Office",
-
-
-  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR___OutDirection": "Out of Office",
-
-
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR___OutDirection": "Out of Office",
-
-  
-  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR___OutDirection": "Out of Office",
-
-
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___OutDirection": "Out of office",
-
-
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___OutDirection": "Out of office",
-
-
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___OutDirection": "Tower B",
-
-
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___OutDirection": "Tower B",
-
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___InDirection": "Tower B",
-  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___OutDirection": "Tower B",
- "APAC_IN_PUN_TOWER B_GYM ROOM___OutDirection": "Tower B GYM"
-};
-
-module.exports = doorZoneMap;
-
-
-
 
