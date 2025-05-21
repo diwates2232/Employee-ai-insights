@@ -1,59 +1,97 @@
-// controllers/liveOccupancyController.js
+lets read all below current file carefully and giev me updated js file carefully
 
-const { poolConnect, pool, sql } = require('../config/db');
-const doorZoneMap    = require('../data/doorZoneMap');
-const zoneFloorMap   = require('../data/zoneFloorMap');
+file 1
 
-// helper: map door + direction to zone, with fallback for APAC_IN_PUN
-function mapDoorToZone(doorName, direction) {
+// config/siteConfig.js
+const { pool: punePool, sql } = require('./db'); 
+
+// Create Denver connection
+const denverPool = new sql.ConnectionPool({
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
+  options: {
+    encrypt: true,
+    trustServerCertificate: true
+  }
+});
+
+denverPool.connect();
+
+module.exports = {
+  pune: {
+    name: 'Pune',
+    pool: punePool,
+    doorZoneMap:   require('../data/doorZoneMap'),
+    zoneFloorMap:  require('../data/zoneFloorMap')
+  },
+  denver: {
+    name: 'Denver',
+    pool: denverPool,
+    zoneFloorMap:  require('../data/denverDoorFloorMap'),
+  }
+};
+
+
+
+
+file 2
+
+file 2
+
+// controllers/denverLiveOccupancyController.js
+
+const { denver } = require('../config/siteConfig');
+const sql         = require('mssql');
+
+// helper: map door + direction to floor, fallback to 'Unknown Floor'
+function mapDoorToFloor(doorName, direction) {
   const key = `${doorName}___${direction}`;
-  if (doorZoneMap[key]) return doorZoneMap[key];
-  if (doorName.startsWith('APAC_IN_PUN')) return 'Unknown Zone';
-  return 'Unknown Zone';
+  return denver.doorFloorMap[key] || 'Unknown Floor';
 }
 
+// 1) fetch all new swipe events since `since`
 async function fetchNewEvents(since) {
-  await poolConnect;
-  const req = pool.request();
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
   req.input('since', sql.DateTime2, since);
 
-  const result = await req.query(`
+  const { recordset } = await req.query(`
     WITH CombinedQuery AS (
-      SELECT
+      SELECT 
         DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE
+        -- same ID logic as Pune
+        CASE 
           WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
           ELSE CAST(t2.Int1 AS NVARCHAR)
         END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,         -- pull the GUID
+        t1.ObjectIdentity1 AS PersonGUID,
         t3.Name AS PersonnelType,
         COALESCE(
           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.value
+          sc.value
         ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
         t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
         ON t1.XmlGUID = t_xml.GUID
       LEFT JOIN (
-        SELECT GUID, value
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE Name IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
+        SELECT GUID, [value] FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
+        WHERE [Name] IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
       WHERE
         t1.MessageType = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
+        AND t1.ObjectName2 LIKE '%HQ%'        -- Denver doors only
         AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
     )
     SELECT
@@ -61,8 +99,7 @@ async function fetchNewEvents(since) {
       CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
       CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
       EmployeeID,
-      PersonGUID,                                 -- carry PersonGUID forward
-      ObjectName1,
+      PersonGUID,
       PersonnelType,
       CardNumber,
       AdmitCode,
@@ -72,231 +109,467 @@ async function fetchNewEvents(since) {
     ORDER BY LocaleMessageTime ASC;
   `);
 
-  return result.recordset;
+  return recordset;
 }
 
+// 2) total distinct visited today
 async function fetchTotalVisitedToday() {
-  await poolConnect;
-  const req = pool.request();
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
   const todayStart = new Date();
   todayStart.setHours(0,0,0,0);
   req.input('start', sql.DateTime2, todayStart);
 
-  const result = await req.query(`
+  const { recordset } = await req.query(`
     WITH DailyVisits AS (
       SELECT DISTINCT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        log.ObjectIdentity1 AS PersonGUID
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      LEFT JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
+        t1.ObjectIdentity1
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
       WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) >= @start
     )
-    SELECT COUNT(*) AS totalVisitedToday
-    FROM DailyVisits;
+    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
   `);
 
-  return result.recordset[0]?.totalVisitedToday || 0;
+  return recordset[0]?.totalVisitedToday || 0;
 }
 
+// 3) visited-today breakdown
 async function fetchVisitedTodayBreakdown() {
-  await poolConnect;
-  const req = pool.request();
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
   const todayStart = new Date();
   todayStart.setHours(0,0,0,0);
   req.input('start', sql.DateTime2, todayStart);
 
-  const result = await req.query(`
-    WITH CombinedEmployeeData AS (
+  const { recordset } = await req.query(`
+    WITH Combined AS (
       SELECT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        pt.Name AS PersonnelType,
-        log.ObjectIdentity1 AS PersonGUID,
-        DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) AS LocaleMessageTime
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      INNER JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      INNER JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeID = pt.ObjectID
+        t1.ObjectIdentity1,
+        CASE 
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN 'Contractor'
+          ELSE 'Employee'
+        END AS bucket,
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS dt
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     p  ON t1.ObjectIdentity1 = p.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType pt ON p.PersonnelTypeId = pt.ObjectID
       WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) >= @start
     ),
     Ranked AS (
-      SELECT *,
-        ROW_NUMBER() OVER (
-          PARTITION BY PersonGUID
-          ORDER BY LocaleMessageTime DESC
-        ) AS rn
-      FROM CombinedEmployeeData
-      WHERE PersonGUID IS NOT NULL
+      SELECT *, ROW_NUMBER() OVER(PARTITION BY ObjectIdentity1 ORDER BY dt DESC) AS rn
+      FROM Combined
     )
-    SELECT
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END AS bucket,
-      COUNT(*) AS cnt
+    SELECT bucket, COUNT(*) AS cnt
     FROM Ranked
     WHERE rn = 1
-    GROUP BY
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END;
+    GROUP BY bucket;
   `);
 
   const breakdown = { employees: 0, contractors: 0 };
-  for (const { bucket, cnt } of result.recordset) {
-    if (bucket === 'Employee')   breakdown.employees = cnt;
+  for (const { bucket, cnt } of recordset) {
+    if (bucket === 'Employee')   breakdown.employees   = cnt;
     if (bucket === 'Contractor') breakdown.contractors = cnt;
   }
   breakdown.total = breakdown.employees + breakdown.contractors;
   return breakdown;
 }
 
+// 4) build the live-occupancy snapshot
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
 
   for (const evt of allEvents) {
     const {
-      EmployeeID,
-      PersonGUID,             // our stable unique key
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      Dateonly,
-      Swipe_Time,
-      Direction,
-      Door
+      EmployeeID, PersonGUID,
+      PersonnelType, Direction, Door,
+      Dateonly, Swipe_Time, CardNumber
     } = evt;
 
-    // use GUID first; fallback to EmployeeID or card or name
-    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-    const zone     = mapDoorToZone(Door, Direction);
+    const dedupKey = PersonGUID || EmployeeID || CardNumber;
+    const floor    = mapDoorToFloor(Door, Direction);
 
-    // only “real” out-of-office removes
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      delete current[dedupKey];
+    // only an explicit “OutDirection” at an unmapped door removes them
+    if (Direction === 'OutDirection' && floor === 'Unknown Floor') {
       uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
       continue;
     }
 
     if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, { PersonnelType });
-      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, CardNumber, PersonnelType, floor };
     } else {
-      delete current[dedupKey];
       uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
     }
   }
 
-  // live headcounts
-  let employeeCount = 0;
+  // live counts
+  let employeeCount   = 0;
   let contractorCount = 0;
-  for (const { PersonnelType } of uniquePeople.values()) {
-    if (['Employee','Terminated Personnel'].includes(PersonnelType)) employeeCount++;
+  for (const pt of uniquePeople.values()) {
+    if (pt === 'Employee' || pt === 'Terminated Personnel') employeeCount++;
     else contractorCount++;
   }
 
-  // zone & floor aggregations…
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([z, emps]) => {
-      const byType = emps.reduce((acc, e) => {
-        acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
-        return acc;
-      }, {});
-      return [z, { total: emps.length, byPersonnelType: byType, employees: emps }];
-    })
-  );
-
+  // floor breakdown
   const floorMap = {};
-  for (const [z,d] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[z] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += d.total;
-    for (const [pt,c] of Object.entries(d.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
-    }
+  for (const { floor } of Object.values(current)) {
+    floorMap[floor] = floorMap[floor] || [];
+    floorMap[floor].push(current[floor]);
   }
-
-  const summary        = Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total }));
-  const zoneBreakdown  = Object.entries(zoneDetails).map(([z,d])=>({ zone: z, ...d.byPersonnelType, total: d.total }));
-  const floorBreakdown = Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total }));
-
-  const personnelBreakdown = [];
-  if (employeeCount)   personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
-  if (contractorCount) personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    count: occupants.length,
+    occupants
+  }));
 
   return {
     asOf:             new Date().toISOString(),
-    summary,
-    zoneBreakdown,
+    currentCount:     employeeCount + contractorCount,
     floorBreakdown,
-    details:          zoneMap,
     personnelSummary: { employees: employeeCount, contractors: contractorCount },
-    personnelBreakdown
+    personnelBreakdown: [
+      { personnelType: 'Employee',   count: employeeCount },
+      { personnelType: 'Contractor', count: contractorCount }
+    ]
   };
 }
 
-exports.getLiveOccupancy = async (req, res) => {
-  try {
-    await poolConnect;
-    res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive'
-    });
-    res.write('\n');
+// 5) SSE endpoint
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
 
-    let lastSeen = new Date(Date.now() - 1000*60*60*24);
-    const events = [];
+  let lastSeen = new Date(Date.now() - 24*60*60*1000);
+  const events = [];
 
-    const push = async () => {
-      const fresh = await fetchNewEvents(lastSeen);
-      if (fresh.length) {
-        lastSeen = fresh[fresh.length-1].LocaleMessageTime;
-        events.push(...fresh);
-      }
-      const payload = await buildOccupancy(events);
-      payload.totalVisitedToday = await fetchTotalVisitedToday();
-      payload.visitedToday      = await fetchVisitedTodayBreakdown();
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    };
-
-    // initial
-    await push();
-    const timer = setInterval(push, 1000);
-    req.on('close', () => clearInterval(timer));
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
+  async function push() {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+    const payload = await buildOccupancy(events);
+    payload.totalVisitedToday = await fetchTotalVisitedToday();
+    payload.visitedToday      = await fetchVisitedTodayBreakdown();
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
   }
+
+  // initial send and then every second
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
 };
+
+
+
+
+file 3
+
+// Auto-generated from data/doorDenver.xlsx
+module.exports = {
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___None": "Floor 12",
+
+  "US.CO.HQ. 12. IDF RESTRICTED DOOR___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. IDF RESTRICTED DOOR___None": "Floor 12",
+
+  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___Floor 12": "Floor 12",
+
+  //"US.CO.HQ. 12. STORAGE ROOM_11:01:0A___None": "Floor 12",
+
+  "US.CO.HQ. 12. NORTH STAIRWELL-IN___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. NORTH STAIRWELL-IN___None": "Floor 12",
+
+  "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-IN___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-IN___None": "Floor 12",
+
+  "US.CO.HQ. 12. MOTHERS ROOM_11:01:CC___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. MOTHERS ROOM_11:01:CC___None": "Floor 12",
+
+  "US.CO.HQ. 12. SOUTH STAIRWELL-IN___Floor 12": "Floor 12",
+
+//   "US.CO.HQ. 12. SOUTH STAIRWELL-IN___None": "Floor 12",
+
+  "US.CO.HQ. 11. IDF ROOM_11:01:42 RESTRICTED DOOR___Floor 11": "Floor 11",
+
+//   "US.CO.HQ. 11. IDF ROOM_11:01:42 RESTRICTED DOOR___None": "Floor 11",
+
+  "US.CO.HQ. 11. STORAGE ROOM_11:01:DD___Floor 11": "Floor 11",
+
+//   "US.CO.HQ. 11. STORAGE ROOM_11:01:DD___None": "Floor 11",
+
+  "US.CO.HQ. 11. NORTH STAIRWELL-IN___Floor 11": "Floor 11",
+
+//   "US.CO.HQ. 11. NORTH STAIRWELL-IN___None": "Floor 11",
+
+  "US.CO.HQ. 11. FREIGHT ELEVATOR LOBBY-IN___Floor 11": "Floor 11",
+
+// "US.CO.HQ. 11. FREIGHT ELEVATOR LOBBY-IN___None": "Floor 11",
+
+  "US.CO.HQ. 11. QUIET ROOM_11:01:0E___Floor 11": "Floor 11",
+
+//   "US.CO.HQ. 11. QUIET ROOM_11:01:0E___None": "Floor 11",
+
+  "US.CO.HQ. 11. SOUTH STAIRWELL-IN___Floor 11": "Floor 11",
+
+//   "US.CO.HQ. 11. SOUTH STAIRWELL-IN___None": "Floor 11",
+
+  "US.CO.HQ. 09. IDF ROOM_11:00:98 RESTRICTED DOOR___Floor 09": "Floor 09",
+
+//   "US.CO.HQ. 09. IDF ROOM_11:00:98 RESTRICTED DOOR___None": "Floor 09",
+
+  "US.CO.HQ. 09. STORAGE ROOM_11:01:05___Floor 09": "Floor 09",
+
+//   "US.CO.HQ. 09. STORAGE ROOM_11:01:05___None": "Floor 09",
+
+  "US.CO.HQ. 09. SOUTH STAIRWELL-IN___Floor 09": "Floor 09",
+
+//   "US.CO.HQ. 09. SOUTH STAIRWELL-IN___None": "Floor 09",
+
+  "US.CO.HQ. 09. FREIGHT ELEVATOR LOBBY-IN___Floor 09": "Floor 09",
+
+//   "US.CO.HQ. 09. FREIGHT ELEVATOR LOBBY-IN___None": "Floor 09",
+
+  "US.CO.HQ. 09. WELLNESS ROOM_11:01:E1___Floor 09": "Floor 09",
+  
+  "US.CO.HQ. 09. WELLNESS ROOM_11:01:E1___None": "Floor 09",
+  "US.CO.HQ. 09. NORTH STAIRWELL-IN___Floor 09": "Floor 09",
+  "US.CO.HQ. 09. NORTH STAIRWELL-IN___None": "Floor 09",
+  "US.CO.HQ. 12. NORTH LOBBY DOORS-IN___Floor 12": "Floor 12",
+  "US.CO.HQ. 12. NORTH LOBBY DOORS-IN___None": "Floor 12",
+  "US.CO.HQ. 11. NORTH LOBBY DOORS-IN___Floor 11": "Floor 11",
+  "US.CO.HQ. 11. NORTH LOBBY DOORS-IN___None": "Floor 11",
+  "US.CO.HQ. 11. SOUTH LOBBY DOORS-IN___Floor 11": "Floor 11",
+  "US.CO.HQ. 11. SOUTH LOBBY DOORS-IN___None": "Floor 11",
+  "US.CO.HQ. 09. NORTH LOBBY DOORS-IN___Floor 09": "Floor 09",
+  "US.CO.HQ. 09. NORTH LOBBY DOORS-IN___None": "Floor 09",
+  "US.CO.HQ. 09. SOUTH LOBBY DOORS-IN___Floor 09": "Floor 09",
+  "US.CO.HQ. 09. SOUTH LOBBY DOORS-IN___None": "Floor 09",
+  "US.CO.HQ. 13. FREIGHT ELEVATOR LOBBY-IN___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. FREIGHT ELEVATOR LOBBY-IN___None": "Floor 13",
+  "US.CO.HQ. 13. SOUTH LOBBY DOORS-IN___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. SOUTH LOBBY DOORS-IN___None": "Floor 13",
+  "US.CO.HQ. 13. NORTH STAIRWELL-IN___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. NORTH STAIRWELL-IN___None": "Floor 13",
+  "US.CO.HQ. 13. IDF ROOM_11:01:8C RESTRICTED DOOR___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. IDF ROOM_11:01:8C RESTRICTED DOOR___None": "Floor 13",
+  "US.CO.HQ. 13. NORTH LOBBY DOORS-IN___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. NORTH LOBBY DOORS-IN___None": "Floor 13",
+  "US.CO.HQ. 13. STORAGE ROOM_11:01:75___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. STORAGE ROOM_11:01:75___None": "Floor 13",
+  "US.CO.HQ. 13. MOTHERS ROOM_11:01:A3___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. MOTHERS ROOM_11:01:A3___None": "Floor 13",
+  "US.CO.HQ. 13. SOUTH STAIRWELL-IN___Floor 13": "Floor 13",
+  "US.CO.HQ. 13. SOUTH STAIRWELL-IN___None": "Floor 13",
+  "US.CO.HQ.06. MAIL ROOM_11:00:17___Floor 06": "Floor 06",
+  "US.CO.HQ.06. MAIL ROOM_11:00:17___None": "Floor 06",
+  "US.CO.HQ. 06. NORTH ENTRY-IN___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. NORTH ENTRY-IN___None": "Floor 06",
+  "US.CO.HQ. 06. SECURITY CONTROL ROOM_11:01:22 RESTRICTED DOOR___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. SECURITY CONTROL ROOM_11:01:22 RESTRICTED DOOR___None": "Floor 06",
+  "US.CO.HQ. 06. EUC LAB STORAGE_11:01:CA___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. EUC LAB STORAGE_11:01:CA___None": "Floor 06",
+  "US.CO.HQ. 06. IT WORK LAB_11:01:99___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. IT WORK LAB_11:01:99___None": "Floor 06",
+  "US.CO.HQ. 06. E-WASTE STORAGE_11:01:96___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. E-WASTE STORAGE_11:01:96___None": "Floor 06",
+  "US.CO.HQ. 06. EUC LAB DOOR_11:01:D4___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. EUC LAB DOOR_11:01:D4___None": "Floor 06",
+  "US.CO.HQ. 06. EAST STAIRWELL-IN___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. EAST STAIRWELL-IN___None": "Floor 06",
+  "US.CO.HQ. 06. MDF ROOM_11:00:D5 RESTRICTED DOOR___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. MDF ROOM_11:00:D5 RESTRICTED DOOR___None": "Floor 06",
+  "US.CO.HQ. 06. FITNESS CENTER EAST_11:01:02___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. FITNESS CENTER EAST_11:01:02___None": "Floor 06",
+  "US.CO.HQ. 06. SOUTH CENTER HALL ENTRY-IN___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. SOUTH CENTER HALL ENTRY-IN___None": "Floor 06",
+  "US.CO.HQ. 06. FITNESS CENTER WEST_11:01:B9___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. FITNESS CENTER WEST_11:01:B9___None": "Floor 06",
+  "US.CO.HQ. 06. SOUTH ENTRANCE-IN___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. SOUTH ENTRANCE-IN___None": "Floor 06",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-IN___None": "Floor 15",
+  "US.CO.HQ. 15. EXECUTIVE ENTRANCE_10:03:9F___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. EXECUTIVE ENTRANCE_10:03:9F___None": "Floor 15",
+  "US.CO.HQ. 15. EXEC ADMINS ENTRANCE_10:04:4F___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. EXEC ADMINS ENTRANCE_10:04:4F___None": "Floor 15",
+  "US.CO.HQ. 15. WEST STORAGE_10:06:6F___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. WEST STORAGE_10:06:6F___None": "Floor 15",
+  "US.CO.HQ. 14. NORTH LOBBY DOORS-IN___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. NORTH LOBBY DOORS-IN___None": "Floor 14",
+  "US.CO.HQ. 14. SOUTH LOBBY DOORS-IN___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. SOUTH LOBBY DOORS-IN___None": "Floor 14",
+  "US.CO.HQ. 14. NORTH STAIRWELL-IN___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. NORTH STAIRWELL-IN___None": "Floor 14",
+  "US.CO.HQ. 14. STORAGE ROOM___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. STORAGE ROOM___None": "Floor 14",
+  "US.CO.HQ. 14. IDF ROOM_11:01:0F RESTRICTED DOOR___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. IDF ROOM_11:01:0F RESTRICTED DOOR___None": "Floor 14",
+  "US.CO.HQ. 14. FREIGHT ELEVATOR LOBBY-IN___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. FREIGHT ELEVATOR LOBBY-IN___None": "Floor 14",
+  "US.CO.HQ. 14 AV SUPPORT_11:01:6E___Floor 14": "Floor 14",
+  "US.CO.HQ. 14 AV SUPPORT_11:01:6E___None": "Floor 14",
+  "US.CO.HQ. 14. WELLNESS ROOM_11:01:B0___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. WELLNESS ROOM_11:01:B0___None": "Floor 14",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-IN___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-IN___None": "Floor 14",
+  "US.CO.HQ. 14. CATERING PANTRY NORTH DOOR_11:01:00___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. CATERING PANTRY NORTH DOOR_11:01:00___None": "Floor 14",
+  "US.CO.HQ. 14. CATERING PANTRY SOUTH DOOR_11:01:19___Floor 14": "Floor 14",
+  "US.CO.HQ. 14. CATERING PANTRY SOUTH DOOR_11:01:19___None": "Floor 14",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-IN___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-IN___None": "Floor 15",
+  "US.CO.HQ. 15. IDF ROOM_11:01:97 RESTRICTED DOOR___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. IDF ROOM_11:01:97 RESTRICTED DOOR___None": "Floor 15",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-IN___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-IN___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-IN___None": "Floor 15",
+  "US.CO.HQ. 15. NORTH STAIRWELL-IN___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. NORTH STAIRWELL-IN___None": "Floor 15",
+  "US.CO.HQ. 15. WELLNESS ROOM_11:00:24___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. WELLNESS ROOM_11:00:24___None": "Floor 15",
+  "US.CO.HQ. 15. AV SUPPORT ROOM_11:01:56___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. AV SUPPORT ROOM_11:01:56___None": "Floor 15",
+  "US.CO.HQ. 15. CATERING KITCHEN_11:01:AE___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. CATERING KITCHEN_11:01:AE___None": "Floor 15",
+  "US.CO.HQ. 15.TRAINING STORAGE ROOM_11:01:90___Floor 15": "Floor 15",
+  "US.CO.HQ. 15.TRAINING STORAGE ROOM_11:01:90___None": "Floor 15",
+  "US.CO.HQ. 01. FOCUS AREA NORTH-IN___Floor 01": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA NORTH-IN___None": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA WEST-IN___Floor 01": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA WEST-IN___None": "Floor 01",
+  "US.CO.HQ. 01. RETAIL NORTH_10:03:1A___Floor 01": "Floor 01",
+  "US.CO.HQ. 01. RETAIL NORTH_10:03:1A___None": "Floor 01",
+  "US.CO.HQ. 06. MORSE STUDIO___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. MORSE STUDIO___None": "Floor 06",
+  "US.CO.HQ. 15. 15TH FLOOR NORTH STORAGE 15.430___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR NORTH STORAGE 15.430___None": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTHWEST ENTRANCE 15.312A___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTHWEST ENTRANCE 15.312A___None": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTH ENTRANCE 15.312B___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTH ENTRANCE 15.312B___None": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTHEAST ENTRANCE 15.313___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR EXECUTIVE SOUTHEAST ENTRANCE 15.313___None": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR SIBLEY CONFERENCE ROOM SOUTHWEST ENTRANCE 15.201A___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR SIBLEY CONFERENCE ROOM SOUTHWEST ENTRANCE 15.201A___None": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR SIBLEY CONFERENCE ROOM SOUTHEAST ENTRANCE 15.201B___Floor 15": "Floor 15",
+  "US.CO.HQ. 15. 15TH FLOOR SIBLEY CONFERENCE ROOM SOUTHEAST ENTRANCE 15.201B___None": "Floor 15",
+  "US.CO.HQ. 06. NORTH ENTRY-OUT___None": "Floor 06",
+  "US.CO.HQ. 06. NORTH ENTRY-OUT___Out of office": "Floor 06",
+  "US.CO.HQ. 06. EAST STAIRWELL-OUT___None": "Floor 06",
+  "US.CO.HQ. 06. EAST STAIRWELL-OUT___Out of office": "Floor 06",
+  "US.CO.HQ. 06. SOUTH CENTER HALL ENTRY-OUT___Floor 06": "Floor 06",
+  "US.CO.HQ. 06. SOUTH CENTER HALL ENTRY-OUT___Out of office": "Floor 06",
+  "US.CO.HQ. 06. SOUTH ENTRANCE-OUT___None": "Floor 06",
+  "US.CO.HQ. 06. SOUTH ENTRANCE-OUT___Out of office": "Floor 06",
+  "US.CO.HQ. 01. FOCUS AREA NORTH-OUT___None": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA NORTH-OUT___Floor 01": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA WEST-OUT___None": "Floor 01",
+  "US.CO.HQ. 01. FOCUS AREA WEST-OUT___Floor 01": "Floor 01",
+  "US.CO.HQ. 09. FREIGHT ELEVATOR LOBBY-OUT___None": "Floor 09",
+  "US.CO.HQ. 09. FREIGHT ELEVATOR LOBBY-OUT___Out of office": "Floor 09",
+  "US.CO.HQ. 09. NORTH LOBBY DOORS-OUT___None": "Floor 09",
+  "US.CO.HQ. 09. NORTH LOBBY DOORS-OUT___Out of office": "Floor 09",
+  "US.CO.HQ. 09. NORTH STAIRWELL-OUT___None": "Floor 09",
+  "US.CO.HQ. 09. NORTH STAIRWELL-OUT___Out of office": "Floor 09",
+  "US.CO.HQ. 09. SOUTH LOBBY DOORS-OUT___None": "Floor 09",
+  "US.CO.HQ. 09. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 09",
+  "US.CO.HQ. 09. SOUTH STAIRWELL-OUT___None": "Floor 09",
+  "US.CO.HQ. 09. SOUTH STAIRWELL-OUT___Out of office": "Floor 09",
+  "US.CO.HQ. 11. FREIGHT ELEVATOR LOBBY-OUT___None": "Floor 11",
+  "US.CO.HQ. 11. FREIGHT ELEVATOR LOBBY-OUT___Out of office": "Floor 11",
+  "US.CO.HQ. 11. NORTH LOBBY DOORS-OUT___None": "Floor 11",
+  "US.CO.HQ. 11. NORTH LOBBY DOORS-OUT___Out of office": "Floor 11",
+  "US.CO.HQ. 11. NORTH STAIRWELL-OUT___None": "Floor 11",
+  "US.CO.HQ. 11. NORTH STAIRWELL-OUT___Out of office": "Floor 11",
+  "US.CO.HQ. 11. SOUTH LOBBY DOORS-OUT___None": "Floor 11",
+  "US.CO.HQ. 11. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 11",
+  "US.CO.HQ. 11. SOUTH STAIRWELL-OUT___None": "Floor 11",
+  "US.CO.HQ. 11. SOUTH STAIRWELL-OUT___Out of office": "Floor 11",
+  "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-OUT___None": "Floor 12",
+  "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-OUT___Out of office": "Floor 12",
+  "US.CO.HQ. 12. NORTH LOBBY DOORS-OUT___None": "Floor 12",
+  "US.CO.HQ. 12. NORTH LOBBY DOORS-OUT___Out of office": "Floor 12",
+  "US.CO.HQ. 12. NORTH STAIRWELL-OUT___None": "Floor 12",
+  "US.CO.HQ. 12. NORTH STAIRWELL-OUT___Out of office": "Floor 12",
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-OUT___None": "Floor 12",
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 12",
+  "US.CO.HQ. 12. SOUTH STAIRWELL-OUT___None": "Floor 12",
+  "US.CO.HQ. 12. SOUTH STAIRWELL-OUT___Out of office": "Floor 12",
+  "US.CO.HQ. 13. FREIGHT ELEVATOR LOBBY-OUT___None": "Floor 13",
+  "US.CO.HQ. 13. FREIGHT ELEVATOR LOBBY-OUT___Out of office": "Floor 13",
+  "US.CO.HQ. 13. NORTH LOBBY DOORS-OUT___None": "Floor 13",
+  "US.CO.HQ. 13. NORTH LOBBY DOORS-OUT___Out of office": "Floor 13",
+  "US.CO.HQ. 13. NORTH STAIRWELL-OUT___None": "Floor 13",
+  "US.CO.HQ. 13. NORTH STAIRWELL-OUT___Out of office": "Floor 13",
+  "US.CO.HQ. 13. SOUTH LOBBY DOORS-OUT___None": "Floor 13",
+  "US.CO.HQ. 13. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 13",
+  "US.CO.HQ. 13. SOUTH STAIRWELL-OUT___None": "Floor 13",
+  "US.CO.HQ. 13. SOUTH STAIRWELL-OUT___Out of office": "Floor 13",
+  "US.CO.HQ. 14. FREIGHT ELEVATOR LOBBY-OUT___None": "Floor 14",
+  "US.CO.HQ. 14. FREIGHT ELEVATOR LOBBY-OUT___Out of office": "Floor 14",
+  "US.CO.HQ. 14. NORTH LOBBY DOORS-OUT___None": "Floor 14",
+  "US.CO.HQ. 14. NORTH LOBBY DOORS-OUT___Out of office": "Floor 14",
+  "US.CO.HQ. 14. NORTH STAIRWELL-OUT___None": "Floor 14",
+  "US.CO.HQ. 14. NORTH STAIRWELL-OUT___Out of office": "Floor 14",
+  "US.CO.HQ. 14. SOUTH LOBBY DOORS-OUT___None": "Floor 14",
+  "US.CO.HQ. 14. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 14",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___None": "Floor 14",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___Out of office": "Floor 14",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___Out of office": "Floor 15",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___None": "Floor 15",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___Out of office": "Floor 15"
+};
+
+
+
+
+file 4
+
+// routes/occupancyDenverRoutes.js
+const express = require('express');
+const router = express.Router();
+const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
+
+// Denver live occupancy
+router.get('/live-occupancy-denver', getDenverLiveOccupancy);
+
+module.exports = router;
 
 
 
