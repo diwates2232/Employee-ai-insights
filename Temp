@@ -1,51 +1,5 @@
-async function fetchTotalVisitedToday() {
-  await poolConnect;
-  const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-  req.input('start', sql.DateTime2, todayStart);
+Read all file line by line and check why count is mismatch
 
-  const result = await req.query(`
-    WITH DailyVisits AS (
-      SELECT DISTINCT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        log.ObjectIdentity1 AS PersonGUID
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      LEFT JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
-      WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
-    )
-    SELECT 
-      COUNT(DISTINCT COALESCE(PersonGUID, EmployeeID)) 
-      AS totalVisitedToday
-    FROM DailyVisits;
-  `);
-
-  return result.recordset[0]?.totalVisitedToday || 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Lets check this file carefully.and check Total Visited Today logic because issue is Our total visited today count is not match as actual count
-dont make unneccesarry changes in this file .
 
 
 // controllers/liveOccupancyController.js
@@ -125,6 +79,7 @@ async function fetchNewEvents(since) {
   return result.recordset;
 }
 
+
 async function fetchTotalVisitedToday() {
   await poolConnect;
   const req = pool.request();
@@ -149,12 +104,15 @@ async function fetchTotalVisitedToday() {
         AND log.PartitionName2 = 'APAC.Default'
         AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
     )
-    SELECT COUNT(*) AS totalVisitedToday
+    SELECT 
+      COUNT(DISTINCT COALESCE(PersonGUID, EmployeeID)) 
+      AS totalVisitedToday
     FROM DailyVisits;
   `);
 
   return result.recordset[0]?.totalVisitedToday || 0;
 }
+
 
 async function fetchVisitedTodayBreakdown() {
   await poolConnect;
