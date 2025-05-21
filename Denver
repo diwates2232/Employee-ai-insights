@@ -1,3 +1,15 @@
+const rawDoor    = String(row['Your Actual Door Column Name'] || '').trim();
+const inDirKey   = String(row['Your Actual In Direction Column'] || '').trim();
+const outDirKey  = String(row['Your Actual Out Direction Column'] || '').trim();
+const floor      = String(row['Your Actual Floor Column Name'] || '').trim();
+
+
+
+
+
+
+
+
 node scripts/debugDenverColumns.js
 
 // scripts/debugDenverColumns.js
