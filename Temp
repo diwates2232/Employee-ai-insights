@@ -1,3 +1,8 @@
+const key = `${doorName}___${direction}`;
+const floor = doorToFloorMap[key];
+
+
+
 function normalizeDoorKey(rawDoorName, rawDirection) {
   const door = rawDoorName.trim().replace(/\s+/g, ' ').toUpperCase(); // trim + standardize spaces + uppercase
   const direction = rawDirection.toUpperCase().includes('IN') ? 'IN' : 'OUT'; // convert any direction to 'IN' or 'OUT'
