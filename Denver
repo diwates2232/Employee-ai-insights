@@ -1,3 +1,78 @@
+// scripts/generateDenverDoorFloorMap.js
+
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+// 1. Load the workbook & first sheet
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+// 2. Convert to JSON
+const rows = xlsx.utils.sheet_to_json(sheet);
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+// 3. Build the door→floor map
+const doorFloorMap = {};
+
+// Replace these with your actual column names in the Excel file
+const DOOR_COLUMN = 'Door Name';
+const IN_DIR_COLUMN = 'IN Direction';
+const OUT_DIR_COLUMN = 'OUT Direction';
+const FLOOR_COLUMN = 'Floor';
+
+rows.forEach(row => {
+  const rawDoor = String(row[DOOR_COLUMN] || '').trim();
+  const inDirKey = String(row[IN_DIR_COLUMN] || '').trim();
+  const outDirKey = String(row[OUT_DIR_COLUMN] || '').trim();
+  const floor = String(row[FLOOR_COLUMN] || '').trim();
+
+  if (!rawDoor || !floor) {
+    console.warn('Skipping row (missing Door Name or Floor):', row);
+    return;
+  }
+
+  const doorName = rawDoor.toUpperCase();
+
+  if (inDirKey) {
+    doorFloorMap[`${doorName}___${inDirKey}`] = floor;
+  }
+  if (outDirKey) {
+    doorFloorMap[`${doorName}___${outDirKey}`] = floor;
+  }
+});
+
+// 4. Write out the JS file
+const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
+const content = 
+  `// Auto-generated from data/doorDenver.xlsx\n` +
+  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
+
+fs.writeFileSync(outputPath, content, 'utf8');
+
+console.log('✅ Denver door-to-floor map written to:', outputPath);
+console.log('Total entries in map:', Object.keys(doorFloorMap).length);
+
+
+
+
+node scripts/generateDenverDoorFloorMap.js
+
+
+
+
+
+
+
+
+
+
+
 This is my Current fuile then give me Updated js file carefully
 
 // scripts/generateDenverDoorFloorMap.js
