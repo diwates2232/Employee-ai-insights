@@ -1,5 +1,45 @@
 read all file carefully and give mr updated js controler,file build logic for Live Occupancy as well people Visited today as well.carefully.
-use Objec1Indentity as unique id
+use Objec1Indentity as unique id Give me both updated file carefully.
+
+ // config/siteConfig.js
+
+const { pool: punePool, sql } = require('./db'); 
+
+// Create Denver connection
+const denverPool = new sql.ConnectionPool({
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
+  options: {
+    encrypt: true,
+    trustServerCertificate: true
+  }
+});
+
+denverPool.connect();
+
+module.exports = {
+  pune: {
+    name: 'Pune',
+    pool: punePool,
+    doorZoneMap:  require('../data/doorZoneMap'),
+    zoneFloorMap: require('../data/zoneFloorMap')
+  },
+  denver: {
+    name: 'Denver',
+    pool: denverPool,
+    // TEMP: Skip zone maps for now
+    doorZoneMap: {},
+    zoneFloorMap: {}
+  }
+};
+
+
+
+
+
+Controllerfile 
 
 const { denver } = require('../config/siteConfig');
 const sql = require('mssql');
