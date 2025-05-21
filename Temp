@@ -6,6 +6,85 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 
+// 1. Load the workbook & first sheet
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+// 2. Convert to JSON
+const rows = xlsx.utils.sheet_to_json(sheet);
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+// 3. Build the door→floor map
+const doorFloorMap = {};
+
+// Excel column headers (adjust if your actual Excel file has different names)
+const DOOR_COLUMN = 'Door Name';
+const IN_DIR_COLUMN = 'IN Direction';
+const IN_FLOOR_COLUMN = 'IN Floor';
+const OUT_DIR_COLUMN = 'OUT Direction';
+const OUT_FLOOR_COLUMN = 'OUT Floor';
+
+rows.forEach((row, index) => {
+  const rawDoor = String(row[DOOR_COLUMN] || '').trim();
+  const inDir = String(row[IN_DIR_COLUMN] || '').trim();
+  const inFloor = String(row[IN_FLOOR_COLUMN] || '').trim();
+  const outDir = String(row[OUT_DIR_COLUMN] || '').trim();
+  const outFloor = String(row[OUT_FLOOR_COLUMN] || '').trim();
+
+  if (!rawDoor) {
+    console.warn(`Skipping row ${index + 2} (missing Door Name)`);
+    return;
+  }
+
+  const doorName = rawDoor.toUpperCase();
+
+  if (inDir && inFloor) {
+    doorFloorMap[`${doorName}___${inDir}`] = inFloor;
+  }
+
+  if (outDir && outFloor) {
+    doorFloorMap[`${doorName}___${outDir}`] = outFloor;
+  }
+});
+
+// 4. Generate output content
+const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
+const content =
+  `// Auto-generated from data/doorDenver.xlsx\n` +
+  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
+
+// 5. Write file with overwrite mode
+try {
+  fs.writeFileSync(outputPath, content, { encoding: 'utf8', flag: 'w' });
+  console.log('\n✅ Denver door-to-floor map written to:', outputPath);
+  console.log('Total entries in map:', Object.keys(doorFloorMap).length);
+} catch (err) {
+  console.error('❌ Error writing file:', err.message);
+}
+
+// 6. Preview first few lines
+console.log('\n--- Preview of exported map ---');
+console.log(content.slice(0, 500));
+console.log('--------------------------------');
+
+
+
+
+
+
+
+
+
+
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
 // 1. Load Excel file
 const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
 const workbook = xlsx.readFile(filePath);
