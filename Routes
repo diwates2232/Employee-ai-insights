@@ -1,3 +1,291 @@
+// controllers/liveOccupancyController.js
+
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap      = require('../data/doorZoneMap');
+const zoneFloorMap     = require('../data/zoneFloorMap');
+
+// helper: map door+direction to zone (falls back to 'Unknown Zone' for any APAC_IN_PUN door)
+function mapDoorToZone(doorName, direction) {
+  const key = `${doorName}___${direction}`;
+  if (doorZoneMap[key]) return doorZoneMap[key];
+  if (doorName.startsWith('APAC_IN_PUN')) return 'Unknown Zone';
+  return 'Unknown Zone';
+}
+
+async function fetchNewEvents(since) {
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE 
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          SCard.[value]
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value   AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2  ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3  ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
+        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
+        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, [value]
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE [Name] IN ('Card','CHUID')
+      ) AS SCard
+        ON t1.XmlGUID = SCard.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+  return recordset;
+}
+
+async function fetchTotalVisitedToday() {
+  const req = pool.request();
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  req.input('start', sql.DateTime2, todayStart);
+  const { recordset } = await req.query(`
+    WITH DailyVisits AS (
+      SELECT DISTINCT
+        CASE 
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      LEFT JOIN [ACVSCore].[Access].[Personnel] p 
+        ON log.ObjectIdentity1 = p.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt 
+        ON p.PersonnelTypeId = pt.ObjectID
+      WHERE
+        log.MessageType = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+    )
+    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
+  `);
+  return recordset[0]?.totalVisitedToday || 0;
+}
+
+async function fetchVisitedTodayBreakdown() {
+  const req = pool.request();
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  req.input('start', sql.DateTime2, todayStart);
+  const { recordset } = await req.query(`
+    WITH CombinedEmployeeData AS (
+      SELECT
+        CASE
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        pt.Name AS PersonnelType,
+        DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) AS LocaleMessageTime
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      INNER JOIN [ACVSCore].[Access].[Personnel] p 
+        ON log.ObjectIdentity1 = p.GUID
+      INNER JOIN [ACVSCore].[Access].[PersonnelType] pt 
+        ON p.PersonnelTypeID = pt.ObjectID
+      WHERE
+        log.MessageType = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
+    ),
+    RankedEmployeeData AS (
+      SELECT *,
+        ROW_NUMBER() OVER (
+          PARTITION BY EmployeeID
+          ORDER BY LocaleMessageTime DESC
+        ) AS rn
+      FROM CombinedEmployeeData
+      WHERE EmployeeID IS NOT NULL
+    )
+    SELECT
+      CASE
+        WHEN PersonnelType IN (
+          'Contractor','Terminated Contractor',
+          'None','Property Management',
+          'Temp Badge','Visitor'
+        ) THEN 'Contractor'
+        ELSE 'Employee'
+      END AS bucket,
+      COUNT(*) AS cnt
+    FROM RankedEmployeeData
+    WHERE rn = 1
+    GROUP BY
+      CASE
+        WHEN PersonnelType IN (
+          'Contractor','Terminated Contractor',
+          'None','Property Management',
+          'Temp Badge','Visitor'
+        ) THEN 'Contractor'
+        ELSE 'Employee'
+      END;
+  `);
+
+  // build the breakdown object
+  const breakdown = { employees: 0, contractors: 0 };
+  for (const { bucket, cnt } of recordset) {
+    if (bucket === 'Employee')   breakdown.employees = cnt;
+    if (bucket === 'Contractor') breakdown.contractors = cnt;
+  }
+  breakdown.total = breakdown.employees + breakdown.contractors;
+  return breakdown;
+}
+
+
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, ObjectName1, PersonnelType,
+      CardNumber, Dateonly, Swipe_Time,
+      Direction, Door
+    } = evt;
+
+    // use ObjectName1 as key if EmployeeID is missing
+    const dedupKey = EmployeeID || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
+
+    // only remove on a true “out-of-office” swipe
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      delete current[dedupKey];
+      uniquePeople.delete(dedupKey);
+      continue;
+    }
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, { PersonnelType });
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
+    } else {
+      delete current[dedupKey];
+      uniquePeople.delete(dedupKey);
+    }
+  }
+
+  // count by type
+  let employeeCount   = 0;
+  let contractorCount = 0;
+  for (const { PersonnelType } of uniquePeople.values()) {
+    if (['Employee','Terminated Personnel'].includes(PersonnelType)) {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
+  }
+
+  // zone breakdown
+  const zoneMap = {};
+  for (const emp of Object.values(current)) {
+    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+    zoneMap[emp.zone].push(emp);
+  }
+
+  const summary        = Object.entries(zoneMap).map(([z, emps]) => ({ zone: z, count: emps.length }));
+  const zoneBreakdown  = Object.entries(zoneMap).map(([z, emps]) => {
+    const byType = emps.reduce((a,e)=>(a[e.PersonnelType]=(a[e.PersonnelType]||0)+1,a),{});
+    return { zone: z, ...byType, total: emps.length };
+  });
+
+  // floor breakdown
+  const floorMap = {};
+  for (const [z, d] of Object.entries(zoneBreakdown)) {
+    const floor = zoneFloorMap[d.zone] || 'Unknown Floor';
+    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
+    floorMap[floor].total += d.total;
+    for (const pt of Object.keys(d)) {
+      if (pt==='zone'||pt==='total') continue;
+      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + d[pt];
+    }
+  }
+
+  const floorBreakdown = Object.entries(floorMap).map(([f,d]) => ({ floor: f, ...d.byPersonnelType, total: d.total }));
+
+  // return everything
+  return {
+    asOf:               new Date().toISOString(),
+    summary,
+    zoneBreakdown,
+    floorBreakdown,
+    details:            zoneMap,
+    personnelSummary:   { employees: employeeCount, contractors: contractorCount },
+    personnelBreakdown: [
+      { personnelType: 'Employee',   count: employeeCount },
+      { personnelType: 'Contractor', count: contractorCount }
+    ]
+  };
+}
+
+
+async function getLiveOccupancy(req, res) {
+  try {
+    await poolConnect;
+    const events  = await fetchNewEvents(new Date(Date.now() - 1000 * 60 * 60 * 24));
+    const payload = await buildOccupancy(events);
+
+    // visited‐today metrics
+    payload.totalVisitedToday = await fetchTotalVisitedToday();
+    payload.visitedToday      = await fetchVisitedTodayBreakdown();
+
+    res.json(payload);
+
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+// finally, export exactly the named handler
+module.exports = {
+  getLiveOccupancy
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 Lets check all routes file 
 
 
