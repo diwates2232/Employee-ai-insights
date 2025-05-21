@@ -4,6 +4,83 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 
+// 1. Load Excel file
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = xlsx.utils.sheet_to_json(sheet);
+
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+// 2. Build the map
+const doorFloorMap = {};
+const DOOR_COLUMN = 'Door Name';
+const IN_DIR_COLUMN = 'IN Direction';
+const IN_FLOOR_COLUMN = 'IN Floor';
+const OUT_DIR_COLUMN = 'OUT Direction';
+const OUT_FLOOR_COLUMN = 'OUT Floor';
+
+rows.forEach(row => {
+  const rawDoor = String(row[DOOR_COLUMN] || '').trim();
+  const doorName = rawDoor.toUpperCase();
+
+  const inDirection = String(row[IN_DIR_COLUMN] || '').trim();
+  const inFloor = String(row[IN_FLOOR_COLUMN] || '').trim();
+
+  const outDirection = String(row[OUT_DIR_COLUMN] || '').trim();
+  const outFloor = String(row[OUT_FLOOR_COLUMN] || '').trim();
+
+  if (!doorName) {
+    console.warn('Skipping row (missing Door Name):', row);
+    return;
+  }
+
+  if (inDirection && inFloor) {
+    doorFloorMap[`${doorName}___${inDirection}`] = inFloor;
+  }
+
+  if (outDirection && outFloor) {
+    doorFloorMap[`${doorName}___${outDirection}`] = outFloor;
+  }
+});
+
+// 3. Write output
+const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
+const content =
+  `// Auto-generated from data/doorDenver.xlsx\n` +
+  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
+
+fs.writeFileSync(outputPath, content, 'utf8');
+
+console.log('✅ Denver door-to-floor map written to:', outputPath);
+console.log('Total entries in map:', Object.keys(doorFloorMap).length);
+
+
+
+
+
+
+node scripts/generateDenverDoorFloorMap.js
+
+
+
+
+
+
+
+
+
+// scripts/generateDenverDoorFloorMap.js
+
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
 // 1. Load the workbook & first sheet
 const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
 const workbook = xlsx.readFile(filePath);
