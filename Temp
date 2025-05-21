@@ -1,3 +1,61 @@
+const path = require('path');
+const xlsx = require('xlsx');
+
+// 1. Load the workbook & first sheet
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+// 2. Convert to JSON
+const rows = xlsx.utils.sheet_to_json(sheet);
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+// 3. Build the door→floor map
+const doorFloorMap = {};
+
+const DOOR_COLUMN = 'Door Name';
+const IN_DIR_COLUMN = 'IN Direction';
+const IN_FLOOR_COLUMN = 'IN Floor';
+const OUT_DIR_COLUMN = 'OUT Direction';
+const OUT_FLOOR_COLUMN = 'OUT Floor';
+
+function clean(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+rows.forEach(row => {
+  const door = clean(row[DOOR_COLUMN]).toUpperCase();
+  const inDir = clean(row[IN_DIR_COLUMN]).toUpperCase();
+  const outDir = clean(row[OUT_DIR_COLUMN]).toUpperCase();
+  const inFloor = clean(row[IN_FLOOR_COLUMN]);
+  const outFloor = clean(row[OUT_FLOOR_COLUMN]);
+
+  if (door && inDir && inFloor) {
+    doorFloorMap[`${door}___${inDir}`] = inFloor;
+  }
+  if (door && outDir && outFloor) {
+    doorFloorMap[`${door}___${outDir}`] = outFloor;
+  }
+});
+
+// 4. Print the object to console
+console.log('\n--- COPY FROM BELOW ---\n');
+console.log('// Auto-generated from data/doorDenver.xlsx');
+console.log('module.exports = ' + JSON.stringify(doorFloorMap, null, 2) + ';');
+console.log('\n--- COPY UNTIL HERE ---');
+console.log(`\nTotal entries: ${Object.keys(doorFloorMap).length}`);
+
+
+
+
+
+
+
+
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
