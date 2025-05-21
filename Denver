@@ -1,137 +1,91 @@
-// scripts/generateDenverDoorFloorMap.js
+read all file carefully and give mr updated js controler,file build logic for Live Occupancy as well people Visited today as well.carefully.
+use Objec1Indentity as unique id
 
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
+const { denver } = require('../config/siteConfig');
+const sql = require('mssql');
 
-// 1. Load the workbook & first sheet
-const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
-const workbook = xlsx.readFile(filePath);
-const sheet = workbook.Sheets[workbook.SheetNames[0]];
+async function getDenverLiveOccupancy(req, res) {
+  try {
+    const pool = await denver.pool.connect();
+    const result = await pool.request().query(`
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
+        t1.ObjectName1,
+        -- permanent employees by Int1; contractors by Text12
+        CASE 
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+  t1.ObjectIdentity1,
+        t3.Name AS PersonnelType,
+        -- fallback: Card or CHUID element
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          SCard.[value]
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value   AS Direction,
+  CASE
+        WHEN t1.[ObjectName2] LIKE '%HQ%' THEN 'Denver'
+        ELSE 'Other'
+    END AS LogicalLocation,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]      t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType]  t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
+        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
+        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, [value]
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE [Name] IN ('Card','CHUID')
+      ) AS SCard
+        ON t1.XmlGUID = SCard.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > '5-20-2025' 
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+   ObjectIdentity1,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+ WHERE LogicalLocation = 'Denver'
+    ORDER BY LocaleMessageTime ASC;
+ 
+    `);
 
-// 2. Convert to JSON
-const rows = xlsx.utils.sheet_to_json(sheet);
-if (!rows.length) {
-  console.error('No rows found in doorDenver.xlsx');
-  process.exit(1);
+    const records = result.recordset;
+
+    // TODO: Process records to compute live occupancy summary
+
+    res.json({
+      site: 'Denver',
+      lastUpdated: new Date(),
+      data: records // temporary response
+    });
+
+  } catch (error) {
+    console.error('Error fetching Denver live occupancy:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 }
-console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
 
-// 3. Build the door→floor map
-const doorFloorMap = {};
-
-// Replace these with your actual column names in the Excel file
-const DOOR_COLUMN = 'Door Name';
-const IN_DIR_COLUMN = 'IN Direction';
-const OUT_DIR_COLUMN = 'OUT Direction';
-const FLOOR_COLUMN = 'Floor';
-
-rows.forEach(row => {
-  const rawDoor = String(row[DOOR_COLUMN] || '').trim();
-  const inDirKey = String(row[IN_DIR_COLUMN] || '').trim();
-  const outDirKey = String(row[OUT_DIR_COLUMN] || '').trim();
-  const floor = String(row[FLOOR_COLUMN] || '').trim();
-
-  if (!rawDoor || !floor) {
-    console.warn('Skipping row (missing Door Name or Floor):', row);
-    return;
-  }
-
-  const doorName = rawDoor.toUpperCase();
-
-  if (inDirKey) {
-    doorFloorMap[`${doorName}___${inDirKey}`] = floor;
-  }
-  if (outDirKey) {
-    doorFloorMap[`${doorName}___${outDirKey}`] = floor;
-  }
-});
-
-// 4. Write out the JS file
-const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
-const content = 
-  `// Auto-generated from data/doorDenver.xlsx\n` +
-  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
-
-fs.writeFileSync(outputPath, content, 'utf8');
-
-console.log('✅ Denver door-to-floor map written to:', outputPath);
-console.log('Total entries in map:', Object.keys(doorFloorMap).length);
-
-
-
-
-node scripts/generateDenverDoorFloorMap.js
-
-
-
-
-
-
-
-
-
-
-
-This is my Current fuile then give me Updated js file carefully
-
-// scripts/generateDenverDoorFloorMap.js
-
-const fs   = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
-
-// 1. Load the workbook & first sheet
-const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
-const workbook = xlsx.readFile(filePath);
-const sheet    = workbook.Sheets[workbook.SheetNames[0]];
-
-// 2. Convert to JSON
-const rows = xlsx.utils.sheet_to_json(sheet);
-if (!rows.length) {
-  console.error('No rows found in doorDenver.xlsx');
-  process.exit(1);
-}
-console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
-
-// 3. Build the door→floor map
-const doorFloorMap = {};
-
-rows.forEach(row => {
-  const rawDoor    = String(row['Your Actual Door Column Name'] || '').trim();
-const inDirKey   = String(row['Your Actual In Direction Column'] || '').trim();
-const outDirKey  = String(row['Your Actual Out Direction Column'] || '').trim();
-const floor      = String(row['Your Actual Floor Column Name'] || '').trim();
-
-  if (!rawDoor || !floor) {
-    console.warn('Skipping row (missing Door Name or Floor):', row);
-    return;
-  }
-
-  // Normalize door name
-  const doorName = rawDoor.toUpperCase();
-
-  // If you have explicit in/out strings in separate cols, use them:
-  if (inDirKey) {
-    doorFloorMap[`${doorName}___${inDirKey}`] = floor;
-  }
-  if (outDirKey) {
-    doorFloorMap[`${doorName}___${outDirKey}`] = floor;
-  }
-
-  // Fallback: if someone left IN/OUT blank but you still want defaults:
-  // doorFloorMap[`${doorName}___InDirection`]  = doorFloorMap[`${doorName}___InDirection`]  || floor;
-  // doorFloorMap[`${doorName}___OutDirection`] = doorFloorMap[`${doorName}___OutDirection`] || floor;
-});
-
-// 4. Write out the JS file
-const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
-fs.writeFileSync(outputPath,
-  `// Auto-generated from data/doorDenver.xlsx\n` +
-  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`
-);
-
-console.log('✅ Denver door-to-floor map written to:', outputPath);
-
-
-
+module.exports = {
+  getDenverLiveOccupancy
+};
