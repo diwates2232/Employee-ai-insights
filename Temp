@@ -3,6 +3,50 @@
 const { denver } = require('../config/siteConfig');
 const sql         = require('mssql');
 
+// helper: normalize doorName + direction → floor
+function mapDoorToFloor(rawDoorName, direction) {
+  // 1) Normalize direction suffix
+  let suffix;
+  if (direction === 'InDirection')      suffix = 'IN';
+  else if (direction === 'OutDirection') suffix = 'OUT';
+  else                                   suffix = direction.trim().toUpperCase();
+
+  // 2) Strip any trailing "-IN" or "-OUT" (case-insensitive) from the door name
+  let base = rawDoorName.trim()
+    .replace(/-IN$/i, '')
+    .replace(/-OUT$/i, '');
+
+  // 3) Collapse multiple spaces, uppercase
+  base = base.replace(/\s+/g, ' ').toUpperCase();
+
+  const key = `${base}___${suffix}`;
+  const floor = denver.zoneFloorMap[key];
+  if (!floor) {
+    console.warn(`⛔ Unmapped door-floor: ${key}`);
+    return 'Unknown Floor';
+  }
+  return floor;
+}
+
+async function fetchNewEvents
+
+
+
+
+
+
+
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
+const { denver } = require('../config/siteConfig');
+const sql         = require('mssql');
+
 // helper: normalize direction & map door → floor, fallback to 'Unknown Floor'
 function mapDoorToFloor(doorName, direction) {
   // normalize the SQL direction to your map suffix
