@@ -1,3 +1,31 @@
+function normalizeDoorKey(rawDoorName, rawDirection) {
+  const door = rawDoorName.trim().replace(/\s+/g, ' ').toUpperCase(); // trim + standardize spaces + uppercase
+  const direction = rawDirection.toUpperCase().includes('IN') ? 'IN' : 'OUT'; // convert any direction to 'IN' or 'OUT'
+  return `${door}___${direction}`;
+}
+
+
+
+
+const key = normalizeDoorKey(doorName, direction);
+const floor = doorToFloorMap[key];
+
+if (!floor) {
+  console.warn(`Unmapped door-floor key: "${key}" (raw: "${doorName}", dir: "${direction}")`);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 // controllers/denverLiveOccupancyController.js
 
 const { denver }   = require('../config/siteConfig');
