@@ -1,509 +1,116 @@
-// controllers/denverLiveOccupancyController.js
-
-const { denver }       = require('../config/siteConfig');
-const doorFloorMap     = require('../data/denverDoorFloorMap');
-const sql              = require('mssql');
-
-// helper: normalize doorName + direction → floor
-function mapDoorToFloor(rawDoor, direction) {
-  // 1) normalize and uppercase the direction suffix
-  let suffix = (direction === 'InDirection')
-    ? 'IN'
-    : (direction === 'OutDirection')
-      ? 'OUT'
-      : direction.trim().toUpperCase();
-
-  // 2) strip any trailing “‐IN” or “‐OUT” (any case), collapse spaces, uppercase
-  let base = rawDoor
-    .replace(/[-–—]\s*IN$/i, '')
-    .replace(/[-–—]\s*OUT$/i, '')
-    .replace(/[^\w\s]/g, ' ')        // replace punctuation with space
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-
-  const key = `${base}___${suffix}`;
-  const floor = doorFloorMap[key];
-  if (!floor) {
-    console.warn(`⛔ Unmapped door-floor key: "${key}" (raw "${rawDoor}", dir "${direction}")`);
-    return 'Unknown Floor';
-  }
-  return floor;
-}
-
-// 1) fetch all new swipe events since `since`
-async function fetchNewEvents(since) {
-  const pool = await denver.pool.connect();
-  const req  = pool.request();
-  req.input('since', sql.DateTime2, since);
-
-  const { recordset } = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT 
-        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE WHEN t3.Name IN ('Contractor','Terminated Contractor')
-             THEN t2.Text12
-             ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,
-        t3.Name            AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          sc.value
-        ) AS CardNumber,
-        t5a.value          AS AdmitCode,
-        t5d.value          AS Direction,
-        t1.ObjectName2     AS Door
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
-      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
-        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
-        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, value
-        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
-        WHERE Name IN ('Card','CHUID')
-      ) sc ON t1.XmlGUID = sc.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      PersonGUID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return recordset;
-}
-
-// ... fetchTotalVisitedToday & fetchVisitedTodayBreakdown unchanged ...
-
-// 4) build the snapshot
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, PersonGUID, ObjectName1, CardNumber,
-      PersonnelType, Direction, Door, Dateonly, Swipe_Time
-    } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID;
-    const floor    = mapDoorToFloor(Door, Direction);
-
-    // on badge-out at unmapped door, just drop them
-    if (Direction === 'OutDirection' && floor === 'Unknown Floor') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      continue;
-    }
-
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly,
-        Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        CardNumber,
-        PersonnelType,
-        Door,
-        Direction,
-        key: `${Door}___${Direction}`,  // for debugging
-        floor
-      };
-    } else {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-    }
-  }
-
-  // headcounts
-  let employees   = 0;
-  let contractors = 0;
-  for (const pt of uniquePeople.values()) {
-    if (pt === 'Employee' || pt === 'Terminated Personnel') employees++;
-    else contractors++;
-  }
-
-  // floor grouping
-  const floorMap = {};
-  for (const rec of Object.values(current)) {
-    floorMap[rec.floor] = floorMap[rec.floor] || [];
-    floorMap[rec.floor].push(rec);
-  }
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
-    floor,
-    total:     occupants.length,
-    occupants
-  }));
-
-  return {
-    asOf:               new Date().toISOString(),
-    currentCount:       employees + contractors,
-    floorBreakdown,
-    personnelSummary:   { employees, contractors },
-    personnelBreakdown: [
-      { personnelType: 'Employee',   count: employees   },
-      { personnelType: 'Contractor', count: contractors }
-    ]
-  };
-}
-
-// 5) SSE endpoint
-exports.getDenverLiveOccupancy = async (req, res) => {
-  await denver.pool.connect();
-  res.writeHead(200, {
-    'Content-Type':  'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection':    'keep-alive'
-  });
-  res.write('\n');
-
-  let lastSeen = new Date(Date.now() - 24*60*60*1000);
-  const events = [];
-
-  const push = async () => {
-    const fresh = await fetchNewEvents(lastSeen);
-    if (fresh.length) {
-      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
-      events.push(...fresh);
-    }
-    const payload = await buildOccupancy(events);
-    payload.totalVisitedToday = await fetchTotalVisitedToday();
-    payload.visitedToday      = await fetchVisitedTodayBreakdown();
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  };
-
-  await push();
-  const timer = setInterval(push, 1000);
-  req.on('close', () => clearInterval(timer));
-};
-
-
-
-
-
-
-
-
-
-
-
-
-Read both file carefully and solve tthis issue
-
-// controllers/denverLiveOccupancyController.js
-
-const { denver }      = require('../config/siteConfig');
-const doorFloorMap    = require('../data/denverDoorFloorMap');  // ← our map
-const sql             = require('mssql');
-
-// helper: normalize doorName + direction → floor
-function mapDoorToFloor(rawDoor, direction) {
-  // normalize direction suffix
-  let suffix;
-  if (direction === 'InDirection')      suffix = 'IN';
-  else if (direction === 'OutDirection') suffix = 'OUT';
-  else                                   suffix = direction.trim().toUpperCase();
-
-  // strip trailing "-IN"/"-OUT", collapse spaces, uppercase
-  const base = rawDoor
-    .replace(/-IN$/i, '')
-    .replace(/-OUT$/i, '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-
-  const key = `${base}___${suffix}`;
-  const floor = doorFloorMap[key];
-  if (!floor) {
-    console.warn(`⛔ Unmapped door-floor: ${key}`);
-    return 'Unknown Floor';
-  }
-  return floor;
-}
-
-// 1) fetch all new swipe events since `since`
-async function fetchNewEvents(since) {
-  const pool = await denver.pool.connect();
-  const req  = pool.request();
-  req.input('since', sql.DateTime2, since);
-
-  const { recordset } = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT
-        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE WHEN t3.Name IN ('Contractor','Terminated Contractor')
-             THEN t2.Text12
-             ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t1.ObjectIdentity1     AS PersonGUID,
-        t3.Name                AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          sc.value
-        ) AS CardNumber,
-        t5a.value              AS AdmitCode,
-        t5d.value              AS Direction,
-        t1.ObjectName2         AS Door
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
-      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
-        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
-        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, value
-        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
-        WHERE Name IN ('Card','CHUID')
-      ) sc ON t1.XmlGUID = sc.GUID
-      WHERE
-        t1.MessageType = 'CardAdmitted'
-        AND t1.ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      PersonGUID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return recordset;
-}
-
-// 2) total distinct visited today
-async function fetchTotalVisitedToday() {
-  const pool = await denver.pool.connect();
-  const req  = pool.request();
-  const start = new Date();
-  start.setHours(0,0,0,0);
-  req.input('start', sql.DateTime2, start);
-
-  const { recordset } = await req.query(`
-    WITH DailyVisits AS (
-      SELECT DISTINCT ObjectIdentity1
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog
-      WHERE
-        MessageType = 'CardAdmitted'
-        AND ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, -1 * MessageLocaleOffset, MessageUTC) >= @start
-    )
-    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
-  `);
-
-  return recordset[0]?.totalVisitedToday || 0;
-}
-
-// 3) visited-today breakdown
-async function fetchVisitedTodayBreakdown() {
-  const pool = await denver.pool.connect();
-  const req  = pool.request();
-  const start = new Date();
-  start.setHours(0,0,0,0);
-  req.input('start', sql.DateTime2, start);
-
-  const { recordset } = await req.query(`
-    WITH Combined AS (
-      SELECT
-        ObjectIdentity1,
-        CASE WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN 'Contractor'
-             ELSE 'Employee' END AS bucket,
-        DATEADD(MINUTE, -1 * MessageLocaleOffset, MessageUTC) AS dt
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
-      LEFT JOIN ACVSCore.Access.Personnel p  ON t1.ObjectIdentity1 = p.GUID
-      LEFT JOIN ACVSCore.Access.PersonnelType pt ON p.PersonnelTypeId = pt.ObjectID
-      WHERE
-        MessageType = 'CardAdmitted'
-        AND ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, -1 * MessageLocaleOffset, MessageUTC) >= @start
-    ), Ranked AS (
-      SELECT *, ROW_NUMBER() OVER (PARTITION BY ObjectIdentity1 ORDER BY dt DESC) AS rn
-      FROM Combined
-    )
-    SELECT bucket, COUNT(*) AS cnt
-    FROM Ranked
-    WHERE rn = 1
-    GROUP BY bucket;
-  `);
-
-  const breakdown = { employees: 0, contractors: 0 };
-  for (const { bucket, cnt } of recordset) {
-    if (bucket === 'Employee')   breakdown.employees   = cnt;
-    if (bucket === 'Contractor') breakdown.contractors = cnt;
-  }
-  breakdown.total = breakdown.employees + breakdown.contractors;
-  return breakdown;
-}
-
-// 4) build the snapshot
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, PersonGUID, ObjectName1, CardNumber,
-      PersonnelType, Direction, Door, Dateonly, Swipe_Time
-    } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID;
-    const floor    = mapDoorToFloor(Door, Direction);
-
-    // remove if they badge out at an unmapped door
-    if (Direction === 'OutDirection' && floor === 'Unknown Floor') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      continue;
-    }
-
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly,
-        Swipe_Time,
-        EmployeeID,
-        ObjectName1,
-        CardNumber,
-        PersonnelType,
-        Door,        // raw door
-        Direction,   // raw direction
-        floor
-      };
-    } else {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-    }
-  }
-
-  // counts
-  let employees   = 0;
-  let contractors = 0;
-  for (const pt of uniquePeople.values()) {
-    if (pt === 'Employee' || pt === 'Terminated Personnel') employees++;
-    else contractors++;
-  }
-
-  // group by floor
-  const floorMap = {};
-  for (const rec of Object.values(current)) {
-    floorMap[rec.floor] = floorMap[rec.floor] || [];
-    floorMap[rec.floor].push(rec);
-  }
-
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
-    floor,
-    total:     occupants.length,
-    occupants
-  }));
-
-  return {
-    asOf:               new Date().toISOString(),
-    currentCount:       employees + contractors,
-    floorBreakdown,
-    personnelSummary:   { employees, contractors },
-    personnelBreakdown: [
-      { personnelType: 'Employee',   count: employees   },
-      { personnelType: 'Contractor', count: contractors }
-    ]
-  };
-}
-
-// 5) SSE endpoint
-exports.getDenverLiveOccupancy = async (req, res) => {
-  await denver.pool.connect();
-  res.writeHead(200, {
-    'Content-Type':  'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection':    'keep-alive'
-  });
-  res.write('\n');
-
-  let lastSeen = new Date(Date.now() - 24*60*60*1000);
-  const events = [];
-
-  const push = async () => {
-    const fresh = await fetchNewEvents(lastSeen);
-    if (fresh.length) {
-      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
-      events.push(...fresh);
-    }
-    const payload = await buildOccupancy(events);
-    payload.totalVisitedToday = await fetchTotalVisitedToday();
-    payload.visitedToday      = await fetchVisitedTodayBreakdown();
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  };
-
-  await push();
-  const timer = setInterval(push, 1000);
-  req.on('close', () => clearInterval(timer));
-};
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\denverDoorFloorMap.js
-
-// Auto-generated from data/doorDenver.xlsx
-module.exports = {
-  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___IN": "Floor 12",
-  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___OUT": "Out of office",
-  "US.CO.HQ. 12. IDF RESTRICTED DOOR___IN": "Floor 12",
-  "US.CO.HQ. 12. IDF RESTRICTED DOOR___OUT": "Out of office",
-  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___IN": "Floor 12",
-  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___OUT": "Out of office",
-  "US.CO.HQ. 12. NORTH STAIRWELL-IN___IN": "Floor 12",
-  "US.CO.HQ. 12. NORTH STAIRWELL-IN___OUT": "Out of office",
-  "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-IN___IN": "Floor 12",
-  "US.CO.HQ. 12. FREIGHT ELEVATOR LOBBY-IN___OUT": "Out of office",
-  "US.CO.HQ. 12. MOTHERS ROOM_11:01:CC___IN": "Floor 12",
-  "US.CO.HQ. 12. MOTHERS ROOM_11:01:CC___OUT": "Out of office",
-  "US.CO.HQ. 12. SOUTH STAIRWELL-IN___IN": "Floor 12",
-  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___OUT": "Out of office",
-  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___IN": "Floor 15",
-  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___OUT": "Out of office"
-};
-
-
-
-
+InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 15. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___IN" (raw "US.CO.HQ. 06. North Entry-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 09. North Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___IN" (raw "US.CO.HQ. 06. South Entrance-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 EXECUTIVE ENTRANCE_10 03 9F___IN" (raw "US.CO.HQ. 15. Executive Entrance_10:03:9F", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___IN" (raw "US.CO.HQ. 06. North Entry-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SECURITY CONTROL ROOM_11 01 22 RESTRICTED DOOR___IN" (raw "US.CO.HQ. 06. Security Control Room_11:01:22 Restricted door", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 14. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 FREIGHT ELEVATOR LOBBY EAST DOOR___OUT" (raw "US.CO.HQ. 15. Freight Elevator Lobby East Door-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___OUT" (raw "US.CO.HQ. 06. South Entrance-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 09. North Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 15. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 15TH FLOOR EXECUTIVE SOUTH ENTRANCE 15 312B___IN" (raw "US.CO.HQ. 15. 15th Floor Executive South Entrance 15.312B", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___OUT" (raw "US.CO.HQ. 06. South Entrance-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. North Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 15. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 14. North Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 13. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EUC LAB DOOR_11 01 D4___IN" (raw "US.CO.HQ. 06. EUC Lab Door_11:01:D4", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 12. North Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EUC LAB DOOR_11 01 D4___IN" (raw "US.CO.HQ. 06. EUC Lab Door_11:01:D4", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___OUT" (raw "US.CO.HQ. 06. East Stairwell-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. North Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 09. Freight Elevator Lobby-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___OUT" (raw "US.CO.HQ. 06. South Center Hall Entry-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 FREIGHT ELEVATOR LOBBY___OUT" (raw "US.CO.HQ. 12. Freight Elevator Lobby-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___IN" (raw "US.CO.HQ. 06. South Entrance-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 MAIL ROOM_11 00 17___IN" (raw "US.CO.HQ.06. Mail Room_11:00:17", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 13. Freight Elevator Lobby-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 11. Freight Elevator Lobby-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 12. South Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 12. North Stairwell-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 13. North Lobby Doors-OUT", dir "OutDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 14 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 14. Freight Elevator Lobby-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> 
