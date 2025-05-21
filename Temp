@@ -1,116 +1,189 @@
-InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 15. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___IN" (raw "US.CO.HQ. 06. North Entry-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 09. North Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___IN" (raw "US.CO.HQ. 06. South Entrance-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 EXECUTIVE ENTRANCE_10 03 9F___IN" (raw "US.CO.HQ. 15. Executive Entrance_10:03:9F", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___IN" (raw "US.CO.HQ. 06. North Entry-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SECURITY CONTROL ROOM_11 01 22 RESTRICTED DOOR___IN" (raw "US.CO.HQ. 06. Security Control Room_11:01:22 Restricted door", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 14. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 FREIGHT ELEVATOR LOBBY EAST DOOR___OUT" (raw "US.CO.HQ. 15. Freight Elevator Lobby East Door-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___OUT" (raw "US.CO.HQ. 06. South Entrance-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 09. North Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 15. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 15TH FLOOR EXECUTIVE SOUTH ENTRANCE 15 312B___IN" (raw "US.CO.HQ. 15. 15th Floor Executive South Entrance 15.312B", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___OUT" (raw "US.CO.HQ. 06. South Entrance-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. North Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 15 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 15. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 14. North Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 13. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EUC LAB DOOR_11 01 D4___IN" (raw "US.CO.HQ. 06. EUC Lab Door_11:01:D4", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 12. North Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EUC LAB DOOR_11 01 D4___IN" (raw "US.CO.HQ. 06. EUC Lab Door_11:01:D4", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 NORTH ENTRY___OUT" (raw "US.CO.HQ. 06. North Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___OUT" (raw "US.CO.HQ. 06. East Stairwell-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 EAST STAIRWELL___IN" (raw "US.CO.HQ. 06. East Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 09. North Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 09. Freight Elevator Lobby-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___OUT" (raw "US.CO.HQ. 06. South Center Hall Entry-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 FREIGHT ELEVATOR LOBBY___OUT" (raw "US.CO.HQ. 12. Freight Elevator Lobby-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH ENTRANCE___IN" (raw "US.CO.HQ. 06. South Entrance-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 MAIL ROOM_11 00 17___IN" (raw "US.CO.HQ.06. Mail Room_11:00:17", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 13. Freight Elevator Lobby-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 11. Freight Elevator Lobby-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 06 SOUTH CENTER HALL ENTRY___IN" (raw "US.CO.HQ. 06. South Center Hall Entry-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 12. South Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 14. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH STAIRWELL___IN" (raw "US.CO.HQ. 12. North Stairwell-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 12 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 12. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___OUT" (raw "US.CO.HQ. 13. North Lobby Doors-OUT", dir "OutDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 09 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 09. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 14 FREIGHT ELEVATOR LOBBY___IN" (raw "US.CO.HQ. 14. Freight Elevator Lobby-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 13 NORTH LOBBY DOORS___IN" (raw "US.CO.HQ. 13. North Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-⛔ Unmapped door-floor key: "US CO HQ 11 SOUTH LOBBY DOORS___IN" (raw "US.CO.HQ. 11. South Lobby Doors-IN", dir "InDirection")
-PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> 
+lets compare both and update logic for Denver door
+
+// Auto-generated from data/doorDenver.xlsx
+//module.exports
+ const doorToFloorMap= {
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___IN": "Floor 12",
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___OUT": "Out of office",
+  "US.CO.HQ. 12. IDF RESTRICTED DOOR___IN": "Floor 12",
+  "US.CO.HQ. 12. IDF RESTRICTED DOOR___OUT": "Out of office",
+  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___IN": "Floor 12",
+  "US.CO.HQ. 12. STORAGE ROOM_11:01:0A___OUT": "Out of office",
+  "US.CO.HQ. 12. NORTH STAIRWELL-IN___IN": "Floor 12",
+  "US.CO.HQ. 12. NORTH STAIRWELL-IN___OUT": "Out of office",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___IN": "Floor 14",
+  "US.CO.HQ. 14. SOUTH STAIRWELL-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY EAST DOOR-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY LEFT-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. FREIGHT ELEVATOR LOBBY RIGHT DOOR-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. NORTH LOBBY DOORS-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. NORTH STAIRWELL-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. SOUTH LOBBY DOORS-OUT___OUT": "Out of office",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___IN": "Floor 15",
+  "US.CO.HQ. 15. SOUTH STAIRWELL-OUT___OUT": "Out of office"
+};
+
+
+
+
+
+this is Pune door
+
+
+
+function mapDoorToZone(door, direction,zone) {
+  const key = `${door}___${direction}__${zone}`;
+  return doorZoneMap[key];
+}
+
+const doorZoneMap = {
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "RED ZONE",
+  
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___OutDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection": "RED ZONE",
+
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 2 (YELLOW)___OutDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-DOOR___InDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2-DOOR___InDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 3-DOOR___InDirection": "Reception Area",
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4-DOOR___InDirection": "Reception Area",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF Restricted Door___InDirection": "Yellow zone",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_IT STORE ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+
+  "APAC_IN_PUN_PODIUM_GSOC DOOR Restricted door___InDirection": "Yellow zone",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR Restricted door___InDirection": "Yellow zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-Restricted Door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR Restricted door___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  
+  "APAC_IN_PUN_PODIUM_ST4 DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN-MAIN LIFT LOBBY-DOOR___OutDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ST3 DOOR 2 (GREEN)___OutDirection": "Green Zone",
+
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_RECEPTION ENTRY-DOOR___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ST3_DOOR 1 (ORANGE)___OutDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___InDirection": "Orange Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_MAIN LIFT LOBBY-DOOR___OutDirection": "Orange Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-Restricted Door___InDirection": "Orange Zone",
+  
+
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 Restricted Door___InDirection": "2nd Floor, Pune",
+  
+
+
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM Restricted Door_10:05:FE___InDirection": "2nd Floor, Pune",
+  
+
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B___OutDirection": "Out of office",
+
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___InDirection": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR_10:05:74___OutDirection": "2nd Floor, Pune",
+
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection": "Reception Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_MAIN LIFT LOBBY-DOOR NEW___OutDirection": "Out of office",
+
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_ST 1 DOOR 2 (YELLOW)___OutDirection": "Yellow Zone",
+
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___InDirection": "Green Zone",
+  "APAC_IN_PUN_PODIUM_ORANGE_KITCHENETTE FIRE EXIT-DOOR NEW___OutDirection": "Green Zone - Outer Area",
+
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___InDirection": "Yellow zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
+
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "RED ZONE",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection": "Yellow Zone - Outer Area",
+
+
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM RIGHT ENTRY-DOOR NEW___OutDirection": "Assembly Area -Podium",
+
+
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___InDirection": "Reception Area",
+  "APAC_IN_PUN_PODIUM_MAIN PODIUM LEFT ENTRY-DOOR NEW___OutDirection": "Assembly Area - Podium",
+
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 2 -OUT DOOR___OutDirection": "Out of Office",
+
+
+  "APAC_IN_PUN-PODIUM_P-1 TURNSTILE 3 -OUT DOOR___OutDirection": "Out of Office",
+
+
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 4 -OUT DOOR___OutDirection": "Out of Office",
+
+  
+  "APAC_IN_PUN_PODIUM_P-1 TURNSTILE 1-OUT DOOR___OutDirection": "Out of Office",
+
+
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_MAIN RECEPTION DOOR___OutDirection": "Out of office",
+
+
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_LIFT LOBBY DOOR___OutDirection": "Out of office",
+
+
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_GYM SIDE DOOR___OutDirection": "Tower B",
+
+
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST6_WKS SIDE DOOR___OutDirection": "Tower B",
+
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___InDirection": "Tower B",
+  "APAC_IN_PUN_TOWER B_ST5_KAPIL DEV DOOR___OutDirection": "Tower B",
+ "APAC_IN_PUN_TOWER B_GYM ROOM___OutDirection": "Tower B GYM"
+};
+
+module.exports = doorZoneMap;
+
+
+
+
