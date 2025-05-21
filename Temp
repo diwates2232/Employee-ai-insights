@@ -1,5 +1,44 @@
 // controllers/denverLiveOccupancyController.js
 
+const { denver }      = require('../config/siteConfig');
+const doorFloorMap    = require('../data/denverDoorFloorMap');  // ← our map
+const sql             = require('mssql');
+
+// helper: normalize doorName + direction → floor
+function mapDoorToFloor(rawDoor, direction) {
+  // normalize direction suffix
+  let suffix;
+  if (direction === 'InDirection')      suffix = 'IN';
+  else if (direction === 'OutDirection') suffix = 'OUT';
+  else                                   suffix = direction.trim().toUpperCase();
+
+  // strip trailing "-IN"/"-OUT", collapse spaces, uppercase
+  const base = rawDoor
+    .replace(/-IN$/i, '')
+    .replace(/-OUT$/i, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+
+  const key = `${base}___${suffix}`;
+  const floor = doorFloorMap[key];
+  if (!floor) {
+    console.warn(`⛔ Unmapped door-floor: ${key}`);
+    return 'Unknown Floor';
+  }
+  return floor;
+}
+
+// …rest of file unchanged…
+
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
 const { denver } = require('../config/siteConfig');
 const sql         = require('mssql');
 
