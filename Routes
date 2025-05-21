@@ -1,3 +1,9 @@
+javac EvenOddChecker.java
+java EvenOddChecker
+
+
+
+
 // EvenOddChecker.java
 import java.util.Scanner;
 
