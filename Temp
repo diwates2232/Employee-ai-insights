@@ -1,2 +1,236 @@
+const { denver } = require('../config/siteConfig');
+const sql         = require('mssql');
 
-data: {"asOf":"2025-05-21T12:32:44.157Z","currentCount":105,"floorBreakdown":[{"floor":"Unknown Floor","total":105,"occupants":[{"Dateonly":"2025-05-20","Swipe_Time":"16:22:31","EmployeeID":"325493","CardNumber":"612312","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:27:48","EmployeeID":"327626","CardNumber":"613671","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"15:20:43","EmployeeID":"323716","CardNumber":"609018","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:35:48","EmployeeID":"68214655","CardNumber":"613800","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"13:30:19","EmployeeID":"239028","CardNumber":"613448","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:22:42","EmployeeID":"77016","CardNumber":"613754","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"13:47:02","EmployeeID":"158397","CardNumber":"232708","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:36:32","EmployeeID":"301804","CardNumber":"232430","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"15:10:09","EmployeeID":"C676439","CardNumber":"613769","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"15:45:08","EmployeeID":"328536","CardNumber":"617994","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:08:01","EmployeeID":"321900","CardNumber":"613512","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:11:20","EmployeeID":"238906","CardNumber":"613414","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:23:52","EmployeeID":"242694","CardNumber":"231414","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:43:28","EmployeeID":"323961","CardNumber":"608821","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"16:49:24","EmployeeID":"74218316","CardNumber":"602917","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"17:03:41","EmployeeID":"326459","CardNumber":"613557","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"17:52:23","EmployeeID":"328584","CardNumber":"618009","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-20","Swipe_Time":"23:17:03","EmployeeID":"W0023721","CardNumber":"613774","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"02:34:00","EmployeeID":"W0026176","CardNumber":"617979","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"03:11:10","EmployeeID":"305776","CardNumber":"232397","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"04:32:31","EmployeeID":"319779","CardNumber":"613494","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"04:45:10","EmployeeID":"199599","CardNumber":"231699","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"04:58:37","EmployeeID":"74480","CardNumber":"608728","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:01:49","EmployeeID":"236044","CardNumber":"232607","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:15:03","EmployeeID":"244571","CardNumber":"231185","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:22:57","EmployeeID":"325898","CardNumber":"613615","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:23:42","EmployeeID":"140217","CardNumber":"232580","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:24:19","EmployeeID":"241754","CardNumber":"233041","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:27:28","EmployeeID":"131247","CardNumber":"232357","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:28:36","EmployeeID":"203742","CardNumber":"603033","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:30:00","EmployeeID":"321791","CardNumber":"604275","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:38:22","EmployeeID":"303447","CardNumber":"232601","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:38:51","EmployeeID":"238213","CardNumber":"608894","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:39:44","EmployeeID":"74258","CardNumber":"231546","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:40:28","EmployeeID":"304063","CardNumber":"232642","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:43:40","EmployeeID":"236573","CardNumber":"231706","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:44:14","EmployeeID":"158956","CardNumber":"231915","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:44:31","EmployeeID":"324898","CardNumber":"610060","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:45:04","EmployeeID":"304330","CardNumber":"231576","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:45:10","EmployeeID":"302286","CardNumber":"232230","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:46:09","EmployeeID":"306613","CardNumber":"232432","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:46:33","EmployeeID":"307263","CardNumber":"232905","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:47:13","EmployeeID":"235929","CardNumber":"231424","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:47:36","EmployeeID":"312968","CardNumber":"613624","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:49:28","EmployeeID":"309641","CardNumber":"231520","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:51:19","EmployeeID":"302143","CardNumber":"613373","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:55:35","EmployeeID":"301857","CardNumber":"228621","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:55:42","EmployeeID":"325691","CardNumber":"613487","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:56:52","EmployeeID":"326497","CardNumber":"613566","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:57:05","EmployeeID":"302174","CardNumber":"232904","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:58:02","EmployeeID":"77953","CardNumber":"232252","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:58:20","EmployeeID":"236001","CardNumber":"608735","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:58:22","EmployeeID":"320884","CardNumber":"602874","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:58:30","EmployeeID":"322607","CardNumber":"604596","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:58:38","EmployeeID":"238543","CardNumber":"613882","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"05:59:39","EmployeeID":"134153","CardNumber":"231258","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:01:27","EmployeeID":"312510","CardNumber":"231338","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:01:36","EmployeeID":"327686","CardNumber":"602969","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:02:38","EmployeeID":"307965","CardNumber":"232619","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:04:15","EmployeeID":"199212","CardNumber":"232032","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:05:13","EmployeeID":"312621","CardNumber":"232997","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:06:55","EmployeeID":"304061","CardNumber":"232737","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:07:20","EmployeeID":"167952","CardNumber":"608651","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:07:29","EmployeeID":"326514","CardNumber":"614273","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:07:42","EmployeeID":"327585","CardNumber":"613730","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:08:25","EmployeeID":"240618","CardNumber":"232038","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:09:21","EmployeeID":"325847","CardNumber":"613518","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:10:49","EmployeeID":"310840","CardNumber":"410496","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:12:32","EmployeeID":"320175","CardNumber":"603901","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:13:24","EmployeeID":"326490","CardNumber":"613590","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:13:28","EmployeeID":"326686","CardNumber":"614290","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:13:29","EmployeeID":"304893","CardNumber":"604299","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:15:40","EmployeeID":"84660525","CardNumber":"614199","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:16:06","EmployeeID":"304934","CardNumber":"232523","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:16:21","EmployeeID":"327391","CardNumber":"613379","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:17:00","EmployeeID":"326314","CardNumber":"614364","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:17:21","EmployeeID":"309679","CardNumber":"612283","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:17:33","EmployeeID":"W0021567","CardNumber":"613807","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:18:11","EmployeeID":"324510","CardNumber":"609068","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:27:57","EmployeeID":"W0022834","CardNumber":"614235","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:21:06","EmployeeID":"W0023386","CardNumber":"614195","PersonnelType":"Contractor","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:19:25","EmployeeID":"139794","CardNumber":"232946","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:20:39","EmployeeID":"315304","CardNumber":"233490","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:21:36","EmployeeID":"247107","CardNumber":"232337","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:21:52","EmployeeID":"308856","CardNumber":"609098","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:23:53","EmployeeID":"314902","CardNumber":"613489","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:24:03","EmployeeID":"75621","CardNumber":"231686","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:24:53","EmployeeID":"247171","CardNumber":"609040","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:25:18","EmployeeID":"250870","CardNumber":"231910","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:25:22","EmployeeID":"318107","CardNumber":"603788","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:25:49","EmployeeID":"198077","CardNumber":"618220","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:26:08","EmployeeID":"305914","CardNumber":"232275","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:26:10","EmployeeID":"326308","CardNumber":"614370","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:26:26","EmployeeID":"301432","CardNumber":"231936","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:26:34","EmployeeID":"326718","CardNumber":"614332","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:27:16","EmployeeID":"240725","CardNumber":"613381","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:27:34","EmployeeID":"325751","CardNumber":"613508","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:27:38","EmployeeID":"77877","CardNumber":"232010","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:27:41","EmployeeID":"319892","CardNumber":"603092","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:28:07","EmployeeID":"307486","CardNumber":"610093","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:29:09","EmployeeID":"237675","CardNumber":"604279","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:29:34","EmployeeID":"327380","CardNumber":"613388","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:30:34","EmployeeID":"323291","CardNumber":"608637","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:30:51","EmployeeID":"328466","CardNumber":"603041","PersonnelType":"Employee","floor":"Unknown Floor"},{"Dateonly":"2025-05-21","Swipe_Time":"06:31:03","EmployeeID":"325159","CardNumber":"612371","PersonnelType":"Employee","floor":"Unknown Floor"}]}],"personnelSummary":{"employees":96,"contractors":9},"personnelBreakdown":[{"personnelType":"Employee","count":96},{"personnelType":"Contractor","count":9}],"totalVisitedToday":117,"visitedToday":{"employees":107,"contractors":10,"total":117}}
+// helper: normalize direction & map door → floor, fallback to 'Unknown Floor'
+function mapDoorToFloor(doorName, direction) {
+  // normalize the SQL direction to your map suffix
+  let suffix;
+  if (direction === 'InDirection')   suffix = 'IN';
+  else if (direction === 'OutDirection') suffix = 'OUT';
+  else suffix = direction.trim();
+
+  const key = `${doorName.trim()}___${suffix}`;
+  return denver.zoneFloorMap[key] || 'Unknown Floor';
+}
+
+// 1) fetch all new swipe events since `since`
+async function fetchNewEvents(since) {
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE WHEN t3.Name IN ('Contractor','Terminated Contractor')
+             THEN t2.Text12
+             ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          sc.value
+        ) AS CardNumber,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
+        WHERE Name IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      PersonGUID,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return recordset;
+}
+
+// 2) total distinct visited today
+async function fetchTotalVisitedToday() {
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  req.input('start', sql.DateTime2, todayStart);
+
+  const { recordset } = await req.query(`
+    WITH DailyVisits AS (
+      SELECT DISTINCT t1.ObjectIdentity1
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) >= @start
+    )
+    SELECT COUNT(*) AS totalVisitedToday FROM DailyVisits;
+  `);
+
+  return recordset[0]?.totalVisitedToday || 0;
+}
+
+// 3) visited-today breakdown (Employee vs Contractor)
+async function fetchVisitedTodayBreakdown() {
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  req.input('start', sql.DateTime2, todayStart);
+
+  const { recordset } = await req.query(`
+    WITH Combined AS (
+      SELECT
+        t1.ObjectIdentity1,
+        CASE WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN 'Contractor'
+             ELSE 'Employee' END AS bucket,
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS dt
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     p  ON t1.ObjectIdentity1 = p.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType pt ON p.PersonnelTypeId = pt.ObjectID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) >= @start
+    ),
+    Ranked AS (
+      SELECT *, ROW_NUMBER() OVER (PARTITION BY ObjectIdentity1 ORDER BY dt DESC) AS rn
+      FROM Combined
+    )
+    SELECT bucket, COUNT(*) AS cnt
+    FROM Ranked
+    WHERE rn = 1
+    GROUP BY bucket;
+  `);
+
+  const breakdown = { employees: 0, contractors: 0 };
+  for (const { bucket, cnt } of recordset) {
+    if (bucket === 'Employee')   breakdown.employees   = cnt;
+    if (bucket === 'Contractor') breakdown.contractors = cnt;
+  }
+  breakdown.total = breakdown.employees + breakdown.contractors;
+  return breakdown;
+}
+
+
+// 4) build the live-occupancy snapshot
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID, ObjectName1, CardNumber,
+      PersonnelType, Direction, Door, Dateonly, Swipe_Time
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID;
+    const floor    = mapDoorToFloor(Door, Direction);
+
+    // remove on out at unmapped door
+    if (Direction === 'OutDirection' && floor === 'Unknown Floor') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = {
+        Dateonly, Swipe_Time, EmployeeID,
+        ObjectName1, CardNumber, PersonnelType, floor
+      };
+    } else {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+    }
+  }
+
+  let employeeCount   = 0;
+  let contractorCount = 0;
+  for (const pt of uniquePeople.values()) {
+    if (pt === 'Employee' || pt === 'Terminated Personnel') employeeCount++;
+    else contractorCount++;
+  }
+
+  const floorMap = {};
+  Object.values(current).forEach(rec => {
+    floorMap[rec.floor] = floorMap[rec.floor] || [];
+    floorMap[rec.floor].push(rec);
+  });
+
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    total:     occupants.length,
+    occupants
+  }));
+
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       employeeCount + contractorCount,
+    floorBreakdown,
+    personnelSummary:   { employees: employeeCount, contractors: contractorCount },
+    personnelBreakdown: [
+      { personnelType: 'Employee',   count: employeeCount },
+      { personnelType: 'Contractor', count: contractorCount }
+    ]
+  };
+}
+
+// 5) SSE endpoint
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24*60*60*1000);
+  const events = [];
+
+  const push = async () => {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+    const payload = await buildOccupancy(events);
+    payload.totalVisitedToday = await fetchTotalVisitedToday();
+    payload.visitedToday      = await fetchVisitedTodayBreakdown();
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
