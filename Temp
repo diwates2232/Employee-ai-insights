@@ -1,3 +1,65 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+// 1. Load Excel file
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = xlsx.utils.sheet_to_json(sheet);
+
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+// 2. Build the door-to-floor map
+const doorFloorMap = {};
+rows.forEach(row => {
+  const rawDoor = String(row['Door Name'] || '').trim();
+  if (!rawDoor) return; // skip if door name is blank
+  const doorName = rawDoor.toUpperCase();
+
+  const inDir = String(row['IN Direction'] || '').trim();
+  const inFloor = String(row['IN Floor'] || '').trim();
+  if (inDir && inFloor) {
+    doorFloorMap[`${doorName}___${inDir}`] = inFloor;
+  }
+
+  const outDir = String(row['OUT Direction'] || '').trim();
+  const outFloor = String(row['OUT Floor'] || '').trim();
+  if (outDir && outFloor) {
+    doorFloorMap[`${doorName}___${outDir}`] = outFloor;
+  }
+});
+
+// 3. Write result to JS file
+const outputPath = path.join(__dirname, '..', 'data', 'denverDoorFloorMap.js');
+const content = 
+  `// Auto-generated from data/doorDenver.xlsx\n` +
+  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
+
+fs.writeFileSync(outputPath, content, 'utf8');
+
+console.log('✅ Denver door-to-floor map written to:', outputPath);
+console.log('Total entries in map:', Object.keys(doorFloorMap).length);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // scripts/generateDenverDoorFloorMap.js
 
 const fs = require('fs');
