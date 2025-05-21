@@ -1,0 +1,50 @@
+Lets check all routes file 
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\routes\employeeRoutes.js
+
+const express = require('express');
+const router = express.Router();
+const { getEmployeeData } = require('../controllers/employeeController');
+
+router.get('/employees', getEmployeeData);
+
+module.exports = router;
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\routes\liveOccupancyRoutes.js
+
+// routes/liveOccupancyRoutes.js
+
+const express = require('express');
+const router  = express.Router();
+const { getLiveOccupancy } = require('../controllers/liveOccupancyController');
+
+router.get('/live-occupancy',getLiveOccupancy);
+
+module.exports = router;
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\routes\occupancyDenverRoutes.js
+
+
+// routes/occupancyDenverRoutes.js
+const express = require('express');
+const router = express.Router();
+const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
+
+// Denver live occupancy
+router.get('/live-occupancy-denver', getDenverLiveOccupancy);
+
+module.exports = router;
+
+
+
+
+
+
+
