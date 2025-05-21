@@ -1,6 +1,92 @@
 node scripts/generateDenverDoorFloorMap.js
 
 
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
+
+// Load Excel
+const filePath = path.join(__dirname, '..', 'data', 'doorDenver.xlsx');
+const workbook = xlsx.readFile(filePath);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = xlsx.utils.sheet_to_json(sheet);
+
+if (!rows.length) {
+  console.error('No rows found in doorDenver.xlsx');
+  process.exit(1);
+}
+
+console.log(`Read ${rows.length} rows from doorDenver.xlsx`);
+
+const doorFloorMap = {};
+
+// Column names
+const DOOR_COLUMN = 'Door Name';
+const IN_DIR_COLUMN = 'IN Direction';
+const IN_FLOOR_COLUMN = 'IN Floor';
+const OUT_DIR_COLUMN = 'OUT Direction';
+const OUT_FLOOR_COLUMN = 'OUT Floor';
+
+// Map logic
+rows.forEach((row, index) => {
+  const door = String(row[DOOR_COLUMN] || '').trim();
+  const inDir = String(row[IN_DIR_COLUMN] || '').trim();
+  const inFloor = String(row[IN_FLOOR_COLUMN] || '').trim();
+  const outDir = String(row[OUT_DIR_COLUMN] || '').trim();
+  const outFloor = String(row[OUT_FLOOR_COLUMN] || '').trim();
+
+  if (!door) {
+    console.warn(`Skipping row ${index + 2} (missing Door Name)`);
+    return;
+  }
+
+  const upperDoor = door.toUpperCase();
+
+  if (inDir && inFloor) {
+    doorFloorMap[`${upperDoor}___${inDir}`] = inFloor;
+  }
+
+  if (outDir && outFloor) {
+    doorFloorMap[`${upperDoor}___${outDir}`] = outFloor;
+  }
+});
+
+// Output path
+const outputDir = path.join(__dirname, '..', 'data');
+const outputPath = path.join(outputDir, 'denverDoorFloorMap.js');
+
+// Ensure output directory exists
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+// Write JS file
+const fileContent =
+  `// Auto-generated from data/doorDenver.xlsx\n` +
+  `module.exports = ${JSON.stringify(doorFloorMap, null, 2)};\n`;
+
+try {
+  fs.writeFileSync(outputPath, fileContent, 'utf8');
+  console.log('\n✅ Denver door-to-floor map written to:', outputPath);
+  console.log('Total entries in map:', Object.keys(doorFloorMap).length);
+} catch (err) {
+  console.error('❌ Failed to write file:', err.message);
+}
+
+// Preview
+console.log('\n--- Preview of exported map ---');
+console.log(fileContent.slice(0, 500));
+console.log('--------------------------------');
+
+
+
+
+
+
+
+
+
+
 
 const fs = require('fs');
 const path = require('path');
