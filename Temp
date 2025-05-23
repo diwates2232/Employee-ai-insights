@@ -1,3 +1,73 @@
+import React, { useEffect } from 'react';
+
+function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data || {});
+
+  useEffect(() => {
+    console.log('Zone Details Table Data:', data);
+  }, [data]);
+
+  if (entries.length === 0) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-details-table">
+      {entries.map(([zone, employees]) => (
+        <section key={zone}>
+          <h3>{zone}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>EmployeeID</th>
+                <th>Name</th>
+                <th>Swipe Time</th>
+                <th>Personnel Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map(emp => {
+                const swipeTime = typeof emp.Swipe_Time === 'object'
+                  ? JSON.stringify(emp.Swipe_Time)
+                  : emp.Swipe_Time;
+
+                const name = typeof emp.ObjectName1 === 'object'
+                  ? JSON.stringify(emp.ObjectName1)
+                  : emp.ObjectName1;
+
+                const personnelType = typeof emp.PersonnelType === 'object'
+                  ? JSON.stringify(emp.PersonnelType)
+                  : emp.PersonnelType;
+
+                return (
+                  <tr key={emp.EmployeeID + swipeTime}>
+                    <td>{emp.EmployeeID}</td>
+                    <td>{name}</td>
+                    <td>{swipeTime}</td>
+                    <td>{personnelType}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export default ZoneDetailsTable;
+
+
+
+
+
+
+
+
+
+
+
 // src/components/ZoneDetailsTable.js
 
 import React, { useEffect } from 'react';
