@@ -1,3 +1,36 @@
+import React from 'react';
+
+export default function DenverPersonnelDonutChart({ data }) {
+  return (
+    <div style={{ backgroundColor: '#1a1a1a', padding: '1rem', borderRadius: '8px' }}>
+      <h5 style={{ color: '#f0c419' }}>Personnel Breakdown</h5>
+      <p style={{ color: '#fff' }}>Chart coming soon...</p>
+    </div>
+  );
+}
+
+
+
+
+import React from 'react';
+
+export default function DenverFloorDetailsTable({ data }) {
+  return (
+    <div style={{ backgroundColor: '#1a1a1a', padding: '1rem', borderRadius: '8px' }}>
+      <h5 style={{ color: '#f0c419' }}>Details Table</h5>
+      <p style={{ color: '#fff' }}>Table coming soon...</p>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client\src\denver\DenverApp.js
 
  import React, { useEffect, useState } from 'react';
