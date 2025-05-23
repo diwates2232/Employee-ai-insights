@@ -1,3 +1,15 @@
+import DenverApp from './denver/DenverApp';
+
+
+
+root.render(
+  <React.StrictMode>
+    <DenverApp />
+  </React.StrictMode>
+);
+
+
+
 "scripts": {
   "start": "cross-env PORT=3001 react-scripts start"
 }
