@@ -1,3 +1,119 @@
+import React from 'react';
+
+/**
+ * Handles rendering of possibly nested or object fields.
+ * Converts Dates and nested objects to readable strings.
+ */
+function formatValue(val) {
+  if (val == null) return '';
+  if (typeof val === 'string' || typeof val === 'number') return val;
+  if (val instanceof Date) return val.toLocaleString();
+  if (typeof val === 'object') {
+    // Try to format known date-like objects
+    if (val.Swipe_Time || val.LocaleMessageTime) {
+      return val.Swipe_Time || val.LocaleMessageTime;
+    }
+
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return '[Object]';
+    }
+  }
+  return String(val);
+}
+
+export default function FloorDetailsTable({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <p>No floor detail data available.</p>;
+  }
+
+  const isGrouped = data[0]?.floor && Array.isArray(data[0]?.occupants);
+
+  // Optional dev logging to trace data issues
+  if (process.env.NODE_ENV === 'development') {
+    console.log('FloorDetailsTable received data:', data);
+  }
+
+  if (isGrouped) {
+    return (
+      <div className="floor-details-table">
+        {data.map(({ floor, total, occupants }) => (
+          <section key={floor}>
+            <h3>{formatValue(floor)} (Total: {formatValue(total)})</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Employee ID</th>
+                  <th>Swipe Time</th>
+                  <th>Personnel Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {occupants.map((emp, idx) => (
+                  <tr key={`${emp.EmployeeID}-${idx}`}>
+                    <td>{formatValue(emp.ObjectName1)}</td>
+                    <td>{formatValue(emp.EmployeeID)}</td>
+                    <td>{formatValue(emp.Swipe_Time)}</td>
+                    <td>{formatValue(emp.PersonnelType)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback for flat swipe data
+  return (
+    <div className="floor-details-table">
+      <h3>All Swipe Events</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Swipe Time</th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Personnel Type</th>
+            <th>Direction</th>
+            <th>Door</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((ev, idx) => (
+            <tr key={ev.PersonGUID || idx}>
+              <td>{formatValue(ev.Swipe_Time || ev.LocaleMessageTime)}</td>
+              <td>{formatValue(ev.EmployeeID)}</td>
+              <td>{formatValue(ev.ObjectName1)}</td>
+              <td>{formatValue(ev.PersonnelType)}</td>
+              <td>{formatValue(ev.Direction)}</td>
+              <td>{formatValue(ev.Door)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // src/components/FloorDetailsTable.jsx
 import React from 'react';
 
