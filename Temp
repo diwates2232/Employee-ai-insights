@@ -1,3 +1,89 @@
+// src/pages/ZoneDetailsPage.jsx
+
+import React, { useState, useEffect } from 'react';
+import './ZoneDetailsPage.css';
+
+export default function ZoneDetailsPage() {
+  const [details, setDetails] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchOccupancy() {
+      try {
+        const res = await fetch('http://localhost:5000/api/live-occupancy');
+        const json = await res.json();
+        if (isMounted) setDetails(json.details || {});
+      } catch (err) {
+        console.error('Error fetching zone details:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    fetchOccupancy();
+    const interval = setInterval(fetchOccupancy, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const entries = Object.entries(details);
+
+  return (
+    <div className="zone-details-page">
+      <h2>Zone Details (Pune)</h2>
+      {loading ? (
+        <p>Loading zone details...</p>
+      ) : entries.length === 0 ? (
+        <p>No zone detail data available.</p>
+      ) : (
+        <div className="zone-boxes">
+          {entries.map(([zone, employees]) => (
+            <div key={zone} className="zone-card">
+              <h3>{zone}</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Swipe Time</th>
+                    <th>Personnel Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((emp) => (
+                    <tr key={emp.EmployeeID + emp.Swipe_Time}>
+                      <td>{emp.EmployeeID}</td>
+                      <td>{emp.ObjectName1}</td>
+                      <td>{emp.Swipe_Time}</td>
+                      <td>{emp.PersonnelType}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 import './ZoneDetailsPage.css';
 
 
