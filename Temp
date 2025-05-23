@@ -1,3 +1,10 @@
+"scripts": {
+  "start": "cross-env PORT=3001 react-scripts start"
+}
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
