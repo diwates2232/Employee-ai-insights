@@ -1,3 +1,94 @@
+// src/App.js
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+
+import DashboardHome      from './pages/DashboardHome';
+import FloorDetailsPage   from './pages/FloorDetailsPage';
+
+import './App.css';
+
+function App() {
+  const [summaryData, setSummaryData]           = useState([]);
+  const [floorData, setFloorData]               = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setFloorData(payload.floorBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/"           style={{ color: '#fff' }}>Dashboard</Nav.Link>
+          <Nav.Link as={Link} to="/floor-details" style={{ color: '#fff' }}>Floor Details</Nav.Link>
+        </Nav>
+      </Navbar>
+
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                personnelSummary={personnelSummary}
+                totalVisitedToday={totalVisitedToday}
+                visitedToday={visitedToday}
+                floorData={floorData}
+                personnelBreakdown={personnelBreakdown}
+              />
+            }
+          />
+          <Route
+            path="/floor-details"
+            element={<FloorDetailsPage floorData={floorData} />}
+          />
+        </Routes>
+      </Container>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
