@@ -1,259 +1,6 @@
-export function createLiveOccupancyEventSource(onData, onError) {
-  const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\DenverApp.js
 
-  es.onmessage = (e) => {
-    try {
-      const payload = JSON.parse(e.data);
-      onData(payload);
-    } catch (err) {
-      console.error('SSE parse error:', err);
-    }
-  };
-
-  es.onerror = (err) => {
-    console.error('SSE error:', err);
-    es.close();
-    onError(err);
-  };
-
-  return es;
-}
-
-
-
-
-
-
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-
-export default function DenverSummaryChart({ summary }) {
-  return (
-    <div style={{ backgroundColor: '#121212', padding: '1rem', borderRadius: '8px' }}>
-      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Zone Occupancy Summary</h5>
-      <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={summary} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid stroke="#333" />
-          <XAxis dataKey="zone" stroke="#f0c419" />
-          <YAxis stroke="#f0c419" />
-          <Tooltip
-            contentStyle={{ backgroundColor: '#222', border: 'none' }}
-            itemStyle={{ color: '#f0c419' }}
-            cursor={{ fill: 'rgba(240,196,25,0.2)' }}
-          />
-          <Bar dataKey="count" fill="#f0c419" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-
-export default function DenverSummaryCards({
-  totalOccupancy,
-  employeeCount,
-  contractorCount,
-  totalVisitedToday,
-  employeesVisitedToday,
-  contractorsVisitedToday,
-}) {
-  const cardStyle = {
-    backgroundColor: '#121212',
-    border: '1px solid #f0c419',
-    color: '#f0c419',
-  };
-
-  return (
-    <Row className="mb-4">
-      <Col md={3}>
-        <Card style={cardStyle} className="text-center p-3">
-          <h6>Total Occupancy</h6>
-          <h3>{totalOccupancy}</h3>
-        </Card>
-      </Col>
-      <Col md={3}>
-        <Card style={cardStyle} className="text-center p-3">
-          <h6>Employees</h6>
-          <h3>{employeeCount}</h3>
-        </Card>
-      </Col>
-      <Col md={3}>
-        <Card style={cardStyle} className="text-center p-3">
-          <h6>Contractors</h6>
-          <h3>{contractorCount}</h3>
-        </Card>
-      </Col>
-      <Col md={3}>
-        <Card style={cardStyle} className="text-center p-3">
-          <h6>Visited Today</h6>
-          <p>Employees: {employeesVisitedToday}</p>
-          <p>Contractors: {contractorsVisitedToday}</p>
-          <h5>Total: {totalVisitedToday}</h5>
-        </Card>
-      </Col>
-    </Row>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-import React from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const COLORS = ['#f0c419', '#444', '#888'];
-
-export default function DenverFloorOccupancyChart({ data }) {
-  if (!data || data.length === 0) {
-    return <p style={{ color: '#fff' }}>No floor occupancy data available</p>;
-  }
-
-  return (
-    <div style={{ backgroundColor: '#1a1a1a', padding: '1rem', borderRadius: '8px' }}>
-      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Floor Occupancy</h5>
-      <ResponsiveContainer width="100%" height={250}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="count"
-            nameKey="floor"
-            cx="50%"
-            cy="50%"
-            outerRadius={80}
-            fill="#f0c419"
-            label
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-
-export default function DenverSummaryCards({
-  totalOccupancy,
-  employeeCount,
-  contractorCount,
-  totalVisitedToday,
-  employeesVisitedToday,
-  contractorsVisitedToday,
-}) {
-  return (
-    <Row className="mb-4">
-      <Col md={3}>
-        <Card bg="dark" text="light" className="text-center">
-          <Card.Body>
-            <Card.Title>Total Occupancy</Card.Title>
-            <Card.Text style={{ fontSize: '2rem' }}>{totalOccupancy}</Card.Text>
-          </Card.Body>
-        </Card>
-      </Col>
-
-      <Col md={3}>
-        <Card bg="dark" text="light" className="text-center">
-          <Card.Body>
-            <Card.Title>Employees</Card.Title>
-            <Card.Text style={{ fontSize: '2rem' }}>{employeeCount}</Card.Text>
-          </Card.Body>
-        </Card>
-      </Col>
-
-      <Col md={3}>
-        <Card bg="dark" text="light" className="text-center">
-          <Card.Body>
-            <Card.Title>Contractors</Card.Title>
-            <Card.Text style={{ fontSize: '2rem' }}>{contractorCount}</Card.Text>
-          </Card.Body>
-        </Card>
-      </Col>
-
-      <Col md={3}>
-        <Card bg="dark" text="light" className="text-center">
-          <Card.Body>
-            <Card.Title>Visited Today</Card.Title>
-            <Card.Text style={{ fontSize: '1.5rem' }}>
-              {totalVisitedToday} (Emp: {employeesVisitedToday}, Cont: {contractorsVisitedToday})
-            </Card.Text>
-          </Card.Body>
-        </Card>
-      </Col>
-    </Row>
-  );
-}
-
-
-
-
-
-
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-
-export default function DenverSummaryChart({ summary }) {
-  return (
-    <div style={{ backgroundColor: '#1a1a1a', padding: '1rem', borderRadius: '8px' }}>
-      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Zone Summary</h5>
-      <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={summary} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <XAxis dataKey="zone" stroke="#fff" />
-          <YAxis stroke="#fff" />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="count" fill="#f0c419" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
@@ -351,7 +98,36 @@ export default DenverApp;
 
 
 
-import React from 'react';
+File 2
+
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\services\liveOccupancyService.js
+
+export function createLiveOccupancyEventSource(onData, onError) {
+  const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+
+  es.onmessage = (e) => {
+    try {
+      const payload = JSON.parse(e.data);
+      onData(payload);
+    } catch (err) {
+      console.error('SSE parse error:', err);
+    }
+  };
+
+  es.onerror = (err) => {
+    console.error('SSE error:', err);
+    es.close();
+    onError(err);
+  };
+
+  return es;
+}
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\pages\DenverDashboardHome.jsx
+
+ import React from 'react';
+ import { createLiveOccupancyEventSource } from '../services/liveOccupancyService';
 import { Container, Row, Col } from 'react-bootstrap';
 
 import DenverSummaryCards from '../components/DenverSummaryCards';
@@ -406,340 +182,134 @@ export default function DenverDashboardHome({
 
 
 
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\components\DenverFloorDetailsTable.jsx
+empty
 
 
-
-
-cd C:\Users\W0024618\Desktop\swipeData\client\src
-
-mkdir denver
-cd denver
-
-mkdir components
-mkdir pages
-
-echo. > DenverApp.js
-echo. > DenverApp.css
-echo. > pages\DenverDashboardHome.jsx
-echo. > components\DenverSummaryCards.jsx
-echo. > components\DenverSummaryChart.jsx
-echo. > components\DenverFloorOccupancyChart.jsx
-echo. > components\DenverPersonnelDonutChart.jsx
-echo. > components\DenverZoneDetailsTable.jsx
-
-
-
-
-
-
-
-
-
-
-
-cd C:\Users\W0024618\Desktop\swipeData\client\src
-
-mkdir denver
-cd denver
-
-mkdir components
-mkdir pages
-
-echo. > App.js
-echo. > App.css
-echo. > pages\DashboardHome.jsx
-echo. > components\SummaryCards.jsx
-echo. > components\SummaryChart.jsx
-echo. > components\FloorOccupancyChart.jsx
-echo. > components\PersonnelDonutChart.jsx
-echo. > components\ZoneDetailsTable.jsx
-
-
-
-
-
-
-
-
-
-
-
-// App.js
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import FloorOccupancyChart from './components/FloorOccupancyChart';
-import ZoneBreakdownTable from './components/ZoneBreakdownTable';
-import DashboardHome from './pages/DashboardHome';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Zone Details</h2>
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-  const [floorData, setFloorData] = useState([]);
-  const [zoneBreakdown, setZoneBreakdown] = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setDetailsData(payload.details || {});
-        setFloorData(payload.floorBreakdown || []);
-        setZoneBreakdown(payload.zoneBreakdown || []);
-        setPersonnelBreakdown(payload.personnelBreakdown || []);
-        setTotalVisitedToday(payload.totalVisitedToday || 0);
-        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union Pune
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
-            Details
-          </Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                zoneSummaryData={summaryData}
-                detailsData={detailsData}
-                floorData={floorData}
-                zoneBreakdown={zoneBreakdown}
-                personnelBreakdown={personnelBreakdown}
-                totalVisitedToday={totalVisitedToday}
-                personnelSummary={personnelSummary}
-                visitedToday={visitedToday}   // <-- fix here
-              />
-            }
-          />
-          <Route
-            path="/details"
-            element={<ZoneDetailsPage detailsData={detailsData} />}
-          />
-        </Routes>
-      </Container>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-
-
-
-
-
-
-Lets check both file carefully and give me updated js file carefully
-App.js
-
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import FloorOccupancyChart from './components/FloorOccupancyChart';
-import ZoneBreakdownTable from './components/ZoneBreakdownTable';
-import DashboardHome from './pages/DashboardHome';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Zone Details</h2>
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-  const [floorData, setFloorData] = useState([]);
-  const [zoneBreakdown, setZoneBreakdown] = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setDetailsData(payload.details || {});
-        setFloorData(payload.floorBreakdown || []);
-        setZoneBreakdown(payload.zoneBreakdown || []);
-        setPersonnelBreakdown(payload.personnelBreakdown || []);
-        setTotalVisitedToday(payload.totalVisitedToday || 0);
-        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union Pune
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
-            Details
-          </Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                zoneSummaryData={summaryData}           // <--- fixed prop name here
-                detailsData={detailsData}
-                floorData={floorData}
-                zoneBreakdown={zoneBreakdown}
-                personnelBreakdown={personnelBreakdown}
-                totalVisitedToday={totalVisitedToday}
-                personnelSummary={personnelSummary}
-              />
-            }
-          />
-          <Route
-            path="/details"
-            element={<ZoneDetailsPage detailsData={detailsData} />}
-          />
-        </Routes>
-      </Container>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\client\src\pages\DashboardHome.jsx
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\components\DenverFloorOccupancyChart.jsx
 
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
+const COLORS = ['#f0c419', '#444', '#888'];
 
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,   // <-- number from backend
-  visitedToday,        // <-- { employees, contractors, total }
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
-
-  // use the backend’s two‐entry array directly for the donut
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
+export default function DenverFloorOccupancyChart({ data }) {
+  if (!data || data.length === 0) {
+    return <p style={{ color: '#fff' }}>No floor occupancy data available</p>;
+  }
 
   return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-  
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
+    <div style={{ backgroundColor: '#1a1a1a', padding: '1rem', borderRadius: '8px' }}>
+      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Floor Occupancy</h5>
+      <ResponsiveContainer width="100%" height={250}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="count"
+            nameKey="floor"
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            fill="#f0c419"
+            label
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
+
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\components\DenverPersonnelDonutChart.jsx
+
+empty
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\components\DenverSummaryCards.jsx
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+
+export default function DenverSummaryCards({
+  totalOccupancy,
+  employeeCount,
+  contractorCount,
+  totalVisitedToday,
+  employeesVisitedToday,
+  contractorsVisitedToday,
+}) {
+  const cardStyle = {
+    backgroundColor: '#121212',
+    border: '1px solid #f0c419',
+    color: '#f0c419',
+  };
+
+  return (
+    <Row className="mb-4">
+      <Col md={3}>
+        <Card style={cardStyle} className="text-center p-3">
+          <h6>Total Occupancy</h6>
+          <h3>{totalOccupancy}</h3>
+        </Card>
+      </Col>
+      <Col md={3}>
+        <Card style={cardStyle} className="text-center p-3">
+          <h6>Employees</h6>
+          <h3>{employeeCount}</h3>
+        </Card>
+      </Col>
+      <Col md={3}>
+        <Card style={cardStyle} className="text-center p-3">
+          <h6>Contractors</h6>
+          <h3>{contractorCount}</h3>
+        </Card>
+      </Col>
+      <Col md={3}>
+        <Card style={cardStyle} className="text-center p-3">
+          <h6>Visited Today</h6>
+          <p>Employees: {employeesVisitedToday}</p>
+          <p>Contractors: {contractorsVisitedToday}</p>
+          <h5>Total: {totalVisitedToday}</h5>
+        </Card>
+      </Col>
+    </Row>
+  );
+}
+
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\denver\components\DenverSummaryChart.jsx
+
+
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+
+export default function DenverSummaryChart({ summary }) {
+  return (
+    <div style={{ backgroundColor: '#121212', padding: '1rem', borderRadius: '8px' }}>
+      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Zone Occupancy Summary</h5>
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={summary} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <CartesianGrid stroke="#333" />
+          <XAxis dataKey="zone" stroke="#f0c419" />
+          <YAxis stroke="#f0c419" />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#222', border: 'none' }}
+            itemStyle={{ color: '#f0c419' }}
+            cursor={{ fill: 'rgba(240,196,25,0.2)' }}
+          />
+          <Bar dataKey="count" fill="#f0c419" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 
 
 
