@@ -1,192 +1,65 @@
-// src/App.js
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+C:\Users\W0024618\Desktop\swipeData\client\src\pages\ZoneDeatailsPage.jsx
 
-import DashboardHome      from './pages/DashboardHome';
-import FloorDetailsPage   from './pages/FloorDetailsPage';
+import React from 'react';
 
-import './App.css';
+export default function ZoneDetailsPage() {
+  return (
+    <div>
+      <h2>Zone Details</h2>
+      {/* We’ll add the detail tables here in Phase 5 */}
+    </div>
+  );
+}
 
-function App() {
-  const [summaryData, setSummaryData]           = useState([]);
-  const [floorData, setFloorData]               = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
-  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+
+
+// src/components/ZoneDetailsTable.js
+
+import React, { useEffect } from 'react';
+
+function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data || {});
 
   useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setFloorData(payload.floorBreakdown || []);
-        setPersonnelBreakdown(payload.personnelBreakdown || []);
-        setTotalVisitedToday(payload.totalVisitedToday || 0);
-        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
+    console.log('Zone Details Table Data:', data);
+  }, [data]);
+
+  if (entries.length === 0) {
+    return <p>No zone detail data available.</p>;
+  }
 
   return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union Denver
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/"           style={{ color: '#fff' }}>Dashboard</Nav.Link>
-          <Nav.Link as={Link} to="/floor-details" style={{ color: '#fff' }}>Floor Details</Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                personnelSummary={personnelSummary}
-                totalVisitedToday={totalVisitedToday}
-                visitedToday={visitedToday}
-                floorData={floorData}
-                personnelBreakdown={personnelBreakdown}
-              />
-            }
-          />
-          <Route
-            path="/floor-details"
-            element={<FloorDetailsPage floorData={floorData} />}
-          />
-        </Routes>
-      </Container>
-    </BrowserRouter>
+    <div className="zone-details-table">
+      {entries.map(([zone, employees]) => (
+        <section key={zone}>
+          <h3>{zone}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>EmployeeID</th>
+                <th>Name</th>
+                <th>Swipe Time</th>
+                <th>Personnel Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map(emp => (
+                <tr key={emp.EmployeeID + emp.Swipe_Time}>
+                  <td>{emp.EmployeeID}</td>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
   );
 }
 
-export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-
-// Remove unused imports (SummaryChart, FloorOccupancyChart)
-import FloorDetailsTable from './components/FloorDetailsTable';
-import DashboardHome from './pages/DashboardHome';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Zone Details (Denver)</h2>
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <FloorDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState([]);
-  const [floorData, setFloorData] = useState([]);
-  const [zoneBreakdown, setZoneBreakdown] = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setDetailsData(payload.details || []);
-        setFloorData(payload.floorBreakdown || []);
-        setZoneBreakdown(payload.zoneBreakdown || []);
-        setPersonnelBreakdown(payload.personnelBreakdown || []);
-        setTotalVisitedToday(payload.totalVisitedToday || 0);
-        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union Denver
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
-            Details
-          </Nav.Link>
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                personnelSummary={personnelSummary}
-                totalVisitedToday={totalVisitedToday}
-                visitedToday={visitedToday}
-                floorData={floorData}
-                personnelBreakdown={personnelBreakdown}
-              />
-            }
-          />
-          <Route path="/details" element={<ZoneDetailsPage detailsData={detailsData} />} />
-        </Routes>
-      </Container>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
+export default ZoneDetailsTable;
 
 
 
