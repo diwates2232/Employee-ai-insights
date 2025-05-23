@@ -1,179 +1,19 @@
-import React, { useEffect } from 'react';
+still we got error message
 
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => {
-                const swipeTime = typeof emp.Swipe_Time === 'object'
-                  ? JSON.stringify(emp.Swipe_Time)
-                  : emp.Swipe_Time;
-
-                const name = typeof emp.ObjectName1 === 'object'
-                  ? JSON.stringify(emp.ObjectName1)
-                  : emp.ObjectName1;
-
-                const personnelType = typeof emp.PersonnelType === 'object'
-                  ? JSON.stringify(emp.PersonnelType)
-                  : emp.PersonnelType;
-
-                return (
-                  <tr key={emp.EmployeeID + swipeTime}>
-                    <td>{emp.EmployeeID}</td>
-                    <td>{name}</td>
-                    <td>{swipeTime}</td>
-                    <td>{personnelType}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
+ERROR
+Objects are not valid as a React child (found: object with keys {LocaleMessageTime, Dateonly, Swipe_Time, EmployeeID, PersonGUID, ObjectName1, PersonnelType, CardNumber, AdmitCode, Direction, Door}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (http://localhost:3001/static/js/bundle.js:36858:11)
+    at reconcileChildFibersImpl (http://localhost:3001/static/js/bundle.js:37173:9)
+    at http://localhost:3001/static/js/bundle.js:37185:31
+    at reconcileChildren (http://localhost:3001/static/js/bundle.js:37447:47)
+    at beginWork (http://localhost:3001/static/js/bundle.js:38202:1565)
+    at runWithFiberInDEV (http://localhost:3001/static/js/bundle.js:33629:68)
+    at performUnitOfWork (http://localhost:3001/static/js/bundle.js:40209:93)
+    at workLoopSync (http://localhost:3001/static/js/bundle.js:40102:38)
+    at renderRootSync (http://localhost:3001/static/js/bundle.js:40086:7)
+    at performWorkOnRoot (http://localhost:3001/static/js/bundle.js:39850:42)
 
 
-
-
-
-
-
-
-
-
-
-// src/components/ZoneDetailsTable.js
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
-
-
-
-
-file 2
-
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,   // <-- number from backend
-  visitedToday,        // <-- { employees, contractors, total }
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
-
-  // use the backend’s two‐entry array directly for the donut
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-  
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
-  );
-}
 
 
 
