@@ -1,3 +1,109 @@
+// src/pages/ZoneDetailsPage.jsx
+import React from 'react';
+import './ZoneDetailsPage.css';
+
+export default function ZoneDetailsPage({ detailsData = {} }) {
+  const entries = Object.entries(detailsData);
+
+  return (
+    <div className="zone-details-page">
+      <h2>Zone Details (Pune)</h2>
+      {entries.length === 0 ? (
+        <p>No zone detail data available.</p>
+      ) : (
+        <div className="zone-cards-container">
+          {entries.map(([zone, employees]) => (
+            <div key={zone} className="zone-card">
+              <div className="zone-header">
+                <h3>{zone}</h3>
+                <span>{employees.length} people</span>
+              </div>
+              <table className="zone-table">
+                <thead>
+                  <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Door</th>
+                    <th>Swipe Time</th>
+                    <th>Personnel Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((emp, index) => (
+                    <tr key={index}>
+                      <td>{emp.EmployeeID}</td>
+                      <td>{emp.ObjectName1}</td>
+                      <td>{emp.Door}</td>
+                      <td>{emp.Swipe_Time}</td>
+                      <td>{emp.PersonnelType}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+
+/* src/pages/ZoneDetailsPage.css */
+
+.zone-details-page {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.zone-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.zone-card {
+  background-color: #f4f4f4;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  flex: 1 1 400px;
+}
+
+.zone-header {
+  background: linear-gradient(to right, #ffc107, #ff9800);
+  padding: 10px;
+  border-radius: 4px;
+  color: white;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.zone-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.zone-table th,
+.zone-table td {
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  font-size: 14px;
+}
+
+
+
+
+
+
+
+
+
 // src/components/ZoneDetailsTable.js
 
 import React, { useEffect } from 'react';
