@@ -1,4 +1,38 @@
 import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+
+export default function DenverSummaryChart({ summary }) {
+  return (
+    <div style={{ backgroundColor: '#121212', padding: '1rem', borderRadius: '8px' }}>
+      <h5 style={{ color: '#f0c419', marginBottom: '1rem' }}>Zone Occupancy Summary</h5>
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={summary} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <CartesianGrid stroke="#333" />
+          <XAxis dataKey="zone" stroke="#f0c419" />
+          <YAxis stroke="#f0c419" />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#222', border: 'none' }}
+            itemStyle={{ color: '#f0c419' }}
+            cursor={{ fill: 'rgba(240,196,25,0.2)' }}
+          />
+          <Bar dataKey="count" fill="#f0c419" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+import React from 'react';
 import { Card, Row, Col } from 'react-bootstrap';
 
 export default function DenverSummaryCards({
