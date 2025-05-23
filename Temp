@@ -1,6 +1,6 @@
 import ZoneDetailsTable from './components/ZoneDetailsTable.jsx';
 
-
+import ZoneDetailsTable from './components/ZoneDetailsTable';
 
 import React from 'react';
 
