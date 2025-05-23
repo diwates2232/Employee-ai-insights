@@ -1,3 +1,183 @@
+const { DateTime } = require('luxon');
+const sql = require('mssql');
+const { denver } = require('../config/siteConfig');
+const doorFloorMap = require('../data/denverDoorFloorMap');
+
+const warnedKeys = new Set();
+
+function normalizeDoorKey(rawDoorName, rawDirection) {
+  const base = rawDoorName
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .replace(/-IN$/i, '')
+    .replace(/-OUT$/i, '');
+  const dir = rawDirection.toUpperCase().includes('IN') ? 'IN' : 'OUT';
+  return `${base}___${dir}`;
+}
+
+function mapDoorToFloor(rawDoorName, rawDirection) {
+  const key = normalizeDoorKey(rawDoorName, rawDirection);
+  if (doorFloorMap[key]) return doorFloorMap[key];
+  const m = key.match(/\b(\d{1,2})\./);
+  if (m) return `Floor ${m[1]}`;
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
+
+async function fetchNewEvents(since) {
+  const pool = await denver.pool.connect();
+  const request = pool.request();
+  request.input('since', sql.DateTime2, since);
+
+  const { recordset } = await request.query(`
+    WITH Combined AS (
+      SELECT
+        DATEADD(MINUTE, -t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1      AS ObjectName1,
+        t2.Value            AS EmployeeID,
+        t1.ObjectIdentity1  AS PersonGUID,
+        sc.CardNumber       AS CardNumber,
+        t1.AdmitCode        AS AdmitCode,
+        t3.Name             AS PersonnelType,
+        t5d.value           AS Direction,
+        t1.ObjectName2      AS Door
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogData t2 
+        ON t1.MessageID = t2.MessageID AND t2.Name = 'Employee ID'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogData t3 
+        ON t1.MessageID = t3.MessageID AND t3.Name = 'Personnel Type'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogData t5d 
+        ON t1.MessageID = t5d.MessageID AND t5d.Name = 'Direction'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogData t_xml 
+        ON t1.MessageID = t_xml.MessageID AND t_xml.Name = 'XMLData'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSCard sc 
+        ON sc.CardGUID = t1.ObjectIdentity2
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+    )
+    SELECT
+      *,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8), LocaleMessageTime, 108) AS Swipe_Time
+    FROM Combined
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return recordset;
+}
+
+function isToday(event) {
+  const swipeDate = DateTime.fromISO(event.Dateonly, { zone: 'America/Denver' }).toFormat('yyyy-LL-dd');
+  const today = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
+  return swipeDate === today;
+}
+
+function buildOccupancyForToday(events) {
+  const todayInEvents = events.filter(
+    e => e.Direction === 'InDirection' && isToday(e)
+  );
+
+  const dedupedMap = new Map();
+  todayInEvents.forEach(e => {
+    const existing = dedupedMap.get(e.PersonGUID);
+    const currentSwipe = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
+    if (!existing || currentSwipe > DateTime.fromFormat(existing.Swipe_Time, 'HH:mm:ss')) {
+      dedupedMap.set(e.PersonGUID, e);
+    }
+  });
+
+  const dedupedList = Array.from(dedupedMap.values());
+
+  let employeeCount = 0;
+  let contractorCount = 0;
+  const floorMap = {};
+
+  dedupedList.forEach(e => {
+    const floor = mapDoorToFloor(e.Door, e.Direction);
+    if (!floorMap[floor]) floorMap[floor] = [];
+    floorMap[floor].push(e);
+
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      employeeCount++;
+    } else {
+      contractorCount++;
+    }
+  });
+
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    total: occupants.length,
+    occupants
+  }));
+
+  return {
+    asOf: new Date().toISOString(),
+    currentCount: dedupedList.length,
+    floorBreakdown,
+    personnelSummary: {
+      employees: employeeCount,
+      contractors: contractorCount
+    },
+    personnelBreakdown: [
+      { personnelType: 'Employee', count: employeeCount },
+      { personnelType: 'Contractor', count: contractorCount }
+    ],
+    totalVisitedToday: dedupedList.length,
+    visitedToday: {
+      employees: employeeCount,
+      contractors: contractorCount,
+      total: dedupedList.length
+    }
+  };
+}
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const allEvents = [];
+
+  const push = async () => {
+    try {
+      const newEvents = await fetchNewEvents(lastSeen);
+      if (newEvents.length > 0) {
+        lastSeen = newEvents[newEvents.length - 1].LocaleMessageTime;
+        allEvents.push(...newEvents);
+      }
+
+      const payload = buildOccupancyForToday(allEvents);
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    } catch (err) {
+      console.error('Denver occupancy SSE error:', err);
+    }
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
+
+
+
+
+
+
+
+
+
 data: {"asOf":"2025-05-23T07:33:04.947Z","currentCount":4,"floorBreakdown":[{"floor":"Floor 11","total":1,"occupants":[{"LocaleMessageTime":"2025-05-23T01:01:23.000Z","Dateonly":"2025-05-23","Swipe_Time":"01:01:23","EmployeeID":"W0022449","PersonGUID":"E0ECF741-9548-463A-9B4E-A3E55D50D4AC","ObjectName1":"Angel, Maria","PersonnelType":"Contractor","CardNumber":"613873","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"}]},{"floor":"Floor 14","total":1,"occupants":[{"LocaleMessageTime":"2025-05-23T01:19:31.000Z","Dateonly":"2025-05-23","Swipe_Time":"01:19:31","EmployeeID":"W0026176","PersonGUID":"6F93B492-C95A-436E-996A-92202EFB9915","ObjectName1":"Vargas, Erika","PersonnelType":"Contractor","CardNumber":"617979","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 14. Freight Elevator Lobby-IN"}]},{"floor":"Floor 06","total":1,"occupants":[{"LocaleMessageTime":"2025-05-23T01:03:54.000Z","Dateonly":"2025-05-23","Swipe_Time":"01:03:54","EmployeeID":"W0022451","PersonGUID":"35327275-1D0C-4BF7-8817-6A76B5F9E29A","ObjectName1":"Alamo, Martin","PersonnelType":"Contractor","CardNumber":"613770","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. South Entrance-IN"}]},{"floor":"Floor 09","total":1,"occupants":[{"LocaleMessageTime":"2025-05-23T01:32:49.000Z","Dateonly":"2025-05-23","Swipe_Time":"01:32:49","EmployeeID":"0","PersonGUID":"A3141A0B-692B-4402-AE73-4E1651E4E900","ObjectName1":"DENVER, TEMP_DEN_030 30","PersonnelType":"Temp Badge","CardNumber":"613896","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"}]}],"personnelSummary":{"employees":0,"contractors":4},"personnelBreakdown":[{"personnelType":"Employee","count":0},
 {"personnelType":"Contractor","count":4}],"totalVisitedToday":4,"visitedToday":{"employees":0,"contractors":4,"total":4},"totalVisitedHistorical":26,"visitedHistorical":{"employees":19,"contractors":7,"total":26}}
 
