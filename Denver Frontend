@@ -1,0 +1,221 @@
+File 1
+C:\Users\W0024618\Desktop\swipeData\client\src\pages\DashboardDenver.jsx
+
+// src/pages/DashboardDenver.jsx
+import React, { useEffect, useState } from 'react';
+import { Grid, Typography, Paper } from '@mui/material';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import DenverFloorSummary from '../components/DenverFloorSummary';
+import axios from 'axios';
+import DenverSummaryCards from '../components/DenverSummaryCards';
+
+const DashboardDenver = () => {
+  const [occupancyData, setOccupancyData] = useState(null);
+
+  useEffect(() => {
+    const eventSource = new EventSource('/api/denver-live-occupancy');
+    eventSource.onmessage = (event) => {
+      const parsedData = JSON.parse(event.data);
+      setOccupancyData(parsedData);
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  if (!occupancyData) return <Typography>Loading Denver data...</Typography>;
+
+  return (
+    <Grid container spacing={2} padding={2}>
+      <Grid item xs={12}>
+        <Typography variant="h5" gutterBottom>
+          Denver Office - Live Occupancy Dashboard
+        </Typography>
+      </Grid>
+
+      <Grid item xs={12}>
+        <DenverSummaryCards data={occupancyData} />
+      </Grid>
+
+<DenverFloorSummary floorBreakdown={occupancyData.floorBreakdown}/>
+      <Grid item xs={12}>
+        <FloorOccupancyChart data={occupancyData.floorBreakdown} />
+      </Grid>
+
+      <Grid item xs={12}>
+        <ZoneDetailsTable data={occupancyData.zoneBreakdown} />
+      </Grid>
+    </Grid>
+  );
+};
+
+export default DashboardDenver;
+
+
+
+file 2
+
+C:\Users\W0024618\Desktop\swipeData\client\src\components\DenverFloorSummary.jsx
+
+// src/components/DenverFloorSummary.jsx
+import React from 'react';
+import { Grid, Paper, Typography } from '@mui/material';
+
+const DenverFloorSummary = ({ floorBreakdown }) => {
+  if (!floorBreakdown || Object.keys(floorBreakdown).length === 0) {
+    return <Typography>No floor data available</Typography>;
+  }
+
+  const cardStyle = {
+    padding: '16px',
+    textAlign: 'center',
+    height: '100%',
+    backgroundColor: '#f4f6f8',
+  };
+
+  return (
+    <div>
+      <Typography variant="h6" gutterBottom>
+        Floor-wise Occupancy
+      </Typography>
+      <Grid container spacing={2}>
+        {Object.entries(floorBreakdown).map(([floor, count]) => (
+          <Grid item xs={6} sm={4} md={3} key={floor}>
+            <Paper elevation={3} style={cardStyle}>
+              <Typography variant="subtitle2">{floor}</Typography>
+              <Typography variant="h5">{count}</Typography>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </div>
+  );
+};
+
+export default DenverFloorSummary;
+
+
+
+
+file 3
+
+C:\Users\W0024618\Desktop\swipeData\client\src\components\DenverSummaryCards.jsx
+
+
+
+// src/components/DenverSummaryCards.jsx
+import React from 'react';
+import { Grid, Paper, Typography } from '@mui/material';
+
+const DenverSummaryCards = ({ data }) => {
+  const {
+    liveCount,
+    totalVisitedToday,
+    personnelBreakdown,
+    siteName,
+    timestamp
+  } = data;
+
+  const employeeCount = personnelBreakdown?.Employee || 0;
+  const contractorCount = personnelBreakdown?.Contractor || 0;
+
+  const cardStyle = {
+    padding: '16px',
+    textAlign: 'center',
+    height: '100%',
+  };
+
+  return (
+    <Grid container spacing={2}>
+      <Grid item xs={12} sm={6} md={3}>
+        <Paper elevation={3} style={cardStyle}>
+          <Typography variant="subtitle2">Total Visited Today</Typography>
+          <Typography variant="h5">{totalVisitedToday}</Typography>
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={3}>
+        <Paper elevation={3} style={cardStyle}>
+          <Typography variant="subtitle2">Current Occupancy</Typography>
+          <Typography variant="h5">{liveCount}</Typography>
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={3}>
+        <Paper elevation={3} style={cardStyle}>
+          <Typography variant="subtitle2">Employees</Typography>
+          <Typography variant="h5">{employeeCount}</Typography>
+        </Paper>
+      </Grid>
+
+      <Grid item xs={12} sm={6} md={3}>
+        <Paper elevation={3} style={cardStyle}>
+          <Typography variant="subtitle2">Contractors</Typography>
+          <Typography variant="h5">{contractorCount}</Typography>
+        </Paper>
+      </Grid>
+    </Grid>
+  );
+};
+
+export default DenverSummaryCards;
+
+
+
+
+
+help me to update 
+
+C:\Users\W0024618\Desktop\swipeData\client\src\services\app.js
+
+
+import React, { useEffect, useState } from 'react';
+import { fetchOccupancyData } from './services/api';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+function App() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const newData = await fetchOccupancyData();
+      setData(newData);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!data) return <div className="text-center mt-5">Loading...</div>;
+
+  return (
+    <div className="container mt-4">
+      <h2 className="text-center mb-4">Live Employee Occupancy Dashboard</h2>
+      <SummaryChart summary={data.summary} />
+      <ZoneDetailsTable details={data.details} />
+    </div>
+  );
+}
+
+export default App;
+
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\api.js
+
+// src/api.js
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api'
+});
+
+
+// API for denver is  http://localhost:5000/api/live-occupancy-denver
+
+
+
+
+
+
+
