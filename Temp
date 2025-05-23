@@ -1,3 +1,88 @@
+// src/components/FloorDetailsTable.jsx
+import React from 'react';
+
+/**
+ * Renders either:
+ *  - Floor‐grouped data: array of { floor, total, occupants: [ { ObjectName1, EmployeeID, Swipe_Time, PersonnelType } ] }
+ *  - Raw events array: [ { LocaleMessageTime, Dateonly, Swipe_Time, EmployeeID, ObjectName1, PersonnelType, ... } ]
+ */
+export default function FloorDetailsTable({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <p>No floor detail data available.</p>;
+  }
+
+  const first = data[0];
+
+  // Case A: grouped by floor
+  if (first.floor && Array.isArray(first.occupants)) {
+    return (
+      <div className="floor-details-table">
+        {data.map(({ floor, total, occupants }) => (
+          <section key={floor}>
+            <h3>{floor} (Total: {total})</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Employee ID</th>
+                  <th>Swipe Time</th>
+                  <th>Personnel Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {occupants.map((emp, idx) => (
+                  <tr key={`${emp.EmployeeID}-${emp.Swipe_Time}-${idx}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.EmployeeID}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  // Case B: raw event list
+  return (
+    <div className="floor-details-table">
+      <h3>All Swipe Events</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Door</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((ev, idx) => (
+            <tr key={`${ev.PersonGUID}-${idx}`}>
+              <td>{ev.Swipe_Time ?? ev.LocaleMessageTime ?? JSON.stringify(ev)}</td>
+              <td>{ev.EmployeeID}</td>
+              <td>{ev.ObjectName1}</td>
+              <td>{ev.PersonnelType}</td>
+              <td>{ev.Door}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
 Give me updated js file carefully.
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorDetailsTable.jsx
 
