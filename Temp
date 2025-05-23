@@ -1,3 +1,64 @@
+// src/pages/DashboardDenver.jsx
+import React, { useEffect, useState } from 'react';
+import { Grid, Typography, Paper } from '@mui/material';
+import SummaryCards from '../components/SummaryCards';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import axios from 'axios';
+
+const DashboardDenver = () => {
+  const [occupancyData, setOccupancyData] = useState(null);
+
+  useEffect(() => {
+    const eventSource = new EventSource('/api/denver-live-occupancy');
+    eventSource.onmessage = (event) => {
+      const parsedData = JSON.parse(event.data);
+      setOccupancyData(parsedData);
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  if (!occupancyData) return <Typography>Loading Denver data...</Typography>;
+
+  return (
+    <Grid container spacing={2} padding={2}>
+      <Grid item xs={12}>
+        <Typography variant="h5" gutterBottom>
+          Denver Office - Live Occupancy Dashboard
+        </Typography>
+      </Grid>
+
+      <Grid item xs={12}>
+        <SummaryCards data={occupancyData} />
+      </Grid>
+
+      <Grid item xs={12}>
+        <FloorOccupancyChart data={occupancyData.floorBreakdown} />
+      </Grid>
+
+      <Grid item xs={12}>
+        <ZoneDetailsTable data={occupancyData.zoneBreakdown} />
+      </Grid>
+    </Grid>
+  );
+};
+
+export default DashboardDenver;
+
+
+
+
+
+
+
+
+
+
+
+
+
 // controllers/liveOccupancyController.js
 
 const { DateTime }   = require('luxon');
