@@ -1,414 +1,45 @@
-// src/pages/ZoneDetailsPage.jsx
-import React from 'react';
-import './ZoneDetailsPage.css';
+C:\Users\W0024618\Desktop\swipeData\client\src\services\app.js
 
-export default function ZoneDetailsPage({ detailsData = {} }) {
-  const entries = Object.entries(detailsData);
+import React, { useEffect, useState } from 'react';
+import { fetchOccupancyData } from './services/api';
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-  return (
-    <div className="zone-details-page">
-      <h2>Zone Details (Pune)</h2>
-      {entries.length === 0 ? (
-        <p>No zone detail data available.</p>
-      ) : (
-        <div className="zone-cards-container">
-          {entries.map(([zone, employees]) => (
-            <div key={zone} className="zone-card">
-              <div className="zone-header">
-                <h3>{zone}</h3>
-                <span>{employees.length} people</span>
-              </div>
-              <table className="zone-table">
-                <thead>
-                  <tr>
-                    <th>Employee ID</th>
-                    <th>Name</th>
-                    <th>Door</th>
-                    <th>Swipe Time</th>
-                    <th>Personnel Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((emp, index) => (
-                    <tr key={index}>
-                      <td>{emp.EmployeeID}</td>
-                      <td>{emp.ObjectName1}</td>
-                      <td>{emp.Door}</td>
-                      <td>{emp.Swipe_Time}</td>
-                      <td>{emp.PersonnelType}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-
-
-/* src/pages/ZoneDetailsPage.css */
-
-.zone-details-page {
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.zone-cards-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.zone-card {
-  background-color: #f4f4f4;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  padding: 16px;
-  flex: 1 1 400px;
-}
-
-.zone-header {
-  background: linear-gradient(to right, #ffc107, #ff9800);
-  padding: 10px;
-  border-radius: 4px;
-  color: white;
-  margin-bottom: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.zone-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.zone-table th,
-.zone-table td {
-  padding: 8px;
-  border-bottom: 1px solid #ccc;
-  font-size: 14px;
-}
-
-
-
-
-
-
-
-
-
-// src/components/ZoneDetailsTable.js
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data);
+function App() {
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
+    const interval = setInterval(async () => {
+      const newData = await fetchOccupancyData();
+      setData(newData);
+    }, 5000);
 
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone} className="zone-section">
-          <h3 className="zone-title">{zone}</h3>
-          <table className="zone-table">
-            <thead>
-              <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Door</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={`${emp.EmployeeID}-${emp.Swipe_Time}`}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Door}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
-
-
-
-
-
-// src/pages/ZoneDetailsPage.jsx
-
-import React from 'react';
-import ZoneDetailsTable from '../components/ZoneDetailsTable';
-import './ZoneDetailsPage.css';
-
-export default function ZoneDetailsPage({ detailsData }) {
-  const entries = Object.entries(detailsData);
-
-  return (
-    <div className="zone-details-page">
-      <h2>Zone Details (Pune)</h2>
-      {entries.length === 0 ? (
-        <p>No zone detail data available.</p>
-      ) : (
-        <div className="zone-infos">
-          {entries.map(([zone, employees]) => (
-            <div key={zone} className="zone-card infographic-card">
-              <div className="card-header">
-                <h3>{zone}</h3>
-                <span className="badge">{employees.length}</span>
-              </div>
-              <ZoneDetailsTable data={{ [zone]: employees }} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-/* src/pages/ZoneDetailsPage.css */
-
-.zone-details-page {
-  padding: 1rem;
-}
-
-.zone-infos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.zone-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  overflow: hidden;
-  flex: 1 1 300px;
-  display: flex;
-  flex-direction: column;
-}
-
-.infographic-card .card-header {
-  background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%);
-  color: #fff;
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.infographic-card .card-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.infographic-card .badge {
-  background: rgba(255,255,255,0.3);
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-  font-weight: bold;
-}
-
-.zone-details-table {
-  overflow-x: auto;
-}
-
-.zone-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.zone-table th,
-.zone-table td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.875rem;
-}
-
-.zone-table thead {
-  background: #f7f7f7;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-Add door name also in details sectiom
-
-
-// src/components/ZoneDetailsTable.js
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
-
-
-
-
-
-
-// src/pages/ZoneDetailsPage.jsx
-
-
-
-import React, { useState, useEffect } from 'react';
-import './ZoneDetailsPage.css';
-
-export default function ZoneDetailsPage() {
-  const [details, setDetails] = useState({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchOccupancy() {
-      try {
-        const res = await fetch('http://localhost:5000/api/live-occupancy');
-        const json = await res.json();
-        if (isMounted) setDetails(json.details || {});
-      } catch (err) {
-        console.error('Error fetching zone details:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    fetchOccupancy();
-    const interval = setInterval(fetchOccupancy, 30000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
-  const entries = Object.entries(details);
+  if (!data) return <div className="text-center mt-5">Loading...</div>;
 
   return (
-    <div className="zone-details-page">
-      <h2>Zone Details (Pune)</h2>
-      {loading ? (
-        <p>Loading zone details...</p>
-      ) : entries.length === 0 ? (
-        <p>No zone detail data available.</p>
-      ) : (
-        <div className="zone-boxes">
-          {entries.map(([zone, employees]) => (
-            <div key={zone} className="zone-card">
-              <h3>{zone}</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Employee ID</th>
-                    <th>Name</th>
-                    <th>Swipe Time</th>
-                    <th>Personnel Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((emp) => (
-                    <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                      <td>{emp.EmployeeID}</td>
-                      <td>{emp.ObjectName1}</td>
-                      <td>{emp.Swipe_Time}</td>
-                      <td>{emp.PersonnelType}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="container mt-4">
+      <h2 className="text-center mb-4">Live Employee Occupancy Dashboard</h2>
+      <SummaryChart summary={data.summary} />
+      <ZoneDetailsTable details={data.details} />
     </div>
   );
 }
 
+export default App;
 
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\App.js
 
 
 
 // App.js
-
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
@@ -513,4 +144,5 @@ function App() {
 }
 
 export default App;
+
 
