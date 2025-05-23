@@ -1,59 +1,108 @@
+// App.js — for Denver
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
 import DashboardHome from './pages/DashboardHome';
-// import ZoneBreakdownTable from './components/ZoneBreakdownTable';  // Removed as requested
-import ZoneDetailsPage from './pages/ZoneDetailsPage';
 
-export default function App() {
-  const [personnelSummary, setPersonnelSummary] = useState(null);
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details (Denver)</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
   const [floorData, setFloorData] = useState([]);
-  const [zoneSummaryData, setZoneSummaryData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
   const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
   const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
 
   useEffect(() => {
-    async function fetchData() {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = (e) => {
       try {
-        const response = await fetch('/api/liveOccupancy');  // adjust your API endpoint
-        const data = await response.json();
-
-        setPersonnelSummary(data.personnelSummary || {});
-        setFloorData(data.floorData || []);
-        setZoneSummaryData(data.zoneSummary || []);
-        setPersonnelBreakdown(data.personnelBreakdown || []);
-        setVisitedToday(data.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setTotalVisitedToday(data.totalVisitedToday || 0);
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
       } catch (err) {
-        console.error('Error fetching live occupancy data:', err);
+        console.error('SSE parse error:', err);
       }
-    }
-
-    fetchData();
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <DashboardHome
-              personnelSummary={personnelSummary}
-              totalVisitedToday={totalVisitedToday}
-              visitedToday={visitedToday}
-              floorData={floorData}
-              zoneSummaryData={zoneSummaryData}
-              personnelBreakdown={personnelBreakdown}
-            />
-          }
-        />
-        <Route path="/zone-details" element={<ZoneDetailsPage />} />
-      </Routes>
-    </Router>
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
+
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                zoneSummaryData={summaryData}
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary}
+                visitedToday={visitedToday}
+              />
+            }
+          />
+          <Route path="/details" element={<ZoneDetailsPage detailsData={detailsData} />} />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
+
+export default App;
+
+
+
 
 
 
