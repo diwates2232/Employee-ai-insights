@@ -1,6 +1,102 @@
 // src/components/FloorDetailsTable.jsx
 import React from 'react';
 
+function safeRender(val) {
+  if (val == null) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return val;
+}
+
+/**
+ * Supports:
+ * A. Grouped format: [{ floor, total, occupants: [...] }]
+ * B. Flat swipe event list: [{ LocaleMessageTime, Swipe_Time, ... }]
+ */
+export default function FloorDetailsTable({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return <p>No floor detail data available.</p>;
+  }
+
+  const isGrouped = data[0]?.floor && Array.isArray(data[0]?.occupants);
+
+  if (isGrouped) {
+    return (
+      <div className="floor-details-table">
+        {data.map(({ floor, total, occupants }) => (
+          <section key={floor}>
+            <h3>{floor} (Total: {safeRender(total)})</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Employee ID</th>
+                  <th>Swipe Time</th>
+                  <th>Personnel Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {occupants.map((emp, idx) => (
+                  <tr key={`${emp.EmployeeID}-${idx}`}>
+                    <td>{safeRender(emp.ObjectName1)}</td>
+                    <td>{safeRender(emp.EmployeeID)}</td>
+                    <td>{safeRender(emp.Swipe_Time)}</td>
+                    <td>{safeRender(emp.PersonnelType)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  // Flat swipe event list
+  return (
+    <div className="floor-details-table">
+      <h3>All Swipe Events</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Swipe Time</th>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Personnel Type</th>
+            <th>Direction</th>
+            <th>Door</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((ev, idx) => (
+            <tr key={`${ev.PersonGUID || idx}`}>
+              <td>{safeRender(ev.Swipe_Time || ev.LocaleMessageTime)}</td>
+              <td>{safeRender(ev.EmployeeID)}</td>
+              <td>{safeRender(ev.ObjectName1)}</td>
+              <td>{safeRender(ev.PersonnelType)}</td>
+              <td>{safeRender(ev.Direction)}</td>
+              <td>{safeRender(ev.Door)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/FloorDetailsTable.jsx
+import React from 'react';
+
 /**
  * Renders either:
  *  - Floor‐grouped data: array of { floor, total, occupants: [ { ObjectName1, EmployeeID, Swipe_Time, PersonnelType } ] }
