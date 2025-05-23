@@ -6,6 +6,33 @@ cd denver
 mkdir components
 mkdir pages
 
+echo. > DenverApp.js
+echo. > DenverApp.css
+echo. > pages\DenverDashboardHome.jsx
+echo. > components\DenverSummaryCards.jsx
+echo. > components\DenverSummaryChart.jsx
+echo. > components\DenverFloorOccupancyChart.jsx
+echo. > components\DenverPersonnelDonutChart.jsx
+echo. > components\DenverZoneDetailsTable.jsx
+
+
+
+
+
+
+
+
+
+
+
+cd C:\Users\W0024618\Desktop\swipeData\client\src
+
+mkdir denver
+cd denver
+
+mkdir components
+mkdir pages
+
 echo. > App.js
 echo. > App.css
 echo. > pages\DashboardHome.jsx
