@@ -1,3 +1,47 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App'; // Only reference Pune App
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+
+
+
+
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import DenverApp from './DenverApp'; // Only reference DenverApp
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <DenverApp />
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+
+
+
+
+
+
+
+
+
 cd swipeData/client-denver
 set PORT=3001 && npm start       # Windows
 # Or use: PORT=3001 npm start    # Mac/Linux
