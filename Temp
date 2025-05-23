@@ -1,252 +1,106 @@
-// src/components/FloorOccupancyChart.jsx
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend
-} from 'recharts';
-import { Card } from 'react-bootstrap';
 
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
+// Remove unused imports (SummaryChart, FloorOccupancyChart)
+import FloorDetailsTable from './components/FloorDetailsTable';
+import DashboardHome from './pages/DashboardHome';
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <Card className="mb-4">
-      <Card.Header>Floor-wise Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="floor" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend verticalAlign="bottom" />
-            {/* Single series on the `total` property */}
-            <Bar
-              dataKey="total"
-              name="Total Occupancy"
-              fill="#007bff"
-              radius={[8, 8, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details (Denver)</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <FloorDetailsTable data={detailsData} />
+    </>
   );
 }
 
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState([]);
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
 
-
-
-
-
-
-// src/pages/FloorDetailsPage.jsx
-import React from 'react';
-import { Container, Row, Col, Card, Table } from 'react-bootstrap';
-import FloorDetailsTable from '../components/FloorDetailsTable';
-
-export default function FloorDetailsPage({ floorData = [] }) {
-  if (!floorData.length) {
-    return <p className="text-center mt-4">No floor details available.</p>;
-  }
-
-  return (
-    <Container fluid className="py-4">
-      <h2 className="mb-4">Floor Details</h2>
-      <Row xs={1} md={2} lg={3} className="g-4">
-        {floorData.map(({ floor, total, occupants }) => (
-          <Col key={floor}>
-            <Card border="primary" className="h-100">
-              <Card.Header>
-                <strong>{floor}</strong> — Total: {total}
-              </Card.Header>
-              <Card.Body style={{ overflowY: 'auto', maxHeight: 300 }}>
-                <Table striped bordered hover size="sm" className="mb-0">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Swipe Time</th>
-                      <th>Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {occupants.map((emp, idx) => (
-                      <tr key={`${emp.EmployeeID}-${idx}`}>
-                        <td>{emp.ObjectName1}</td>
-                        <td>{emp.Swipe_Time}</td>
-                        <td>{emp.PersonnelType}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-    </Container>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-now check below compoments file carefully .and Solve issue regaeding Floor Wise Occupancy chart is not update
-and important display Floor details data on details page make attractibe Boxes and display deatsils data on this page.
-
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorDetailsTable.jsx
-
-
-import React from 'react';
-
-/**
- * Expects `data` to be an array of:
- *   { floor: string, total: number, occupants: Array<{ ObjectName1, EmployeeID, Swipe_Time, PersonnelType, Door }> }
- */
-export default function FloorDetailsTable({ data = [] }) {
-  // Only render when data is the grouped floor shape
-  if (!Array.isArray(data) || data.length === 0 || !data[0].floor || !Array.isArray(data[0].occupants)) {
-    return <p>No floor detail data available.</p>;
-  }
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || []);
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <div className="floor-details-table">
-      {data.map(({ floor, total, occupants }) => (
-        <section key={floor}>
-          <h3>{floor} (Total: {total})</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Employee ID</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-                <th>Door</th>
-              </tr>
-            </thead>
-            <tbody>
-              {occupants.map((emp, idx) => (
-                <tr key={`${emp.EmployeeID}-${idx}`}>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                  <td>{emp.Door}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
 
-
-
-// src/components/FloorOccupancyChart.jsx
-
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  CartesianGrid
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-const COLORS = {
-  Contractor: '#fd7e14',
-  Employee:   '#007bff',
-  'Temp Badge': '#6f42c1',
-  // add more personnel types here...
-};
-
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
-
-  // determine all personnel-type keys present, but *exclude* 'floor', 'total', and 'occupants'
-  const types = Array.from(
-    new Set(
-      data.flatMap(d =>
-        Object.keys(d).filter(
-          k => k !== 'floor' && k !== 'total' && k !== 'occupants'
-        )
-      )
-    )
-  );
-
-  return (
-    <Card className="mb-4">
-      <Card.Header>Floor-wise Occupancy</Card.Header>
-      <Card.Body style={{ height: 350 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="floor" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend wrapperStyle={{ bottom: -10 }} />
-            {types.map((type, idx) => (
-              <Bar
-                key={type}
-                dataKey={type}
-                stackId="a"
-                name={type}
-                fill={COLORS[type] || '#cccccc'}
-                radius={[8, 8, 0, 0]}
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                personnelSummary={personnelSummary}
+                totalVisitedToday={totalVisitedToday}
+                visitedToday={visitedToday}
+                floorData={floorData}
+                personnelBreakdown={personnelBreakdown}
               />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
+            }
+          />
+          <Route path="/details" element={<ZoneDetailsPage detailsData={detailsData} />} />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
+export default App;
 
 
 
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\FloorDeatailsPage.jsx
 
 
 
 
-import React from 'react';
-
-export default function FloorDetailsPage() {
-  return (
-    <div>
-      <h2>Floor Details</h2>
-      {/* We’ll add the detail tables here in Phase 5 */}
-    </div>
-  );
-}
 
 
