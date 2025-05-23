@@ -1,4 +1,62 @@
+Add door name also in details sectiom
+
+
+// src/components/ZoneDetailsTable.js
+
+import React, { useEffect } from 'react';
+
+function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data || {});
+
+  useEffect(() => {
+    console.log('Zone Details Table Data:', data);
+  }, [data]);
+
+  if (entries.length === 0) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-details-table">
+      {entries.map(([zone, employees]) => (
+        <section key={zone}>
+          <h3>{zone}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>EmployeeID</th>
+                <th>Name</th>
+                <th>Swipe Time</th>
+                <th>Personnel Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map(emp => (
+                <tr key={emp.EmployeeID + emp.Swipe_Time}>
+                  <td>{emp.EmployeeID}</td>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export default ZoneDetailsTable;
+
+
+
+
+
+
 // src/pages/ZoneDetailsPage.jsx
+
+
 
 import React, { useState, useEffect } from 'react';
 import './ZoneDetailsPage.css';
@@ -76,184 +134,110 @@ export default function ZoneDetailsPage() {
 
 
 
+// App.js
 
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
+import DashboardHome from './pages/DashboardHome';
 
+import './App.css';
 
-
-
-
-
-import './ZoneDetailsPage.css';
-
-
-
-
-/* src/pages/ZoneDetailsPage.css */
-.zone-summary-boxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
+  );
 }
 
-.zone-box {
-  flex: 0 0 150px;
-  padding: 1rem;
-  background: #f5f5f5;
-  border-radius: 4px;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.zone-count {
-  font-size: 1.5rem;
-  margin-top: 0.5rem;
-  color: #333;
-}
-
-
-
-
-
-
-
-
-// src/pages/ZoneDetailsPage.jsx
-
-import React, { useState, useEffect } from 'react';
-import ZoneDetailsTable from '../components/ZoneDetailsTable';
-import './ZoneDetailsPage.css'; // optional, for styling your boxes
-
-export default function ZoneDetailsPage() {
-  const [summary, setSummary] = useState([]);
-  const [details, setDetails] = useState({});
-  const [loading, setLoading] = useState(true);
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchOccupancy() {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = (e) => {
       try {
-        const res  = await fetch('http://localhost:5000/api/live-occupancy');
-        const json = await res.json();
-        if (!isMounted) return;
-        setSummary(json.summary);
-        setDetails(json.details);
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
       } catch (err) {
-        console.error('Failed to load occupancy:', err);
-      } finally {
-        if (isMounted) setLoading(false);
+        console.error('SSE parse error:', err);
       }
-    }
-
-    fetchOccupancy();
-    const interval = setInterval(fetchOccupancy, 30_000); // every 30s
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
     };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
   }, []);
 
   return (
-    <div className="zone-details-page">
-      <h2>Zone Details (Pune)</h2>
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Pune
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
 
-      {loading ? (
-        <p>Loading occupancy data…</p>
-      ) : (
-        <>
-          <div className="zone-summary-boxes">
-            {summary.map(({ zone, count }) => (
-              <div key={zone} className="zone-box">
-                <strong>{zone}</strong>
-                <div className="zone-count">{count}</div>
-              </div>
-            ))}
-          </div>
-
-          <ZoneDetailsTable data={details} />
-        </>
-      )}
-    </div>
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                zoneSummaryData={summaryData}
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary}
+                visitedToday={visitedToday}   // <-- fix here
+              />
+            }
+          />
+          <Route
+            path="/details"
+            element={<ZoneDetailsPage detailsData={detailsData} />}
+          />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
-
-
-
-
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\client\src\pages\ZoneDeatailsPage.jsx
-
-import React from 'react';
-
-export default function ZoneDetailsPage() {
-  return (
-    <div>
-      <h2>Zone Details</h2>
-      {/* We’ll add the detail tables here in Phase 5 */}
-    </div>
-  );
-}
-
-
-
-// src/components/ZoneDetailsTable.js
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
-
-  useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => (
-                <tr key={emp.EmployeeID + emp.Swipe_Time}>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-export default ZoneDetailsTable;
-
-
-
-
-
-
-
+export default App;
 
