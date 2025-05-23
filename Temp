@@ -1,3 +1,30 @@
+cd C:\Users\W0024618\Desktop\swipeData\client\src
+
+mkdir denver
+cd denver
+
+mkdir components
+mkdir pages
+
+echo. > App.js
+echo. > App.css
+echo. > pages\DashboardHome.jsx
+echo. > components\SummaryCards.jsx
+echo. > components\SummaryChart.jsx
+echo. > components\FloorOccupancyChart.jsx
+echo. > components\PersonnelDonutChart.jsx
+echo. > components\ZoneDetailsTable.jsx
+
+
+
+
+
+
+
+
+
+
+
 // App.js
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
