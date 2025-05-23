@@ -1,3 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+import DashboardHome from './pages/DashboardHome';
+// import ZoneBreakdownTable from './components/ZoneBreakdownTable';  // Removed as requested
+import ZoneDetailsPage from './pages/ZoneDetailsPage';
+
+export default function App() {
+  const [personnelSummary, setPersonnelSummary] = useState(null);
+  const [floorData, setFloorData] = useState([]);
+  const [zoneSummaryData, setZoneSummaryData] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch('/api/liveOccupancy');  // adjust your API endpoint
+        const data = await response.json();
+
+        setPersonnelSummary(data.personnelSummary || {});
+        setFloorData(data.floorData || []);
+        setZoneSummaryData(data.zoneSummary || []);
+        setPersonnelBreakdown(data.personnelBreakdown || []);
+        setVisitedToday(data.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setTotalVisitedToday(data.totalVisitedToday || 0);
+      } catch (err) {
+        console.error('Error fetching live occupancy data:', err);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <DashboardHome
+              personnelSummary={personnelSummary}
+              totalVisitedToday={totalVisitedToday}
+              visitedToday={visitedToday}
+              floorData={floorData}
+              zoneSummaryData={zoneSummaryData}
+              personnelBreakdown={personnelBreakdown}
+            />
+          }
+        />
+        <Route path="/zone-details" element={<ZoneDetailsPage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+
+
+
+
+
+
+
+
 lets check all file carefully and solve the isue 
 
 if any file is missing kindly inform me i will create new file ok
