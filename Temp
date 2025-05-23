@@ -1,3 +1,11 @@
+cd swipeData/client-denver
+set PORT=3001 && npm start       # Windows
+# Or use: PORT=3001 npm start    # Mac/Linux
+
+
+
+
+
 import DenverApp from './denver/DenverApp';
 
 
