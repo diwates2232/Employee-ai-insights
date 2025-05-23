@@ -1,3 +1,71 @@
+// src/pages/ZoneDetailsPage.jsx
+
+import React, { useState, useEffect } from 'react';
+import ZoneDetailsTable from '../components/ZoneDetailsTable';
+import './ZoneDetailsPage.css'; // optional, for styling your boxes
+
+export default function ZoneDetailsPage() {
+  const [summary, setSummary] = useState([]);
+  const [details, setDetails] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchOccupancy() {
+      try {
+        const res  = await fetch('http://localhost:5000/api/live-occupancy');
+        const json = await res.json();
+        if (!isMounted) return;
+        setSummary(json.summary);
+        setDetails(json.details);
+      } catch (err) {
+        console.error('Failed to load occupancy:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    fetchOccupancy();
+    const interval = setInterval(fetchOccupancy, 30_000); // every 30s
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <div className="zone-details-page">
+      <h2>Zone Details (Pune)</h2>
+
+      {loading ? (
+        <p>Loading occupancy data…</p>
+      ) : (
+        <>
+          <div className="zone-summary-boxes">
+            {summary.map(({ zone, count }) => (
+              <div key={zone} className="zone-box">
+                <strong>{zone}</strong>
+                <div className="zone-count">{count}</div>
+              </div>
+            ))}
+          </div>
+
+          <ZoneDetailsTable data={details} />
+        </>
+      )}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client\src\pages\ZoneDeatailsPage.jsx
 
 import React from 'react';
