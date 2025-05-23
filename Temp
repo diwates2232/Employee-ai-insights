@@ -1,238 +1,128 @@
-import ZoneDetailsTable from './components/ZoneDetailsTable.jsx';
+`lets check all file carefully and give me updated js file .
+
+ERROR in ./src/App.js 10:0-61
+Module not found: Error: Can't resolve './components/ZoneDetailsTable' in 'C:\Users\W0024618\Desktop\swipeData\client-denver\src'
+
+webpack compiled with 1 error and 1 warning
+Compiling...
+Failed to compile.
+
+Module not found: Error: Can't resolve './components/ZoneDetailsTable' in 'C:\Users\W0024618\Desktop\swipeData\client-denver\src'
+WARNING in [eslint]
+src\App.js
+  Line 7:8:   'SummaryChart' is defined but never used         no-unused-vars
+  Line 13:8:  'FloorOccupancyChart' is defined but never used  no-unused-vars
+
+ERROR in ./src/App.js 10:0-61
+Module not found: Error: Can't resolve './components/ZoneDetailsTable' in 'C:\Users\W0024618\Desktop\swipeData\client-denver\src'
+
+webpack compiled with 1 error and 1 warning
+
+
+
+// App.js — for Denver
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+
+import SummaryChart from './components/SummaryChart';
 
 import ZoneDetailsTable from './components/ZoneDetailsTable';
 
-import React from 'react';
 
-/**
- * Expects `data` to be an array of:
- *   { floor: string, total: number, occupants: Array< { ObjectName1, EmployeeID, Swipe_Time, PersonnelType } > }
- */
-export default function FloorDetailsTable({ data = [] }) {
-  if (!data.length) {
-    return <p>No floor detail data available.</p>;
-  }
 
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import DashboardHome from './pages/DashboardHome';
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <div className="floor-details-table">
-      {data.map(({ floor, total, occupants }) => (
-        <section key={floor}>
-          <h3>{floor} (Total: {total})</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Employee ID</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {occupants.map((emp, idx) => (
-                <tr key={`${emp.EmployeeID}-${emp.Swipe_Time}-${idx}`}>
-                  <td>{emp.ObjectName1}</td>
-                  <td>{emp.EmployeeID}</td>
-                  <td>{emp.Swipe_Time}</td>
-                  <td>{emp.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Zone Details (Denver)</h2>
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
 }
 
-
-
-
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-// import SummaryChart from '../components/SummaryChart';  // removed if not used
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-import FloorDetailsTable from '../components/FloorDetailsTable'; // if you want details here
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  visitedToday,
-  floorData,
-  // zoneSummaryData,    // no longer used
-  personnelBreakdown
-}) {
-  const employees      = personnelSummary?.employees   ?? 0;
-  const contractors    = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        {/* If you’re dropping the zone chart, comment this out: */}
-        {/* <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col> */}
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-
-      {/* If you want a detailed table by floor: */}
-      <FloorDetailsTable data={floorData} />
-    </Container>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorDetailsTable.jsx
-
-import React, { useEffect } from 'react';
-
-function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data || {});
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
 
   useEffect(() => {
-    console.log('Zone Details Table Data:', data);
-  }, [data]);
-
-  if (entries.length === 0) {
-    return <p>No zone detail data available.</p>;
-  }
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <div className="zone-details-table">
-      {entries.map(([zone, employees]) => (
-        <section key={zone}>
-          <h3>{zone}</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>EmployeeID</th>
-                <th>Name</th>
-                <th>Swipe Time</th>
-                <th>Personnel Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map(emp => {
-                const swipeTime = typeof emp.Swipe_Time === 'object'
-                  ? JSON.stringify(emp.Swipe_Time)
-                  : emp.Swipe_Time;
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
+        </Nav>
+      </Navbar>
 
-                const name = typeof emp.ObjectName1 === 'object'
-                  ? JSON.stringify(emp.ObjectName1)
-                  : emp.ObjectName1;
-
-                const personnelType = typeof emp.PersonnelType === 'object'
-                  ? JSON.stringify(emp.PersonnelType)
-                  : emp.PersonnelType;
-
-                return (
-                  <tr key={emp.EmployeeID + swipeTime}>
-                    <td>{emp.EmployeeID}</td>
-                    <td>{name}</td>
-                    <td>{swipeTime}</td>
-                    <td>{personnelType}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </div>
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                zoneSummaryData={summaryData}
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary}
+                visitedToday={visitedToday}
+              />
+            }
+          />
+          <Route path="/details" element={<ZoneDetailsPage detailsData={detailsData} />} />
+        </Routes>
+      </Container>
+    </BrowserRouter>
   );
 }
 
-export default ZoneDetailsTable;
-
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DashboardHome.jsx
-
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,   // <-- number from backend
-  visitedToday,        // <-- { employees, contractors, total }
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
-
-  // use the backend’s two‐entry array directly for the donut
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-  
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-    </Container>
-  );
-}
-
-
+export default App;
 
