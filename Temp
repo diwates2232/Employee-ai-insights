@@ -1,3 +1,111 @@
+// src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body>No floor data available</Card>;
+  }
+
+  return (
+    <Card className="mb-4">
+      <Card.Header>Floor-wise Occupancy</Card.Header>
+      <Card.Body style={{ height: 350 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="floor" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend verticalAlign="bottom" />
+            {/* Single series on the `total` property */}
+            <Bar
+              dataKey="total"
+              name="Total Occupancy"
+              fill="#007bff"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+// src/pages/FloorDetailsPage.jsx
+import React from 'react';
+import { Container, Row, Col, Card, Table } from 'react-bootstrap';
+import FloorDetailsTable from '../components/FloorDetailsTable';
+
+export default function FloorDetailsPage({ floorData = [] }) {
+  if (!floorData.length) {
+    return <p className="text-center mt-4">No floor details available.</p>;
+  }
+
+  return (
+    <Container fluid className="py-4">
+      <h2 className="mb-4">Floor Details</h2>
+      <Row xs={1} md={2} lg={3} className="g-4">
+        {floorData.map(({ floor, total, occupants }) => (
+          <Col key={floor}>
+            <Card border="primary" className="h-100">
+              <Card.Header>
+                <strong>{floor}</strong> — Total: {total}
+              </Card.Header>
+              <Card.Body style={{ overflowY: 'auto', maxHeight: 300 }}>
+                <Table striped bordered hover size="sm" className="mb-0">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Swipe Time</th>
+                      <th>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {occupants.map((emp, idx) => (
+                      <tr key={`${emp.EmployeeID}-${idx}`}>
+                        <td>{emp.ObjectName1}</td>
+                        <td>{emp.Swipe_Time}</td>
+                        <td>{emp.PersonnelType}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 
 now check below compoments file carefully .and Solve issue regaeding Floor Wise Occupancy chart is not update
 and important display Floor details data on details page make attractibe Boxes and display deatsils data on this page.
