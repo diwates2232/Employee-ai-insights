@@ -1,3 +1,101 @@
+// src/services/api.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+});
+
+export default api;
+
+
+
+// src/App.jsx
+import React, { useEffect, useState } from 'react';
+import DenverSummaryCards from './components/DenverSummaryCards';
+import DenverFloorSummary from './components/DenverFloorSummary';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import { Container, Typography, Grid } from '@mui/material';
+
+function App() {
+  const [occupancyData, setOccupancyData] = useState(null);
+
+  useEffect(() => {
+    // point at the SSE endpoint
+    const url = (process.env.REACT_APP_API_URL || '') + '/live-occupancy-denver';
+    const es  = new EventSource(url);
+
+    es.onmessage = (e) => {
+      try {
+        setOccupancyData(JSON.parse(e.data));
+      } catch (err) {
+        console.error('Failed to parse SSE data', err);
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('SSE error', err);
+      es.close();
+    };
+
+    return () => es.close();
+  }, []);
+
+  if (!occupancyData) {
+    return (
+      <Container style={{ paddingTop: 40 }}>
+        <Typography variant="h6" align="center">
+          Loading Denver occupancy…
+        </Typography>
+      </Container>
+    );
+  }
+
+  return (
+    <Container style={{ paddingTop: 20 }}>
+      <Typography variant="h4" align="center" gutterBottom>
+        Denver Office — Live Occupancy Dashboard
+      </Typography>
+
+      <DenverSummaryCards data={{
+        totalVisitedToday: occupancyData.totalVisitedToday,
+        liveCount:         occupancyData.currentCount,
+        personnelBreakdown: occupancyData.personnelBreakdown.reduce(
+          (acc, { personnelType, count }) => ({ ...acc, [personnelType]: count }),
+          {}
+        )
+      }} />
+
+      <Grid container spacing={3} style={{ marginTop: 20 }}>
+        <Grid item xs={12}>
+          <DenverFloorSummary floorBreakdown={
+            // backend gives an array of { floor, total, occupants }
+            occupancyData.floorBreakdown.reduce(
+              (acc, { floor, total }) => ({ ...acc, [floor]: total }),
+              {}
+            )
+          }/>
+        </Grid>
+
+        <Grid item xs={12}>
+          <FloorOccupancyChart data={occupancyData.floorBreakdown} />
+        </Grid>
+
+        <Grid item xs={12}>
+          <ZoneDetailsTable data={occupancyData.floorBreakdown} />
+        </Grid>
+      </Grid>
+    </Container>
+  );
+}
+
+export default App;
+
+
+
+
+
+
 File 1
 C:\Users\W0024618\Desktop\swipeData\client\src\pages\DashboardDenver.jsx
 
