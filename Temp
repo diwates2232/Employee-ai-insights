@@ -1,3 +1,19 @@
+['#A80000', '#FFCCCC']   // Dark Red → Light Red
+
+
+['#B28000', '#FFF2CC']   // Deep Yellow → Pale Yellow
+
+
+
+['#C75D00', '#FFE0B2']   // Burnt Orange → Light Orange
+
+
+
+
+
+
+
+
 // src/components/FloorOccupancyChart.jsx
 import React from 'react';
 import {
