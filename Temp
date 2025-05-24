@@ -1,219 +1,10 @@
-import React, { useEffect } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  Cell
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// Fixed colors per zone
-const ZONE_COLORS = {
-  'Orange Zone': '#FFA500',
-  'Green Zone': '#28a745',
-  'RED ZONE': '#FF0000',
-  'Tower B': '#999999',
-  'Yellow zone': '#FFD100'
-};
-
-export default function SummaryChart({ summary = [] }) {
-  useEffect(() => {
-    console.log('Summary Chart Data:', summary);
-  }, [summary]);
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={summary} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
-            <Tooltip />
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-            <Bar dataKey="count" name="Count" radius={[6, 6, 0, 0]} barSize={30}>
-              {summary.map((entry, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={ZONE_COLORS[entry.zone] || '#FFB800'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
+Lets understand use infographic theme bar sixe dont make fix its look very small adjust as per chart .adjust bar size as per chart size.
+and Colour theme use are using infographic latest theme
 
 
+C:\Users\W0024618\Desktop\swipeData\client\src\components\FloorOccupancyChart.jsx
 
 
-
-
-
-
-
-
-
-
-
-// src/components/SummaryChart.jsx
-import React, { useEffect } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// Custom colors per zone
-const ZONE_COLORS = {
-  'Orange Zone': '#fd7e14',
-  'Yellow zone': '#FFD100',
-  'Green Zone': '#28a745',
-  'RED ZONE': '#dc3545',
-  'Tower B': '#6f42c1',
-  // fallback palette for any other zones:
-  fallback: ['#007bff','#17a2b8','#e83e8c','#20c997']
-};
-
-export default function SummaryChart({ summary = [] }) {
-  useEffect(() => {
-    console.log('Summary Chart Data:', summary);
-  }, [summary]);
-
-  if (!summary.length) return <Card body>No zone data available</Card>;
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={summary} 
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
-            <Tooltip />
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-
-            <Bar dataKey="count" name="Count" radius={[6,6,0,0]} barSize={30}>
-              {summary.map((entry, idx) => {
-                const c = ZONE_COLORS[entry.zone] 
-                  || ZONE_COLORS.fallback[idx % ZONE_COLORS.fallback.length];
-                return (
-                  <Cell key={entry.zone} fill={c} stroke="#fff" strokeWidth={1} />
-                );
-              })}
-              <LabelList 
-                dataKey="count" 
-                position="top" 
-                style={{ fill: '#000', fontSize: 12, fontWeight: 'bold' }} 
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-// src/components/FloorOccupancyChart.jsx
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// A simple fallback palette
-const FALLBACK = ['#007bff','#28a745','#fd7e14','#6f42c1','#17a2b8','#e83e8c'];
-
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
-
-  // assume data = [{ floor, total }, ...]
-  const sorted = [...data].sort((a,b) => b.total - a.total);
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={sorted} 
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-            <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#333' }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
-            <Tooltip />
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-
-            <Bar dataKey="total" name="Occupancy" radius={[6,6,0,0]} barSize={30}>
-              {sorted.map((entry, idx) => {
-                const color = FALLBACK[idx % FALLBACK.length];
-                return (
-                  <Cell key={entry.floor} fill={color} stroke="#fff" strokeWidth={1} />
-                );
-              })}
-              <LabelList 
-                dataKey="total" 
-                position="top" 
-                style={{ fill: '#000', fontSize: 12, fontWeight: 'bold' }} 
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-dont make Colurs theme aslo as per photo size of bar is automatically adjust, colour are faint in bottom above colours are dark this theme is good so dont make this changes
 import React from 'react';
 import {
   BarChart,
@@ -279,8 +70,7 @@ export default function FloorOccupancyChart({ data = [] }) {
 
 
 
-Summary chart.jsx for this used fix colours . Orange zone -for Orange , Grren Zone for -Green -and Red zone -Red , 
-And another zone use Diffrent colousrs, 
+C:\Users\W0024618\Desktop\swipeData\client\src\components\SummaryChart.jsx
 
 import React, { useEffect } from 'react';
 import {
@@ -291,9 +81,19 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Legend
+  Legend,
+  Cell
 } from 'recharts';
 import { Card } from 'react-bootstrap';
+
+// Fixed colors per zone
+const ZONE_COLORS = {
+  'Orange Zone': '#FFA500',
+  'Green Zone': '#28a745',
+  'RED ZONE': '#FF0000',
+  'Tower B': '#999999',
+  'Yellow zone': '#FFD100'
+};
 
 export default function SummaryChart({ summary = [] }) {
   useEffect(() => {
@@ -308,31 +108,25 @@ export default function SummaryChart({ summary = [] }) {
       <Card.Body style={{ height: 400 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={summary} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-            <defs>
-              <linearGradient id="zoneGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FFD100" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#FFB800" stopOpacity={0.2}/>
-              </linearGradient>
-            </defs>
             <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }}/>
-            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }}/>
+            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
             <Tooltip />
             <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
-            <Bar
-              dataKey="count"
-              name="Count"
-              fill="url(#zoneGradient)"
-              radius={[6,6,0,0]}
-            />
+            <Bar dataKey="count" name="Count" radius={[6, 6, 0, 0]} barSize={30}>
+              {summary.map((entry, idx) => (
+                <Cell
+                  key={`cell-${idx}`}
+                  fill={ZONE_COLORS[entry.zone] || '#FFB800'}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card.Body>
     </Card>
   );
 }
-
-
 
 
 
