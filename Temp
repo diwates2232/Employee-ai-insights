@@ -1,3 +1,44 @@
+--- a/controllers/liveOccupancyController.js
++++ b/controllers/liveOccupancyController.js
+@@
+// — helper: normalize & map door+direction to zone, warn unmapped once —
+
+// old buggy version:
+-function mapDoorToZone(rawDoor, rawDir) {
+-  const key = normalizeZoneKey(rawDoor, rawDir);
+-  if (doorZoneMap[key]) return doorZoneMap[key];
+-  if (door.startsWith('APAC_IN_PUN')) return 'Unknown Zone';
+-  return 'Unknown Zone';
+-}
+
+// new fixed version:
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+  // if we have an explicit mapping, use it
+  if (doorZoneMap[key]) return doorZoneMap[key];
+
+  // warn unmapped keys exactly once
+  if (!didWarn) {
+    unmappedKeys.add(key);
+  }
+
+  // any APAC_IN_PUN swipe is “in office” but unknown zone
+  if (String(rawDoor || '').toUpperCase().startsWith('APAC_IN_PUN')) {
+    return 'Unknown Zone';
+  }
+
+  // truly unknown
+  return 'Unknown Zone';
+}
+
+
+
+
+
+
+
+
+
 // controllers/liveOccupancyController.js
 
 const { DateTime }   = require('luxon');
