@@ -1,3 +1,71 @@
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  Cell
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Fixed colors per zone
+const ZONE_COLORS = {
+  'Orange Zone': '#FFA500',
+  'Green Zone': '#28a745',
+  'RED ZONE': '#FF0000',
+  'Tower B': '#999999',
+  'Yellow zone': '#FFD100'
+};
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={summary} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
+            <Tooltip />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+            <Bar dataKey="count" name="Count" radius={[6, 6, 0, 0]} barSize={30}>
+              {summary.map((entry, idx) => (
+                <Cell
+                  key={`cell-${idx}`}
+                  fill={ZONE_COLORS[entry.zone] || '#FFB800'}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 // src/components/SummaryChart.jsx
 import React, { useEffect } from 'react';
 import {
