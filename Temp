@@ -1,3 +1,104 @@
+// src/components/SummaryChart.jsx
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  Cell,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Define top (dark) and bottom (faint) colors for key zones
+const ZONE_GRADIENTS = {
+  'Red Zone':       ['#A80000', '#FFCCCC'],
+  'Yellow zone':    ['#B28000', '#FFF2CC'],
+  'Orange Zone':    ['#C75D00', '#FFE0B2'],
+  'Green Zone':     ['#006400', '#CCFFCC'],
+};
+
+// fallback solid color if zone not in map
+const FALLBACK_COLOR = '#B0B0B0';
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={summary}
+            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+          >
+            {/* Define one gradient per bar */}
+            <defs>
+              {summary.map((entry, idx) => {
+                const [dark, faint] = ZONE_GRADIENTS[entry.zone] || [FALLBACK_COLOR, FALLBACK_COLOR];
+                return (
+                  <linearGradient id={`grad-${idx}`} key={idx} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={dark} stopOpacity={1}/>
+                    <stop offset="100%" stopColor={faint} stopOpacity={1}/>
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
+            <Tooltip />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+
+            <Bar dataKey="count" name="Count" radius={[6, 6, 0, 0]}>
+              {summary.map((entry, idx) => (
+                <Cell
+                  key={`cell-${idx}`}
+                  fill={`url(#grad-${idx})`}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              ))}
+              <LabelList
+                dataKey="count"
+                position="top"
+                style={{ fill: '#000', fontSize: 12, fontWeight: 'bold' }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect } from 'react';
 import {
   BarChart,
