@@ -1,3 +1,78 @@
+--- src/components/FloorOccupancyChart.jsx
++++ src/components/FloorOccupancyChart.jsx
+@@ render() {
+-              {types.map((type, idx) => (
+-                <Bar
+-                  key={type}
+-                  dataKey={type}
+-                  stackId="a"
+-                  name={type}
+-                  radius={[6, 6, 0, 0]}
+-                >
+-                  {sortedData.map((_, barIdx) => (
+-                    <Cell
+-                      key={barIdx}
+-                      fill={`url(#grad-${idx})`}
+-                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
+-                      strokeWidth={1}
+-                    />
+-                  ))}
+-                  <LabelList
+-                    dataKey={type}
+-                    position="top"
+-                    style={{
+-                      fill: DARK_COLORS[idx % DARK_COLORS.length],
+-                      fontSize: 12,
+-                      fontWeight: 'bold'
+-                    }}
+-                  />
+-                </Bar>
+-              ))}
++              {types.map((type, idx) => (
++                <Bar
++                  key={type}
++                  dataKey={type}
++                  stackId="a"
++                  name={type}
++                  radius={[6, 6, 0, 0]}
++                >
++                  {sortedData.map((_, barIdx) => (
++                    <Cell
++                      key={barIdx}
++                      fill={`url(#grad-${idx})`}
++                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
++                      strokeWidth={1}
++                    />
++                  ))}
++                </Bar>
++              ))}
++
++              {/* Single overall total label on top of each stacked bar */}
++              <Bar
++                dataKey="total"
++                fill="transparent"
++                isAnimationActive={false}
++                label={({ x, y, width, value }) => (
++                  <text
++                    x={x + width / 2}
++                    y={y - 6}
++                    fill="#333"
++                    textAnchor="middle"
++                    fontSize={12}
++                    fontWeight="bold"
++                  >
++                    {value}
++                  </text>
++                )}
++              />
+
+
+
+
+
+
+
+
 Now Read carefully thsi chart dont make another changes in this file .
 there is single Update foe this chart.
 on the top of bar We are display cpount as details . currently display count LIKE only Employee, Contractors, prpperty managememt like.
