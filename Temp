@@ -13,6 +13,170 @@ import {
 } from 'recharts';
 import { Card } from 'react-bootstrap';
 
+// 10 light→dark gradient pairs (inverted from previous)
+const GRADIENTS = [
+  ['#bfd6ff', '#002f6c'],
+  ['#d0d8ff', '#3b4cca'],
+  ['#cffaf3', '#006d5b'],
+  ['#d6e3f0', '#4e5d6c'],
+  ['#e0ccff', '#4b0082'],
+  ['#a0b5d8', '#264653'],
+  ['#ffb3b3', '#9b2226'],
+  ['#caebf2', '#005f73'],
+  ['#fff2cc', '#7f6000'],
+  ['#e5ccf2', '#6a1b9a']
+];
+
+// extract just the dark colors for legend & tooltip
+const DARK_COLORS = GRADIENTS.map(([, dark]) => dark);
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body>No floor data available</Card>;
+  }
+
+  // extract series keys (excluding floor & total)
+  const types = Array.from(
+    new Set(
+      data.flatMap(d =>
+        Object.keys(d).filter(k => k !== 'floor' && k !== 'total')
+      )
+    )
+  );
+
+  const sortedData = [...data].sort((a, b) => b.total - a.total);
+
+  // custom tooltip
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={{
+        backgroundColor: '#fff',
+        border: '1px solid #ccc',
+        padding: '8px',
+        borderRadius: '4px'
+      }}>
+        <div><strong>{label}</strong></div>
+        {payload.map((p, idx) => (
+          <div key={p.dataKey} style={{ color: DARK_COLORS[idx] }}>
+            {p.name}: {p.value}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <div style={{
+          height: '100%',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          backgroundColor: '#fff'
+        }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={sortedData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+              barCategoryGap="20%"
+            >
+              {/* define inverted gradients */}
+              <defs>
+                {types.map((_, idx) => {
+                  const [light, dark] = GRADIENTS[idx % GRADIENTS.length];
+                  return (
+                    <linearGradient
+                      id={`grad-${idx}`}
+                      key={idx}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor={light} stopOpacity={1}/>
+                      <stop offset="100%" stopColor={dark} stopOpacity={1}/>
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#333' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#333' }} />
+
+              <Tooltip content={renderTooltip} />
+
+              <Legend
+                verticalAlign="bottom"
+                wrapperStyle={{ paddingTop: 10 }}
+                formatter={(val, entry, idx) => (
+                  <span style={{
+                    color: DARK_COLORS[idx % DARK_COLORS.length],
+                    fontWeight: 'bold'
+                  }}>
+                    {val}
+                  </span>
+                )}
+              />
+
+              {types.map((type, idx) => (
+                <Bar
+                  key={type}
+                  dataKey={type}
+                  stackId="a"
+                  name={type}
+                  radius={[6, 6, 0, 0]}
+                  // no barSize specified—auto-sizing via category gap
+                >
+                  {sortedData.map((_, barIdx) => (
+                    <Cell
+                      key={barIdx}
+                      fill={`url(#grad-${idx})`}
+                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
+                      strokeWidth={1}
+                    />
+                  ))}
+                </Bar>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+  Cell
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
 // 10 dark→light pairs
 const GRADIENTS = [
   ['#002f6c', '#bfd6ff'],
