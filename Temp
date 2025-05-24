@@ -1,3 +1,98 @@
+let see How i display Flooe deatails for Denver.this Looks Good,
+Read carefully all files,
+// src/components/FloorDetailsTable.jsx
+
+import React from 'react';
+import './FloorDetailsTable.css';
+
+export default function FloorDetailsTable({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0 || !data[0].floor) {
+    return <p>No floor detail data available.</p>;
+  }
+
+  return (
+    <div className="floor-cards">
+      {data.map(({ floor, total, occupants }) => (
+        <div key={floor} className="floor-card">
+          <div className="floor-header">
+            <h3>{floor}</h3>
+            <span className="floor-badge">{total}</span>
+          </div>
+
+          <table className="floor-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Door</th>
+                <th>Swipe Time</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occupants.map((emp, i) => (
+                <tr key={`${emp.EmployeeID}-${i}`}>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.EmployeeID}</td>
+                  <td>{emp.Door}</td>
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorDetailsTable.css
+
+.floor-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.floor-card {
+  flex: 1 1 300px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+.floor-header {
+  background: #4a90e2;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.floor-badge {
+  background: rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-weight: bold;
+}
+.floor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.floor-table th,
+.floor-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid #eee;
+}
+
+
+
+
+As per above I need exact file for Pune Zone Deatails so Give me Updated js file carefully
+
+
 // src/components/ZoneDetailsTable.js
 import React from 'react';
 
@@ -58,51 +153,5 @@ export default function ZoneDetailsTable({ data = {} }) {
 
 
 
-
-
-
-
-Now adjust this file carefully
-add border for each table and also make a box to display Zonne Details data 
-in on top Total Count as per zone and and in a one row display 3 box for zone deatails .
-
-give me updated js file carefully
-
-// src/components/ZoneDetailsTable.js
-
-import React from 'react';
-
-export default function ZoneDetailsTable({ data = {} }) {
-  const entries = Object.entries(data);
-  if (!entries.length) return <p>No zone detail data available.</p>;
-
-  return (
-    <div className="zone-details-table mb-4">
-      {entries.map(([zone, emps]) => (
-        <div key={zone} className="mb-3 p-3 border rounded shadow-sm">
-          <h3 className="mb-2">{zone} ({emps.length})</h3>
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>ID</th><th>Name</th><th>Door</th><th>Time</th><th>Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {emps.map((e,i) => (
-                <tr key={`${e.EmployeeID}-${i}`}>
-                  <td>{e.EmployeeID}</td>
-                  <td>{e.ObjectName1}</td>
-                  <td>{e.Door}</td>
-                  <td>{e.Swipe_Time}</td>
-                  <td>{e.PersonnelType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 
