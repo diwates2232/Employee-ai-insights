@@ -1,3 +1,117 @@
+import React from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data);
+  if (!entries.length) return <p>No zone detail data available.</p>;
+
+  return (
+    <div className="zone-cards">
+      {entries.map(([zone, emps]) => (
+        <div key={zone} className="zone-card">
+          <div className="zone-header">
+            <h3>{zone}</h3>
+            <span className="zone-badge">Total: {emps.length}</span>
+          </div>
+
+          <table className="zone-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Swipe Time</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emps.map((emp, i) => (
+                <tr key={`${emp.EmployeeID}-${i}`}>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+
+
+.zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.zone-card {
+  flex: 1 1 calc(33.333% - 1rem);
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.zone-header {
+  background: #4a90e2;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.zone-badge {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-weight: bold;
+}
+
+.zone-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.zone-table th,
+.zone-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid #eee;
+}
+
+/* Responsive behavior */
+@media (max-width: 992px) {
+  .zone-card {
+    flex: 1 1 calc(50% - 1rem);
+  }
+}
+
+@media (max-width: 600px) {
+  .zone-card {
+    flex: 1 1 100%;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 .zone-cards {
   display: flex;
   flex-wrap: wrap;
