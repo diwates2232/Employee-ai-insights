@@ -1,3 +1,23 @@
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  LabelList,
+  Cell,
+} from 'recharts';
+
+
+
+
+
+
+
+
+
 import React from 'react';
 import {
   BarChart,
