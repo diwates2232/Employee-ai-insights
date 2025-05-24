@@ -1,3 +1,67 @@
+// src/components/ZoneDetailsTable.js
+import React from 'react';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data);
+  if (!entries.length) return <p>No zone detail data available.</p>;
+
+  return (
+    <div className="zone-details-table mb-4">
+      <div className="row gy-4">
+        {entries.map(([zone, emps]) => (
+          <div key={zone} className="col-12 col-md-6 col-lg-4">
+            <div className="p-3 border rounded shadow-sm h-100 d-flex flex-column">
+              {/* Zone title + total */}
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h5 className="mb-0">{zone}</h5>
+                <span className="badge bg-secondary">{emps.length}</span>
+              </div>
+              {/* Table scroll container */}
+              <div className="flex-grow-1 overflow-auto">
+                <table className="table table-sm table-bordered mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Door</th>
+                      <th>Time</th>
+                      <th>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emps.map((e, i) => (
+                      <tr key={`${e.EmployeeID}-${i}`}>
+                        <td>{e.EmployeeID}</td>
+                        <td>{e.ObjectName1}</td>
+                        <td>{e.Door}</td>
+                        <td>{e.Swipe_Time}</td>
+                        <td>{e.PersonnelType}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Now adjust this file carefully
 add border for each table and also make a box to display Zonne Details data 
 in on top Total Count as per zone and and in a one row display 3 box for zone deatails .
