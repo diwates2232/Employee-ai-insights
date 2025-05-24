@@ -1,3 +1,173 @@
+// src/components/SummaryChart.jsx
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  Cell
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Zone gradients (dark → faint) remain untouched
+const ZONE_GRADIENTS = {
+  'RED ZONE':    ['#A80000', '#FFCCCC'],
+  'Yellow zone': ['#B28000', '#FFF2CC'],
+  'Orange Zone': ['#C75D00', '#FFE0B2'],
+  'Green Zone':  ['#006400', '#CCFFCC'],
+};
+
+// **Strict label & tooltip text colors per zone**
+const ZONE_LABEL_COLORS = {
+  'RED ZONE':    '#A80000',
+  'Yellow zone': '#B28000',
+  'Orange Zone': '#C75D00',
+  'Green Zone':  '#006400',
+};
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // Custom label renderer using only ZONE_LABEL_COLORS
+  const renderLabel = ({ x, y, width, value, index }) => {
+    const zone = summary[index].zone;
+    const color = ZONE_LABEL_COLORS[zone] || '#333';
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 6}
+        fill={color}
+        textAnchor="middle"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {value}
+      </text>
+    );
+  };
+
+  // Custom tooltip content using only ZONE_LABEL_COLORS
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const { zone, count } = payload[0].payload;
+    const color = ZONE_LABEL_COLORS[zone] || '#333';
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          padding: '8px',
+          borderRadius: '4px',
+          color: '#000'
+        }}
+      >
+        <div><strong>{label}</strong></div>
+        <div style={{ color }}>
+          {payload[0].name}: {count}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      {/* Chart container with its own border */}
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <div
+          style={{
+            height: '100%',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={summary}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+            >
+              {/* Gradients */}
+              <defs>
+                {summary.map((entry, idx) => {
+                  const grad = ZONE_GRADIENTS[entry.zone] || ['#ccc','#ccc'];
+                  return (
+                    <linearGradient
+                      id={`grad-${idx}`}
+                      key={idx}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor={grad[0]} stopOpacity={1}/>
+                      <stop offset="100%" stopColor={grad[1]} stopOpacity={1}/>
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              {/* Grid and axes */}
+              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
+
+              {/* Tooltip with custom text color */}
+              <Tooltip content={renderTooltip} />
+
+              {/* Legend with yellow labels */}
+              <Legend
+                verticalAlign="bottom"
+                wrapperStyle={{ paddingTop: 10 }}
+                formatter={(value) => (
+                  <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
+                    {value}
+                  </span>
+                )}
+              />
+
+              {/* Bars + custom labels */}
+              <Bar
+                dataKey="count"
+                name="Count"
+                radius={[6, 6, 0, 0]}
+                label={renderLabel}
+              >
+                {summary.map((_, idx) => (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fill={`url(#grad-${idx})`}
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
 
 
 
