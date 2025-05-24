@@ -1,3 +1,29 @@
+Theme
+Dark Color
+Light Color
+Slate Blue
+#3B4CCA
+#D0D8FF
+Teal Green
+#006D5B
+#CFFAF3
+Steel Gray
+#4E5D6C
+#D6E3F0
+Royal Purple
+#4B0082
+#E0CCFF
+Navy Blue
+#002F6C
+#BFD6FF
+
+
+
+
+
+
+
+
 // src/components/SummaryChart.jsx
 import React, { useEffect } from 'react';
 import {
