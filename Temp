@@ -6,6 +6,60 @@ export default function ZoneDetailsTable({ data = {} }) {
   if (!entries.length) return <p>No zone detail data available.</p>;
 
   return (
+    <div className="zone-cards">
+      {entries.map(([zone, emps]) => (
+        <div key={zone} className="zone-card">
+          <div className="zone-header">
+            <h5>{zone}</h5>
+            <span className="zone-badge">{emps.length}</span>
+          </div>
+
+          <table className="zone-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Door</th>
+                <th>Time</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emps.map((e, i) => (
+                <tr key={`${e.EmployeeID}-${i}`}>
+                  <td>{e.EmployeeID}</td>
+                  <td>{e.ObjectName1}</td>
+                  <td>{e.Door}</td>
+                  <td>{e.Swipe_Time}</td>
+                  <td>{e.PersonnelType}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+import React from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data);
+  if (!entries.length) return <p>No zone detail data available.</p>;
+
+  return (
     <div className="zone-cards mb-4">
       {entries.map(([zone, occupants]) => (
         <div key={zone} className="zone-card">
