@@ -1,3 +1,271 @@
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+const unmappedKeys = new Set();
+
+/** Normalize the raw door+direction into the same key shape as your map. */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/** Map door+direction to zone, warning once on anything unmapped. */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  // warn exactly once about any unmapped key
+  if (!unmappedKeys.has(key)) {
+    console.warn('⛔ Unmapped door-zone key:', key);
+    unmappedKeys.add(key);
+  }
+
+  // anything starting APAC_IN_PUN is “in office” but zone unknown
+  if (String(rawDoor || '').toUpperCase().startsWith('APAC_IN_PUN')) {
+    return 'Unknown Zone';
+  }
+
+  return 'Unknown Zone';
+}
+
+async function fetchNewEvents(since) {
+  await poolConnect;
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+  const result = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          SCard.value
+        ) AS CardNumber,
+        t5_admit.value AS AdmitCode,
+        t5_dir.value   AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
+        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
+        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE Name IN ('Card','CHUID')
+      ) AS SCard
+        ON t1.XmlGUID = SCard.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      PersonGUID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return result.recordset;
+}
+
+async function fetchTotalVisitedToday() {
+  await poolConnect;
+  const req = pool.request();
+
+  // compute the UTC equivalent of Asia/Kolkata midnight today
+  const istMidnight = DateTime.now()
+    .setZone('Asia/Kolkata')
+    .startOf('day')
+    .toUTC()
+    .toJSDate();
+
+  req.input('start', sql.DateTime2, istMidnight);
+
+  const { recordset } = await req.query(`
+    WITH DailyVisits AS (
+      SELECT DISTINCT
+        CASE
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        log.ObjectIdentity1 AS PersonGUID
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      LEFT JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
+      WHERE
+        log.MessageType   = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1*log.MessageLocaleOffset, log.MessageUTC) >= @start
+    )
+    SELECT COUNT(*) AS totalVisitedToday
+    FROM DailyVisits;
+  `);
+
+  return recordset[0]?.totalVisitedToday || 0;
+}
+
+async function fetchVisitedTodayBreakdown() {
+  await poolConnect;
+  const req = pool.request();
+
+  const istMidnight = DateTime.now()
+    .setZone('Asia/Kolkata')
+    .startOf('day')
+    .toUTC()
+    .toJSDate();
+
+  req.input('start', sql.DateTime2, istMidnight);
+
+  const { recordset } = await req.query(`
+    WITH CombinedEmployeeData AS (
+      SELECT
+        CASE
+          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
+          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
+          ELSE CAST(p.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        pt.Name AS PersonnelType,
+        log.ObjectIdentity1 AS PersonGUID,
+        DATEADD(MINUTE, -1*log.MessageLocaleOffset, log.MessageUTC) AS LocaleMessageTime
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
+      INNER JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
+      INNER JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeID = pt.ObjectID
+      WHERE
+        log.MessageType   = 'CardAdmitted'
+        AND log.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1*log.MessageLocaleOffset, log.MessageUTC) >= @start
+    ),
+    Ranked AS (
+      SELECT *,
+        ROW_NUMBER() OVER (
+          PARTITION BY PersonGUID
+          ORDER BY LocaleMessageTime DESC
+        ) AS rn
+      FROM CombinedEmployeeData
+      WHERE PersonGUID IS NOT NULL
+    )
+    SELECT
+      CASE
+        WHEN PersonnelType IN (
+          'Contractor','Terminated Contractor',
+          'None','Property Management',
+          'Temp Badge','Visitor'
+        ) THEN 'Contractor'
+        ELSE 'Employee'
+      END AS bucket,
+      COUNT(*) AS cnt
+    FROM Ranked
+    WHERE rn = 1
+    GROUP BY
+      CASE
+        WHEN PersonnelType IN (
+          'Contractor','Terminated Contractor',
+          'None','Property Management',
+          'Temp Badge','Visitor'
+        ) THEN 'Contractor'
+        ELSE 'Employee'
+      END;
+  `);
+
+  const breakdown = { employees: 0, contractors: 0 };
+  for (const { bucket, cnt } of recordset) {
+    if (bucket === 'Employee')   breakdown.employees = cnt;
+    if (bucket === 'Contractor') breakdown.contractors = cnt;
+  }
+  breakdown.total = breakdown.employees + breakdown.contractors;
+  return breakdown;
+}
+
+// ... your existing buildOccupancy, SSE wiring etc remain exactly the same ...
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    await poolConnect;
+    res.writeHead(200, {
+      'Content-Type':  'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':    'keep-alive'
+    });
+    res.write('\n');
+
+    let lastSeen = DateTime.now()
+      .setZone('Asia/Kolkata')
+      .minus({ days: 1 })
+      .toUTC()
+      .toJSDate();
+
+    const events = [];
+
+    const push = async () => {
+      const fresh = await fetchNewEvents(lastSeen);
+      if (fresh.length) {
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+        events.push(...fresh);
+      }
+      const payload = await buildOccupancy(events);
+      payload.totalVisitedToday = await fetchTotalVisitedToday();
+      payload.visitedToday      = await fetchVisitedTodayBreakdown();
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    // initial + interval
+    await push();
+    const timer = setInterval(push, 1000);
+    req.on('close', () => clearInterval(timer));
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 --- a/controllers/liveOccupancyController.js
 +++ b/controllers/liveOccupancyController.js
 @@
