@@ -1,4 +1,74 @@
 // controllers/liveOccupancyController.js
+// … all your existing imports, helpers, fetchNewEvents, buildOccupancy, buildVisitedToday remain unchanged …
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    // make sure the MSSQL pool is ready
+    await poolConnect;
+
+    // set up SSE headers
+    res.writeHead(200, {
+      'Content-Type':  'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':    'keep-alive'
+    });
+    res.write('\n');
+
+    // pull 24h of history on startup
+    let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const events = [];
+
+    const push = async () => {
+      // 1) fetch only *new* events since lastSeen
+      const fresh = await fetchNewEvents(lastSeen);
+      if (fresh.length) {
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+        events.push(...fresh);
+      }
+
+      // 2) build your live snapshot
+      const occupancy = await buildOccupancy(events);
+
+      // 3) compute “visited today” purely in JS (uses buildVisitedToday() which
+      //     correctly compares against Asia/Kolkata midnight)
+      const todayStats = buildVisitedToday(events);
+
+      occupancy.totalVisitedToday = todayStats.total;
+      occupancy.visitedToday      = {
+        employees:   todayStats.employees,
+        contractors: todayStats.contractors,
+        total:       todayStats.total
+      };
+
+      // 4) write out SSE
+      res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
+    };
+
+    // initial + interval
+    await push();
+    const timer = setInterval(push, 1000);
+    req.on('close', () => clearInterval(timer));
+
+  } catch (err) {
+    console.error('Live occupancy SSE error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+// controllers/liveOccupancyController.js
 
 const { DateTime }   = require('luxon');
 const { poolConnect, pool, sql } = require('../config/db');
