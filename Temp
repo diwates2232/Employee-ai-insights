@@ -1,3 +1,132 @@
+// src/components/SummaryChart.jsx
+import React, { useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  Cell
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Zone gradients (we’ll pull only the dark color for labels)
+const ZONE_GRADIENTS = {
+  'RED ZONE':    ['#A80000', '#FFCCCC'],
+  'Yellow zone': ['#B28000', '#FFF2CC'],
+  'Orange Zone': ['#C75D00', '#FFE0B2'],
+  'Green Zone':  ['#006400', '#CCFFCC'],
+};
+
+// Fallback dark colors if zone not listed
+const FALLBACK_DARKS = ['#340068','#005F73','#9B2226','#2A9D8F','#264653'];
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // Custom label renderer uses fixed dark colors
+  const renderLabel = ({ x, y, width, value, index }) => {
+    const zone = summary[index].zone;
+    const dark = ZONE_GRADIENTS[zone]
+      ? ZONE_GRADIENTS[zone][0]
+      : FALLBACK_DARKS[index % FALLBACK_DARKS.length];
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 6}
+        fill={dark}
+        textAnchor="middle"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {value}
+      </text>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <div style={{
+          height: '100%',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          backgroundColor: '#ffffff'
+        }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={summary}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+              barCategoryGap="20%"
+            >
+              {/* Gradients */}
+              <defs>
+                {summary.map((entry, idx) => {
+                  const grad = ZONE_GRADIENTS[entry.zone]
+                    || [FALLBACK_DARKS[idx % FALLBACK_DARKS.length], FALLBACK_DARKS[idx % FALLBACK_DARKS.length]];
+                  return (
+                    <linearGradient id={`grad-${idx}`} key={idx} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={grad[0]} stopOpacity={1}/>
+                      <stop offset="100%" stopColor={grad[1]} stopOpacity={1}/>
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
+              <Tooltip 
+                wrapperStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px' }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                wrapperStyle={{ paddingTop: 10 }}
+                formatter={(value) => <span style={{ color: '#FFD100', fontWeight: 'bold' }}>{value}</span>}
+              />
+
+              <Bar dataKey="count" name="Count" radius={[6, 6, 0, 0]} label={renderLabel}>
+                {summary.map((_, idx) => (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fill={`url(#grad-${idx})`}
+                    stroke="#fff"
+                    strokeWidth={1}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 NoW 
 
 // Custom label renderer
