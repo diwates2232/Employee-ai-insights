@@ -1,3 +1,115 @@
+import React from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const entries = Object.entries(data);
+  if (!entries.length) return <p>No zone detail data available.</p>;
+
+  return (
+    <div className="zone-cards mb-4">
+      {entries.map(([zone, occupants]) => (
+        <div key={zone} className="zone-card">
+          <div className="zone-header">
+            <h3>{zone}</h3>
+            <span className="zone-badge">{occupants.length}</span>
+          </div>
+          <div className="zone-table-wrapper">
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Door</th>
+                  <th>Time</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {occupants.map((e, i) => (
+                  <tr key={`${e.EmployeeID}-${i}`}>
+                    <td>{e.EmployeeID}</td>
+                    <td>{e.ObjectName1}</td>
+                    <td>{e.Door}</td>
+                    <td>{e.Swipe_Time}</td>
+                    <td>{e.PersonnelType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+
+.zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.zone-card {
+  flex: 1 1 300px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.zone-header {
+  background: #4a90e2;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.zone-badge {
+  background: rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-weight: bold;
+}
+
+.zone-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.zone-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.zone-table th,
+.zone-table td {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #eee;
+}
+
+.zone-table thead {
+  background: #f7f7f7;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 let see How i display Flooe deatails for Denver.this Looks Good,
 Read carefully all files,
 // src/components/FloorDetailsTable.jsx
