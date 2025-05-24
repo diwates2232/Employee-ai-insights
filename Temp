@@ -1,3 +1,8 @@
+After Updating this file stillWe got Wrong Count Total Visited 
+Strickly solve this issue and give me updated .js file carefully
+
+
+
 // controllers/liveOccupancyController.js
 const { DateTime }   = require('luxon');
 const { poolConnect, pool, sql } = require('../config/db');
@@ -206,70 +211,3 @@ exports.getLiveOccupancy = async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-this is query for   fetchVisitedTodayBreakdown When i run this query in mssql We 36 Contractor and 2 Employee.But Ui not Display this count UI Display 
-138 count Wich is not acceptable .
-Kindly make changes use specific timeZone and give me Updated js filr carefully
-
-WITH CombinedEmployeeData AS (
-      SELECT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        pt.Name AS PersonnelType,
-        log.ObjectIdentity1 AS PersonGUID,
-        DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) AS LocaleMessageTime
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      INNER JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      INNER JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeID = pt.ObjectID
-      WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= '2025-05-24'
-    ),
-    Ranked AS (
-      SELECT *,
-        ROW_NUMBER() OVER (
-          PARTITION BY PersonGUID
-          ORDER BY LocaleMessageTime DESC
-        ) AS rn
-      FROM CombinedEmployeeData
-      WHERE PersonGUID IS NOT NULL
-    )
-    SELECT
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END AS bucket,
-      COUNT(*) AS cnt
-    FROM Ranked
-    WHERE rn = 1
-    GROUP BY
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END;
-  
