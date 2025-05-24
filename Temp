@@ -1,3 +1,85 @@
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+  Cell,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// A vibrant multi-color palette
+const COLORS = [
+  '#007bff', '#28a745', '#fd7e14', '#6f42c1',
+  '#17a2b8', '#e83e8c', '#ffc107', '#20c997'
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body>No floor data available</Card>;
+  }
+
+  // assume data = [{ floor, total }, ...]
+  const sorted = [...data].sort((a,b) => b.total - a.total);
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sorted}
+            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+            barCategoryGap="20%"   /* gap between floor categories */
+            barGap={4}             /* gap between bars if multiple series */
+          >
+            <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+            <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#333' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
+            <Tooltip />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+
+            <Bar dataKey="total" name="Occupancy" radius={[6,6,0,0]}>
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={`cell-${idx}`}
+                  fill={COLORS[idx % COLORS.length]}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              ))}
+              <LabelList 
+                dataKey="total" 
+                position="top" 
+                style={{ fill: '#000', fontSize: 12, fontWeight: 'bold' }} 
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 Lets understand use infographic theme bar sixe dont make fix its look very small adjust as per chart .adjust bar size as per chart size.
 and Colour theme use are using infographic latest theme
 
