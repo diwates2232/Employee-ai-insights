@@ -8,6 +8,194 @@ const zoneFloorMap   = require('../data/zoneFloorMap');
 // track which door→zone keys we've already warned on
 const warnedKeys = new Set();
 
+/** Normalize raw door+direction into map key */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = rawDir === 'InDirection' ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone (or null for true “Out of office”).
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+  let zone = doorZoneMap[key];
+
+  // if the explicit map says “Out of office”, we bail out here **without** returning it
+  if (zone === 'Out of office') {
+    return null;
+  }
+
+  // auto‐extract for Pune doors when no explicit map
+  if (!zone && String(rawDoor||'').toUpperCase().startsWith('APAC_IN_PUN_')) {
+    const rest  = rawDoor.toUpperCase().slice('APAC_IN_PUN_'.length);
+    const paren = rest.match(/\(([^)]+)\)/);
+    if (paren) {
+      zone = paren[1].toUpperCase() === paren[1]
+        ? `${paren[1]} ZONE`
+        : `${paren[1][0].toUpperCase() + paren[1].slice(1).toLowerCase()} Zone`;
+    } else {
+      const parts = rest.split(/[\s_]+/).filter(Boolean);
+      const maybeZone = parts[1] || parts[0];
+      if (maybeZone) {
+        if (/RECEPTION/.test(maybeZone)) {
+          zone = 'Reception Area';
+        } else {
+          const z = maybeZone[0].toUpperCase() + maybeZone.slice(1).toLowerCase();
+          zone = z.includes('Zone') ? z : `${z} Zone`;
+        }
+      }
+    }
+  }
+
+  // still no zone? warn once & fallback to “Unknown Zone”
+  if (!zone) {
+    if (!warnedKeys.has(key)) {
+      console.warn('⛔ Unmapped door-zone key:', key);
+      warnedKeys.add(key);
+    }
+    return 'Unknown Zone';
+  }
+
+  // for any OutDirection into a real zone, mark it “- Outer”
+  if (rawDir === 'OutDirection') {
+    const base = zone.replace(/\s+Zone$/i, '');
+    return `${base} - Outer`;
+  }
+
+  return zone;
+}
+
+
+/** Fetch all swipe events since `since` (UTC) */
+async function fetchNewEvents(since) {
+  await poolConnect;
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+  const { recordset } = await req.query(`
+    /* … your existing SQL … */
+  `);
+  return recordset;
+}
+
+
+/** Build the live‐occupancy snapshot from allEvents */
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
+
+    // if mapDoorToZone returned null, it was a true “Out of office” → evict
+    if (Direction === 'OutDirection' && zone === null) {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
+
+    // now handle all other swipes (In or Out→Outer)
+    uniquePeople.set(dedupKey, PersonnelType);
+    current[dedupKey] = {
+      Dateonly, Swipe_Time,
+      EmployeeID, ObjectName1, CardNumber,
+      PersonnelType, zone,
+      door: Door, Direction
+    };
+  }
+
+  // live headcounts
+  let employeeCount   = 0;
+  let contractorCount = 0;
+  for (const pt of uniquePeople.values()) {
+    if (['Employee','Terminated Personnel'].includes(pt)) employeeCount++;
+    else contractorCount++;
+  }
+
+  // aggregate by zone
+  const zoneMap = {};
+  for (const emp of Object.values(current)) {
+    // skip any truly “Out of office” entries (zone was null)
+    if (!emp.zone) continue;
+    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
+    zoneMap[emp.zone].push(emp);
+  }
+
+  const zoneDetails = Object.fromEntries(
+    Object.entries(zoneMap).map(([z, emps]) => {
+      const byType = emps.reduce((acc, e) => {
+        acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
+        return acc;
+      }, {});
+      return [ z, { total: emps.length, byPersonnelType: byType, employees: emps } ];
+    })
+  );
+
+  // roll up into floors
+  const floorMap = {};
+  for (const [z,d] of Object.entries(zoneDetails)) {
+    const floor = zoneFloorMap[z] || 'Unknown Floor';
+    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
+    floorMap[floor].total += d.total;
+    for (const [pt,c] of Object.entries(d.byPersonnelType)) {
+      floorMap[floor].byPersonnelType[pt] =
+        (floorMap[floor].byPersonnelType[pt]||0) + c;
+    }
+  }
+
+  return {
+    asOf:             new Date().toISOString(),
+    summary:          Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total })),
+    zoneBreakdown:    Object.entries(zoneDetails).map(([z,d])=>({ zone: z, ...d.byPersonnelType, total: d.total })),
+    floorBreakdown:   Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total })),
+    details:          zoneMap,
+    personnelSummary: { employees: employeeCount, contractors: contractorCount },
+    personnelBreakdown:[
+      { personnelType:'Employee',   count: employeeCount   },
+      { personnelType:'Contractor', count: contractorCount }
+    ]
+  };
+}
+
+// … buildVisitedToday + getLiveOccupancy stay exactly the same …
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
 
 /** Normalize the raw door + direction into your map’s key format */
 function normalizeZoneKey(rawDoor, rawDir) {
