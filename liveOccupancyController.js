@@ -1,67 +1,137 @@
+read below file carefully first .
+  first In API responce display door name Where we got swipe.
+  We are not showing api responce door name 
+
+first update this then we will upgrade logic .
+  
+
 // controllers/liveOccupancyController.js
 
+const { DateTime }   = require('luxon');
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap    = require('../data/doorZoneMap');
 const zoneFloorMap   = require('../data/zoneFloorMap');
 
-// helper: map door + direction to zone, with fallback for APAC_IN_PUN
-function mapDoorToZone(doorName, direction) {
-  const key = `${doorName}___${direction}`;
-  if (doorZoneMap[key]) return doorZoneMap[key];
-  if (doorName.startsWith('APAC_IN_PUN')) return 'Unknown Zone';
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
+
+/** Normalize the raw door + direction into your map’s key format */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone:
+ * 1) explicit lookup
+ * 2) if Pune door (APAC_IN_PUN_), auto-extract zone
+ * 3) warn & “Unknown Zone”
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  // 1) explicit map?
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  const up = String(rawDoor || '').toUpperCase();
+  if (up.startsWith('APAC_IN_PUN_')) {
+    // strip prefix
+    const rest = up.slice('APAC_IN_PUN_'.length);
+
+    // 2a) parenthesized zone → RED, YELLOW, GREEN, ORANGE, etc.
+    const paren = rest.match(/\(([^)]+)\)/);
+    if (paren) {
+      return paren[1] + (paren[1].toUpperCase() === paren[1] ? ' ZONE' : ' Zone');
+    }
+
+    // 2b) otherwise split on '_' → [Floor, Zone, …]
+    const parts = rest.split('_').filter(Boolean);
+    const maybeZone = parts[1];
+    if (maybeZone) {
+      // e.g. parts = ['PODIUM','GSOC','DOOR…'] → zone = GSOC
+      const zone = maybeZone.trim();
+      // normalize e.g. “GSOC” stays, “RECEPTION” → “Reception Area”
+      if (/RECEPTION/.test(zone)) return 'Reception Area';
+      return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
+    }
+
+    // fallback if nothing at all
+    return 'Unknown Zone';
+  }
+
+  // 3) no match → warn once
+  if (!warnedKeys.has(key)) {
+    console.warn('⛔ Unmapped door-zone key:', key);
+    warnedKeys.add(key);
+  }
   return 'Unknown Zone';
 }
 
+
+
+
+
+
+
+
+
+/** Fetch all swipe events since `since` (UTC) */
 async function fetchNewEvents(since) {
   await poolConnect;
   const req = pool.request();
   req.input('since', sql.DateTime2, since);
 
-  const result = await req.query(`
+  const { recordset } = await req.query(`
     WITH CombinedQuery AS (
       SELECT
-        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
         t1.ObjectName1,
         CASE
           WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
           ELSE CAST(t2.Int1 AS NVARCHAR)
         END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,         -- pull the GUID
+        t1.ObjectIdentity1 AS PersonGUID,
         t3.Name AS PersonnelType,
         COALESCE(
           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          SCard.value
+          sc.value
         ) AS CardNumber,
-        t5_admit.value AS AdmitCode,
-        t5_dir.value   AS Direction,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
         t1.ObjectName2 AS Door
       FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
       LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
       LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_admit
-        ON t1.XmlGUID = t5_admit.GUID AND t5_admit.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5_dir
-        ON t1.XmlGUID = t5_dir.GUID AND t5_dir.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
       LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
         ON t1.XmlGUID = t_xml.GUID
       LEFT JOIN (
         SELECT GUID, value
         FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
         WHERE Name IN ('Card','CHUID')
-      ) AS SCard
-        ON t1.XmlGUID = SCard.GUID
+      ) sc ON t1.XmlGUID = sc.GUID
       WHERE
-        t1.MessageType = 'CardAdmitted'
+        t1.MessageType     = 'CardAdmitted'
         AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+        AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
     )
     SELECT
       LocaleMessageTime,
       CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      CONVERT(VARCHAR(8) , LocaleMessageTime, 108) AS Swipe_Time,
       EmployeeID,
-      PersonGUID,                                 -- carry PersonGUID forward
+      PersonGUID,
       ObjectName1,
       PersonnelType,
       CardNumber,
@@ -72,153 +142,51 @@ async function fetchNewEvents(since) {
     ORDER BY LocaleMessageTime ASC;
   `);
 
-  return result.recordset;
+  return recordset;
 }
 
-async function fetchTotalVisitedToday() {
-  await poolConnect;
-  const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-  req.input('start', sql.DateTime2, todayStart);
 
-  const result = await req.query(`
-    WITH DailyVisits AS (
-      SELECT DISTINCT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        log.ObjectIdentity1 AS PersonGUID
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      LEFT JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeId = pt.ObjectID
-      WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
-    )
-    SELECT COUNT(*) AS totalVisitedToday
-    FROM DailyVisits;
-  `);
-
-  return result.recordset[0]?.totalVisitedToday || 0;
-}
-
-async function fetchVisitedTodayBreakdown() {
-  await poolConnect;
-  const req = pool.request();
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-  req.input('start', sql.DateTime2, todayStart);
-
-  const result = await req.query(`
-    WITH CombinedEmployeeData AS (
-      SELECT
-        CASE
-          WHEN pt.Name IN ('Contractor','Terminated Contractor') THEN p.Text12
-          WHEN pt.Name IN ('Temp Badge','Visitor','Property Management') THEN p.Text9
-          ELSE CAST(p.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        pt.Name AS PersonnelType,
-        log.ObjectIdentity1 AS PersonGUID,
-        DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) AS LocaleMessageTime
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] log
-      INNER JOIN [ACVSCore].[Access].[Personnel]     p  ON log.ObjectIdentity1 = p.GUID
-      INNER JOIN [ACVSCore].[Access].[PersonnelType] pt ON p.PersonnelTypeID = pt.ObjectID
-      WHERE
-        log.MessageType = 'CardAdmitted'
-        AND log.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, -1 * log.MessageLocaleOffset, log.MessageUTC) >= @start
-    ),
-    Ranked AS (
-      SELECT *,
-        ROW_NUMBER() OVER (
-          PARTITION BY PersonGUID
-          ORDER BY LocaleMessageTime DESC
-        ) AS rn
-      FROM CombinedEmployeeData
-      WHERE PersonGUID IS NOT NULL
-    )
-    SELECT
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END AS bucket,
-      COUNT(*) AS cnt
-    FROM Ranked
-    WHERE rn = 1
-    GROUP BY
-      CASE
-        WHEN PersonnelType IN (
-          'Contractor','Terminated Contractor',
-          'None','Property Management',
-          'Temp Badge','Visitor'
-        ) THEN 'Contractor'
-        ELSE 'Employee'
-      END;
-  `);
-
-  const breakdown = { employees: 0, contractors: 0 };
-  for (const { bucket, cnt } of result.recordset) {
-    if (bucket === 'Employee')   breakdown.employees = cnt;
-    if (bucket === 'Contractor') breakdown.contractors = cnt;
-  }
-  breakdown.total = breakdown.employees + breakdown.contractors;
-  return breakdown;
-}
-
+/** Build the live‐occupancy snapshot from allEvents */
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
 
   for (const evt of allEvents) {
     const {
-      EmployeeID,
-      PersonGUID,             // our stable unique key
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      Dateonly,
-      Swipe_Time,
-      Direction,
-      Door
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
     } = evt;
 
-    // use GUID first; fallback to EmployeeID or card or name
     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
     const zone     = mapDoorToZone(Door, Direction);
 
-    // only “real” out-of-office removes
+    // “Out of office” actually evicts
     if (Direction === 'OutDirection' && zone === 'Out of office') {
-      delete current[dedupKey];
       uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
       continue;
     }
 
     if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, { PersonnelType });
+      uniquePeople.set(dedupKey, PersonnelType);
       current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
     } else {
-      delete current[dedupKey];
       uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
     }
   }
 
   // live headcounts
-  let employeeCount = 0;
+  let employeeCount   = 0;
   let contractorCount = 0;
-  for (const { PersonnelType } of uniquePeople.values()) {
-    if (['Employee','Terminated Personnel'].includes(PersonnelType)) employeeCount++;
+  for (const pt of uniquePeople.values()) {
+    if (['Employee','Terminated Personnel'].includes(pt)) employeeCount++;
     else contractorCount++;
   }
 
-  // zone & floor aggregations…
+  // zone & floor aggregates
   const zoneMap = {};
   for (const emp of Object.values(current)) {
     zoneMap[emp.zone] = zoneMap[emp.zone] || [];
@@ -230,7 +198,7 @@ async function buildOccupancy(allEvents) {
         acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
         return acc;
       }, {});
-      return [z, { total: emps.length, byPersonnelType: byType, employees: emps }];
+      return [ z, { total: emps.length, byPersonnelType: byType, employees: emps } ];
     })
   );
 
@@ -244,28 +212,58 @@ async function buildOccupancy(allEvents) {
     }
   }
 
-  const summary        = Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total }));
-  const zoneBreakdown  = Object.entries(zoneDetails).map(([z,d])=>({ zone: z, ...d.byPersonnelType, total: d.total }));
-  const floorBreakdown = Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total }));
-
-  const personnelBreakdown = [];
-  if (employeeCount)   personnelBreakdown.push({ personnelType: 'Employee', count: employeeCount });
-  if (contractorCount) personnelBreakdown.push({ personnelType: 'Contractor', count: contractorCount });
-
   return {
     asOf:             new Date().toISOString(),
-    summary,
-    zoneBreakdown,
-    floorBreakdown,
+    summary:          Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total })),
+    zoneBreakdown:    Object.entries(zoneDetails).map(([z,d])=>({ zone: z, ...d.byPersonnelType, total: d.total })),
+    floorBreakdown:   Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total })),
     details:          zoneMap,
     personnelSummary: { employees: employeeCount, contractors: contractorCount },
-    personnelBreakdown
+    personnelBreakdown:[
+      { personnelType:'Employee',   count: employeeCount   },
+      { personnelType:'Contractor', count: contractorCount }
+    ]
   };
 }
 
+/** Build “visited today” from the same in‐memory stream */
+function buildVisitedToday(allEvents) {
+  // IST “today” string
+  const today = DateTime.now().setZone('Asia/Kolkata').toFormat('yyyy-LL-dd');
+
+  // only today's InDirection swipes
+  const todayIns = allEvents.filter(evt => {
+    if (evt.Direction !== 'InDirection' || !evt.LocaleMessageTime) return false;
+    const swipeDate = DateTime
+      .fromJSDate(evt.LocaleMessageTime, { zone:'Asia/Kolkata' })
+      .toFormat('yyyy-LL-dd');
+    return swipeDate === today;
+  });
+
+  // dedupe by PersonGUID → keep latest
+  const dedup = new Map();
+  for (const e of todayIns) {
+    const prev = dedup.get(e.PersonGUID);
+    if (!prev || e.LocaleMessageTime > prev.LocaleMessageTime) {
+      dedup.set(e.PersonGUID, e);
+    }
+  }
+
+  const finalList   = Array.from(dedup.values());
+  const employees   = finalList.filter(e =>
+    !['Contractor','Terminated Contractor','Temp Badge','Visitor','Property Management']
+      .includes(e.PersonnelType)
+  ).length;
+  const contractors = finalList.length - employees;
+
+  return { employees, contractors, total: finalList.length };
+}
+
+/** Server‐Sent‐Events endpoint */
 exports.getLiveOccupancy = async (req, res) => {
   try {
     await poolConnect;
+
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -273,28 +271,39 @@ exports.getLiveOccupancy = async (req, res) => {
     });
     res.write('\n');
 
-    let lastSeen = new Date(Date.now() - 1000*60*60*24);
+    // pull last 24h on startup
+    let lastSeen = new Date(Date.now() - 24*60*60*1000);
     const events = [];
 
     const push = async () => {
       const fresh = await fetchNewEvents(lastSeen);
       if (fresh.length) {
-        lastSeen = fresh[fresh.length-1].LocaleMessageTime;
+        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
         events.push(...fresh);
       }
-      const payload = await buildOccupancy(events);
-      payload.totalVisitedToday = await fetchTotalVisitedToday();
-      payload.visitedToday      = await fetchVisitedTodayBreakdown();
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+
+      // build occupancy + today counts
+      const occupancy  = await buildOccupancy(events);
+      const todayStats = buildVisitedToday(events);
+
+      occupancy.totalVisitedToday = todayStats.total;
+      occupancy.visitedToday      = {
+        employees:   todayStats.employees,
+        contractors: todayStats.contractors,
+        total:       todayStats.total
+      };
+
+      res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
     };
 
-    // initial
     await push();
     const timer = setInterval(push, 1000);
     req.on('close', () => clearInterval(timer));
+
   } catch (err) {
     console.error('Live occupancy SSE error:', err);
-    if (!res.headersSent) res.status(500).json({ error: 'Internal Server Error' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
   }
 };
-
