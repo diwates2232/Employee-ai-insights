@@ -1,170 +1,50 @@
-// config/db.js
+Read below file carefully.issue is there 
+/**
+ * Build both:
+ *  • the live floor-occupancy snapshot, and
+ *  • the “visited Today” deduped totals,
+ * from exactly the same in-memory data.
+ */
 
-const sql = require('mssql');
-const dotenv = require('dotenv');
-dotenv.config();
+Above two function are removed from my side by mistakely so kindly add this function and give me Updated js file carefully.
 
-const config = {
-  server:   process.env.DB_SERVER,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  // bump the default timeouts and enable pooling
-  connectionTimeout: 30000,    // 30 s to establish connection
-  requestTimeout:    0,        // 0 = no timeout on queries
-  pool: {
-    max: 10,                   // up to 10 connections
-    min: 0,
-    idleTimeoutMillis: 30000   // 30 s before a connection is reaped
-  },
-  options: {
-    encrypt:              true,
-    trustServerCertificate: true
+/** Build the live‐occupancy snapshot from allEvents */
+
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
+
+    // “Out of office” actually evicts
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
+    } else {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+    }
   }
-};
-
-const pool = new sql.ConnectionPool(config);
-const poolConnect = pool
-  .connect()
-  .then(() => console.log('✅ MSSQL pool connected'))
-  .catch(err => console.error('❌ MSSQL pool connection failed:', err));
-
-// log any asynchronous errors on the pool
-pool.on('error', err => {
-  console.error('❌ MSSQL pool error:', err);
-});
-
-module.exports = { sql, poolConnect, pool };
 
 
 
+For more Information Refer above code and make changes smothly and give me Updated js file carefully
 
-
-
-
-
-// config/siteConfig.js
-
-const { pool: punePool, sql } = require('./db'); 
-
-// Denver uses the same driver/pool config
-const denverPool = new sql.ConnectionPool({
-  user:     process.env.DB_USER_DENVER,
-  password: process.env.DB_PASSWORD_DENVER,
-  server:   process.env.DB_SERVER_DENVER,
-  database: process.env.DB_DATABASE_DENVER,
-  connectionTimeout: 30000,
-  requestTimeout:    0,
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
-  },
-  options: {
-    encrypt:              true,
-    trustServerCertificate: true
-  }
-});
-const denverPoolConnect = denverPool
-  .connect()
-  .then(() => console.log('✅ Denver MSSQL pool connected'))
-  .catch(err => console.error('❌ Denver pool connection failed:', err));
-
-module.exports = {
-  pune: {
-    name: 'Pune',
-    pool: punePool,
-    doorZoneMap:  require('../data/doorZoneMap'),
-    zoneFloorMap: require('../data/zoneFloorMap')
-  },
-  denver: {
-    name: 'Denver',
-    pool: denverPool,
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-File 1
-// config/siteConfig.js
-
-const { pool: punePool, sql } = require('./db'); 
-
-// Create Denver connection
-const denverPool = new sql.ConnectionPool({
-  user:     'GSOC_Test',
-  password: 'Westerngsoc@2025',
-  server:   'SRVWUDEN0891V',
-  database: 'ACVSUJournal_00010027',
-  options: {
-    encrypt: true,
-    trustServerCertificate: true
-  }
-});
-
-denverPool.connect();
-
-module.exports = {
-  pune: {
-    name: 'Pune',
-    pool: punePool,
-    doorZoneMap:   require('../data/doorZoneMap'),
-    zoneFloorMap:  require('../data/zoneFloorMap')
-  },
-  denver: {
-    name: 'Denver',
-    pool: denverPool,
-    zoneFloorMap:  require('../data/denverDoorFloorMap'),
-  }
-};
-
-
-
-// config/db.js
-
-
-const sql = require('mssql');
-const dotenv = require('dotenv');
-dotenv.config();
-
-const config = {
-  server: process.env.DB_SERVER,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  options: {
-    encrypt: true,
-    trustServerCertificate: true,
-  },
-};
-
-const pool = new sql.ConnectionPool(config);
-const poolConnect = pool.connect()
-  .then(() => console.log('✅ MSSQL pool connected'))
-  .catch(err => console.error('❌ MSSQL pool connection failed:', err));
-
-pool.on('error', err => {
-  console.error('❌ MSSQL pool error:', err);
-});
-
-module.exports = { sql, poolConnect, pool };
-
-
-
-
-
-File 2
 
 // controllers/denverLiveOccupancyController.js
 
@@ -291,11 +171,16 @@ function isTodayInDenver(dateOnly) {
  *  • the “visited Today” deduped totals,
  * from exactly the same in-memory data.
  */
+
+
 function buildOccupancyForToday(allEvents) {
   // 1) filter only today’s InDirection swipes
   const todayIn = allEvents.filter(e =>
     e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
-  );
+   );
+
+
+/** Build the live‐occupancy snapshot from allEvents */
 
   // 2) dedupe: keep only the latest swipe per PersonGUID
   const latestByPerson = new Map();
@@ -374,72 +259,5 @@ exports.getDenverLiveOccupancy = async (req, res) => {
   // initial + interval
   await push();
   const timer = setInterval(push, 1000);
-
-
-
-
-file 3
-
-// server.js
-
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-
-const employeeRoutes        = require('./routes/employeeRoutes');
-const liveOccupancyRoutes   = require('./routes/liveOccupancyRoutes');
-const occupancyDenverRoutes = require('./routes/occupancyDenverRoutes');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// simple sanity-check
-app.get('/ping', (req, res) => res.send('pong'));
-
-// mount your routers under /api
-app.use('/api', employeeRoutes);           // /api/employees
-app.use('/api', liveOccupancyRoutes);      // /api/live-occupancy
-app.use('/api', occupancyDenverRoutes);    // /api/live-occupancy/denver
-
-// debug: list registered endpoints
-if (app._router && Array.isArray(app._router.stack)) {
-  console.log('\n📋 Registered endpoints:');
-  app._router.stack.forEach(layer => {
-    if (layer.route && layer.route.path) {
-      const methods = Object
-        .keys(layer.route.methods)
-        .map(m => m.toUpperCase())
-        .join(',');
-      console.log(`  ${methods}\t${layer.route.path}`);
-    }
-  });
-}
-
-// serve React build (if any)
-const buildPath = path.join(__dirname, '..', 'client', 'build');
-app.use(express.static(buildPath));
-
-// health check
-app.get('/health', (req, res) => res.send('OK'));
-
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
-
-
-
-
   req.on('close', () => clearInterval(timer));
 };
-
-
-
-
-file 4
-.env
-
-DB_SERVER=SRVWUPNQ0986V
-DB_USER=GSOC_Test
-DB_PASSWORD=Westernuniongsoc@2025
-DB_DATABASE=ACVSUJournal_00010020
-PORT=5000
