@@ -1,3 +1,148 @@
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
+/**
+ * 1) Strip out any embedded timestamps (e.g. “10:05:86”)  
+ * 2) Remove punctuation except parentheses (so “-” “/” “:” etc. → space)  
+ * 3) Collapse multiple spaces → single, uppercase  
+ * 4) Append ___InDirection or ___OutDirection
+ */
+function normalizeZoneKey(rawDoor, rawDir) {
+  let base = String(rawDoor || '')
+    // drop timestamps
+    .replace(/\d{1,2}:\d{1,2}:\w*/g, '')
+    // remove punctuation other than parentheses
+    .replace(/[^A-Z0-9() ]+/gi, ' ')
+    // uppercase & collapse spaces
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone:
+ * 1) exact lookup in doorZoneMap
+ * 2) fallback: if the rawDoor contains “(RED)/(YELLOW)/(GREEN)/(ORANGE)” pick that
+ * 3) default: warn once + “Unknown Zone”
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  // fallback: look for parenthetical color zones
+  const up = String(rawDoor || '').toUpperCase();
+  const m  = up.match(/\((RED|YELLOW|GREEN|ORANGE)\)/);
+  if (m) {
+    switch (m[1]) {
+      case 'RED':    return 'RED ZONE';
+      case 'YELLOW': return 'Yellow zone';
+      case 'GREEN':  return 'Green Zone';
+      case 'ORANGE': return 'Orange Zone';
+    }
+  }
+
+  // still not found → warn exactly once
+  if (!warnedKeys.has(key)) {
+    console.warn('⛔ Unmapped door-zone key:', key);
+    warnedKeys.add(key);
+  }
+
+  return 'Unknown Zone';
+}
+
+// —————————————————— everything else is unchanged ——————————————————
+
+/** Fetch all swipe events since `since` (UTC) */
+async function fetchNewEvents(since) {
+  await poolConnect;
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          sc.value
+        ) AS CardNumber,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE Name IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) > @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      PersonGUID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+  return recordset;
+}
+
+// … your fetchTotalVisitedToday, fetchVisitedTodayBreakdown, buildOccupancy, buildVisitedToday, and exports.getLiveOccupancy all remain exactly as they are today …
+
+module.exports = {
+  fetchNewEvents,
+  // … etc.
+};
+
+
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\doorZoneMap.js
 
 // Auto-generated from punedoor.xlsx
