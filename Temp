@@ -1,117 +1,3 @@
-if (Direction === 'OutDirection') {
-  if (zone === 'Out of office') {
-    // True exit — remove from map
-    uniquePeople.delete(dedupKey);
-    delete current[dedupKey];
-    continue;
-  } else {
-    // OutDirection but still within building — treat as valid zone update
-    uniquePeople.set(dedupKey, PersonnelType);
-    current[dedupKey] = {
-      Dateonly, Swipe_Time, EmployeeID, ObjectName1,
-      CardNumber, PersonnelType, zone, door: Door, Direction
-    };
-    continue;
-  }
-}
-
-// InDirection — update as usual
-if (Direction === 'InDirection') {
-  uniquePeople.set(dedupKey, PersonnelType);
-  current[dedupKey] = {
-    Dateonly, Swipe_Time, EmployeeID, ObjectName1,
-    CardNumber, PersonnelType, zone, door: Door, Direction
-  };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---- a/controllers/liveOccupancyController.js
-+++ b/controllers/liveOccupancyController.js
-@@ async function buildOccupancy(allEvents) {
-   for (const evt of allEvents) {
-     const {
-       EmployeeID, PersonGUID,
-       ObjectName1, PersonnelType,
-       CardNumber, Dateonly,
-       Swipe_Time, Direction, Door
-     } = evt;
- 
-     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-     const zone     = mapDoorToZone(Door, Direction);
- 
-     // “Out of office” actually evicts
--    if (Direction === 'OutDirection' && zone === 'Out of office') {
--      uniquePeople.delete(dedupKey);
--      delete current[dedupKey];
--      continue;
--    }
-+    if (Direction === 'OutDirection' && zone === 'Out of office') {
-+      uniquePeople.delete(dedupKey);
-+      delete current[dedupKey];
-+      continue;
-+    }
-+
-+    // any other OutDirection should _not_ evict,
-+    // but should update their zone to the "… - Outer Area" bucket:
-+    if (Direction === 'OutDirection') {
-+      if (current[dedupKey]) {
-+        current[dedupKey].zone      = zone;
-+        current[dedupKey].door      = Door;
-+        current[dedupKey].Direction = Direction;
-+      }
-+      // don't touch uniquePeople
-+      continue;
-+    }
- 
-     if (Direction === 'InDirection') {
-       uniquePeople.set(dedupKey, PersonnelType);
-       current[dedupKey] = {
-         Dateonly, Swipe_Time,
-         EmployeeID, ObjectName1, CardNumber,
-         PersonnelType, zone,
--        door: Door, Direction
-+        door: Door, Direction
-       };
-     } else {
-       // (only other case is OutDirection but we've already handled it above)
-       uniquePeople.delete(dedupKey);
-       delete current[dedupKey];
-     }
-   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-lets i have review and test all file from my end.
-
-
-
 // controllers/liveOccupancyController.js
 
 const { DateTime }   = require('luxon');
@@ -205,12 +91,6 @@ function mapDoorToZone(rawDoor, rawDir) {
 
 
 
-
-
-// Everything is fine from here Ok
-
-
-
 /** Fetch all swipe events since `since` (UTC) */
 async function fetchNewEvents(since) {
   await poolConnect;
@@ -275,15 +155,7 @@ async function fetchNewEvents(since) {
 }
 
 
-
-
-// this is also fine Working.
-
-
-
-lets Check this part....
-
-/** Build the live‐occupancy snapshot from allEvents */  
+/** Build the live‐occupancy snapshot from allEvents */
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
@@ -298,6 +170,10 @@ async function buildOccupancy(allEvents) {
 
     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
     const zone     = mapDoorToZone(Door, Direction);
+
+
+
+
 
     // “Out of office” actually evicts
     if (Direction === 'OutDirection' && zone === 'Out of office') {
@@ -316,21 +192,6 @@ async function buildOccupancy(allEvents) {
       delete current[dedupKey];
     }
   }
-
-
-// we have Write Condtion if direction ===OutDirection && Zone is 'out of Office'
-this will delete 
- uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-
-this 
-but Direction is Out and zone is Reception are , Green Outer like anythig else ,
-this is not map .
-So create a new map or add extra condtion . here beacuse all door and zone are map as We Define
-
-
-
-
 
 
   // live headcounts
@@ -462,4 +323,3 @@ exports.getLiveOccupancy = async (req, res) => {
     }
   }
 };
-
