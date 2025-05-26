@@ -5,6 +5,88 @@ const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap    = require('../data/doorZoneMap');
 const zoneFloorMap   = require('../data/zoneFloorMap');
 
+const warnedKeys = new Set();
+
+/**
+ * 1) Strip out any embedded timestamps like “10:05:86”  
+ * 2) Remove EVERY punctuation char except parentheses (so “-” “/” “:” etc. go away)  
+ * 3) Collapse multiple spaces → single  
+ * 4) Upper-case  
+ * 5) Append ___InDirection or ___OutDirection
+ */
+function normalizeZoneKey(rawDoor, rawDir) {
+  let base = String(rawDoor || '')
+    // drop timestamps
+    .replace(/\d{1,2}:\d{1,2}:\w*/g, '')
+    // remove punctuation other than parentheses
+    .replace(/[^A-Z0-9() ]+/gi, ' ')
+    // uppercase & collapse spaces
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone.
+ * 1) exact lookup in doorZoneMap
+ * 2) look for parenthetical color
+ * 3) warn once + Unknown
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  // fallback—grab e.g. "(RED)" or "(YELLOW)", etc.
+  const up = String(rawDoor||'').toUpperCase();
+  const m = up.match(/\((RED|YELLOW|GREEN|ORANGE)\)/);
+  if (m) {
+    switch (m[1]) {
+      case 'RED':    return 'RED ZONE';
+      case 'YELLOW': return 'Yellow zone';
+      case 'GREEN':  return 'Green Zone';
+      case 'ORANGE': return 'Orange Zone';
+    }
+  }
+
+  // still not found, warn exactly once
+  if (!warnedKeys.has(key)) {
+    console.warn('⛔ Unmapped door‐zone key:', key);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Zone';
+}
+
+// ————————————————— rest of your file remains entirely unchanged —————————————————
+// fetchNewEvents, fetchTotalVisitedToday, fetchVisitedTodayBreakdown,
+// buildOccupancy, buildVisitedToday, exports.getLiveOccupancy, etc...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
 // track which door→zone keys we've already warned on
 const warnedKeys = new Set();
 
