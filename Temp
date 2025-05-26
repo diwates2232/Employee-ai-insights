@@ -1,3 +1,73 @@
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
+/** Normalize rawDoor & rawDir into the same key format used by doorZoneMap */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone.
+ * 1) Try the explicit map.
+ * 2) If it starts with APAC_IN_PUN, pull out floor & zone from the name.
+ * 3) Otherwise warn once and return 'Unknown Zone'.
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  const up = String(rawDoor || '').toUpperCase();
+  if (up.startsWith('APAC_IN_PUN_')) {
+    // after APAC_IN_PUN_
+    const rest = up.slice('APAC_IN_PUN_'.length);
+    // attempt parenthesized zone: e.g. "... (RED)"
+    const paren = rest.match(/\(([^)]+)\)/);
+    let zone, floor;
+    if (paren) {
+      zone = paren[1];
+    } else {
+      // otherwise split on '_' → first is floor, second is likely zone
+      const parts = rest.split('_').filter(Boolean);
+      floor = parts[0];              // e.g. PODIUM, 2NDFLR, TOWER B
+      zone  = parts[1] || 'Unknown'; // e.g. RED, GSOC, RECEPTION
+    }
+    return zone;
+  }
+
+  if (!warnedKeys.has(key)) {
+    console.warn('⛔ Unmapped door-zone key:', key);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Zone';
+}
+
+// ... the rest of your file remains exactly the same ...
+
+// (fetchNewEvents, buildOccupancy, buildVisitedToday, exports.getLiveOccupancy, etc.)
+
+
+
+
+
+
+
+
+
+
 Read Below file carefully this is our Pune File All file Working Successfully.
 in Console We are getting Unmapped door list ,its Fine Some Door are not get map as per current logic so We dont meet excat count,
 if possible Can we Write extra condtion for unmapped door and all dor.
