@@ -1,3 +1,244 @@
+// data/zoneFloorMap.js
+
+const zoneFloorMap = {
+  // Podium Floor
+  "RED ZONE":               "Podium Floor",
+  "Yellow zone":            "Podium Floor",
+  "Reception Area":         "Podium Floor",
+  "Green Zone":             "Podium Floor",
+  "Orange Zone":            "Podium Floor",
+  "GSOC":                   "Podium Floor",
+  "Assembly Area":          "Podium Floor",
+
+  // 2nd Floor
+  "2nd Floor, Pune":        "2nd Floor",
+
+  // Tower B
+  "Tower B":                "Tower B",
+  "Reception Area Tower B": "Tower B",
+  "Tower B GYM":            "Tower B",
+
+  // Out-direction “outer area” variants
+  "Green Zone - Outer":                   "Podium Floor",
+  "Yellow zone - Outer":                  "Podium Floor",
+  "Orange Zone - Outer":                  "Podium Floor",
+  "Reception Area - Outer":               "Podium Floor",
+  "Assembly Area - Outer":                "Podium Floor",
+  "GSOC - Outer":                         "Podium Floor",
+  "RED ZONE - Outer":                     "Podium Floor",
+  "2nd Floor, Pune - Outer":              "2nd Floor",
+  "Tower B - Outer":                      "Tower B",
+  "Reception Area Tower B - Outer":       "Tower B",
+  "Tower B GYM - Outer":                  "Tower B",
+
+  // True “Out of office” evictions
+  "Out of office":        "Podium Floor",
+  "Out of Office":        "Podium Floor"
+};
+
+module.exports = zoneFloorMap;
+
+
+
+
+
+
+
+
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
+
+/** Normalize the raw door + direction into your map’s key format */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = rawDir === 'InDirection' ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone.
+ *
+ * 1) Try explicit doorZoneMap lookup
+ * 2) If APAC_IN_PUN_*: extract parenthesized or underscore-split zone
+ * 3) If OutDirection on any recognized zone (but not "Out of office"), map to the "– Outer" variant
+ * 4) Warn once & return Unknown Zone
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  // 1) explicit lookup
+  let zone = doorZoneMap[key];
+
+  // 2) auto-extract for Pune doors
+  if (!zone && String(rawDoor || '').toUpperCase().startsWith('APAC_IN_PUN_')) {
+    const rest  = rawDoor.toUpperCase().slice('APAC_IN_PUN_'.length);
+    const paren = rest.match(/\(([^)]+)\)/);
+    if (paren) {
+      // e.g. "(RED)" → "RED ZONE"
+      zone = paren[1].toUpperCase() === paren[1]
+        ? `${paren[1]} ZONE`
+        : `${paren[1][0].toUpperCase() + paren[1].slice(1).toLowerCase()} Zone`;
+    } else {
+      // otherwise pick the second underscore-delimited token as zone
+      const parts = rest.split(/[\s_]+/).filter(Boolean);
+      const maybeZone = parts[1] || parts[0];
+      if (maybeZone) {
+        if (/RECEPTION/.test(maybeZone)) {
+          zone = 'Reception Area';
+        } else {
+          const z = maybeZone[0].toUpperCase() + maybeZone.slice(1).toLowerCase();
+          zone = z.includes('Zone') ? z : `${z} Zone`;
+        }
+      }
+    }
+  }
+
+  // 4) still no zone? warn & fallback
+  if (!zone) {
+    if (!warnedKeys.has(key)) {
+      console.warn('⛔ Unmapped door-zone key:', key);
+      warnedKeys.add(key);
+    }
+    return 'Unknown Zone';
+  }
+
+  // 3) if OutDirection (not real eviction) → Outer variant
+  if (rawDir === 'OutDirection' && zone !== 'Out of office') {
+    const base = zone.replace(/\s+Zone$/i, '');
+    return `${base} - Outer`;
+  }
+
+  return zone;
+}
+
+
+/** Fetch all swipe events since `since` (UTC) */
+async function fetchNewEvents(since) {
+  await poolConnect;
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT
+        DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+          sc.value
+        ) AS CardNumber,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
+      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+        WHERE Name IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
+      WHERE
+        t1.MessageType     = 'CardAdmitted'
+        AND t1.PartitionName2 = 'APAC.Default'
+        AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8), LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      PersonGUID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return recordset;
+}
+
+
+/** Build the live-occupancy snapshot */
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
+
+    // real eviction
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone, door: Door };
+    } else {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+    }
+  }
+
+  // … the rest of your summary/floor‐breakdown logic remains unchanged, using zoneFloorMap[zone] …
+  // make sure to include `door: Door` in your `details` if you want to surface it in the API response
+}
+
+exports.getLiveOccupancy = async (req, res) => {
+  // … unchanged …
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 This zoneFloorMap.js file Read all carefully and give me both updated file carefully
 
 // data/zoneFloorMap.js
