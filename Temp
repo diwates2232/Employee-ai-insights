@@ -1,3 +1,42 @@
+if (Direction === 'OutDirection') {
+  if (zone === 'Out of office') {
+    // True exit — remove from map
+    uniquePeople.delete(dedupKey);
+    delete current[dedupKey];
+    continue;
+  } else {
+    // OutDirection but still within building — treat as valid zone update
+    uniquePeople.set(dedupKey, PersonnelType);
+    current[dedupKey] = {
+      Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+      CardNumber, PersonnelType, zone, door: Door, Direction
+    };
+    continue;
+  }
+}
+
+// InDirection — update as usual
+if (Direction === 'InDirection') {
+  uniquePeople.set(dedupKey, PersonnelType);
+  current[dedupKey] = {
+    Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+    CardNumber, PersonnelType, zone, door: Door, Direction
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 --- a/controllers/liveOccupancyController.js
 +++ b/controllers/liveOccupancyController.js
 @@ async function buildOccupancy(allEvents) {
