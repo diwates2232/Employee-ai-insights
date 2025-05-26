@@ -87,6 +87,99 @@ function mapDoorToZone(rawDoor, rawDir) {
 
 
 
+
+
+
+
+// controllers/liveOccupancyController.js
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track which door→zone keys we've already warned on
+const warnedKeys = new Set();
+
+/** Normalize the raw door + direction into your map’s key format */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = rawDir === 'InDirection' ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone.
+ *
+ * 1) Try explicit doorZoneMap lookup
+ * 2) If APAC_IN_PUN_*: extract parenthesized or underscore-split zone
+ * 3) If OutDirection on any recognized zone (but not "Out of office"), map to the "– Outer" variant
+ * 4) Warn once & return Unknown Zone
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  // 1) explicit lookup
+  let zone = doorZoneMap[key];
+  if (!zone && String(rawDoor||'').toUpperCase().startsWith('APAC_IN_PUN_')) {
+    // 2) auto-extract from the door name
+    const rest  = rawDoor.toUpperCase().slice('APAC_IN_PUN_'.length);
+    const paren = rest.match(/\(([^)]+)\)/);
+    if (paren) {
+      zone = paren[1].toUpperCase() === paren[1]
+        ? `${paren[1]} ZONE`
+        : `${paren[1][0].toUpperCase() + paren[1].slice(1).toLowerCase()} Zone`;
+    } else {
+      const parts = rest.split(/[\s_]+/).filter(Boolean);
+      // floor token in parts[0], zone token in parts[1] if present
+      const maybeZone = parts[1] || parts[0];
+      if (maybeZone) {
+        if (/RECEPTION/.test(maybeZone)) {
+          zone = 'Reception Area';
+        } else {
+          const z = maybeZone[0].toUpperCase() + maybeZone.slice(1).toLowerCase();
+          zone = z.includes('Zone') ? z : `${z} Zone`;
+        }
+      }
+    }
+  }
+
+  // if we still have no zone, warn & fallback
+  if (!zone) {
+    if (!warnedKeys.has(key)) {
+      console.warn('⛔ Unmapped door-zone key:', key);
+      warnedKeys.add(key);
+    }
+    return 'Unknown Zone';
+  }
+
+  // 3) if it's an OutDirection *and* not the special "Out of office" marker, convert to the Outer variant
+  if (rawDir === 'OutDirection' && zone !== 'Out of office') {
+    // strip any trailing " Zone" or " zone"
+    const base = zone.replace(/\s+Zone$/i, '');
+    // match your zoneFloorMap key names, e.g. "Green – Outer" or "Yellow – Outer"
+    return `${base} - Outer`;
+  }
+
+  // otherwise return what we found
+  return zone;
+}
+
+// … the rest of your controller remains unchanged …
+
+
+
+
+
+
+
+
+
+
+
+
 // data/doorZoneMap.js
 
 // Auto-generated from punedoor.xlsx
