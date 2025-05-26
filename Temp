@@ -1,3 +1,101 @@
+// config/db.js
+
+const sql = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  // bump the default timeouts and enable pooling
+  connectionTimeout: 30000,    // 30 s to establish connection
+  requestTimeout:    0,        // 0 = no timeout on queries
+  pool: {
+    max: 10,                   // up to 10 connections
+    min: 0,
+    idleTimeoutMillis: 30000   // 30 s before a connection is reaped
+  },
+  options: {
+    encrypt:              true,
+    trustServerCertificate: true
+  }
+};
+
+const pool = new sql.ConnectionPool(config);
+const poolConnect = pool
+  .connect()
+  .then(() => console.log('✅ MSSQL pool connected'))
+  .catch(err => console.error('❌ MSSQL pool connection failed:', err));
+
+// log any asynchronous errors on the pool
+pool.on('error', err => {
+  console.error('❌ MSSQL pool error:', err);
+});
+
+module.exports = { sql, poolConnect, pool };
+
+
+
+
+
+
+
+
+// config/siteConfig.js
+
+const { pool: punePool, sql } = require('./db'); 
+
+// Denver uses the same driver/pool config
+const denverPool = new sql.ConnectionPool({
+  user:     process.env.DB_USER_DENVER,
+  password: process.env.DB_PASSWORD_DENVER,
+  server:   process.env.DB_SERVER_DENVER,
+  database: process.env.DB_DATABASE_DENVER,
+  connectionTimeout: 30000,
+  requestTimeout:    0,
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  },
+  options: {
+    encrypt:              true,
+    trustServerCertificate: true
+  }
+});
+const denverPoolConnect = denverPool
+  .connect()
+  .then(() => console.log('✅ Denver MSSQL pool connected'))
+  .catch(err => console.error('❌ Denver pool connection failed:', err));
+
+module.exports = {
+  pune: {
+    name: 'Pune',
+    pool: punePool,
+    doorZoneMap:  require('../data/doorZoneMap'),
+    zoneFloorMap: require('../data/zoneFloorMap')
+  },
+  denver: {
+    name: 'Denver',
+    pool: denverPool,
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 File 1
 // config/siteConfig.js
 
