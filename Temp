@@ -1,3 +1,74 @@
+--- a/controllers/liveOccupancyController.js
++++ b/controllers/liveOccupancyController.js
+@@ async function buildOccupancy(allEvents) {
+   for (const evt of allEvents) {
+     const {
+       EmployeeID, PersonGUID,
+       ObjectName1, PersonnelType,
+       CardNumber, Dateonly,
+       Swipe_Time, Direction, Door
+     } = evt;
+ 
+     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+     const zone     = mapDoorToZone(Door, Direction);
+ 
+     // “Out of office” actually evicts
+-    if (Direction === 'OutDirection' && zone === 'Out of office') {
+-      uniquePeople.delete(dedupKey);
+-      delete current[dedupKey];
+-      continue;
+-    }
++    if (Direction === 'OutDirection' && zone === 'Out of office') {
++      uniquePeople.delete(dedupKey);
++      delete current[dedupKey];
++      continue;
++    }
++
++    // any other OutDirection should _not_ evict,
++    // but should update their zone to the "… - Outer Area" bucket:
++    if (Direction === 'OutDirection') {
++      if (current[dedupKey]) {
++        current[dedupKey].zone      = zone;
++        current[dedupKey].door      = Door;
++        current[dedupKey].Direction = Direction;
++      }
++      // don't touch uniquePeople
++      continue;
++    }
+ 
+     if (Direction === 'InDirection') {
+       uniquePeople.set(dedupKey, PersonnelType);
+       current[dedupKey] = {
+         Dateonly, Swipe_Time,
+         EmployeeID, ObjectName1, CardNumber,
+         PersonnelType, zone,
+-        door: Door, Direction
++        door: Door, Direction
+       };
+     } else {
+       // (only other case is OutDirection but we've already handled it above)
+       uniquePeople.delete(dedupKey);
+       delete current[dedupKey];
+     }
+   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 lets i have review and test all file from my end.
 
 
