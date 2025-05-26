@@ -1,3 +1,67 @@
+async function buildOccupancy(allEvents) {
+  const current      = {};
+  const uniquePeople = new Map();
+
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToZone(Door, Direction);
+
+    // 1) True "Out of office" → full eviction
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
+
+    // 2) Any other OutDirection (outer areas, reception exits, etc.)
+    if (Direction === 'OutDirection') {
+      // Update their latest zone/door but keep them counted
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = {
+        Dateonly, Swipe_Time,
+        EmployeeID, ObjectName1, CardNumber,
+        PersonnelType, zone,
+        door: Door,
+        Direction
+      };
+      continue;
+    }
+
+    // 3) InDirection → normal check-in
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = {
+        Dateonly, Swipe_Time,
+        EmployeeID, ObjectName1, CardNumber,
+        PersonnelType, zone,
+        door: Door,
+        Direction
+      };
+      continue;
+    }
+
+    // 4) Any other case (shouldn’t happen) → safe eviction
+    uniquePeople.delete(dedupKey);
+    delete current[dedupKey];
+  }
+
+  // … now build your headcounts, zoneDetails, floorBreakdown exactly as before …
+}
+
+
+
+
+
+
+
+
 
 
 // controllers/liveOccupancyController.js
