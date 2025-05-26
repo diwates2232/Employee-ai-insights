@@ -1,3 +1,100 @@
+// controllers/liveOccupancyController.js
+
+const { DateTime }   = require('luxon');
+const { poolConnect, pool, sql } = require('../config/db');
+const doorZoneMap    = require('../data/doorZoneMap');
+const zoneFloorMap   = require('../data/zoneFloorMap');
+
+// track warnings
+const warnedKeys = new Set();
+
+/** Normalize the raw door + direction into your map’s key format */
+function normalizeZoneKey(rawDoor, rawDir) {
+  const base = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
+  return `${base}___${dir}`;
+}
+
+/**
+ * Map a swipe’s door+direction → zone:
+ * 1) explicit lookup
+ * 2) if Pune door (APAC_IN_PUN_), auto-extract zone
+ * 3) warn & “Unknown Zone”
+ */
+function mapDoorToZone(rawDoor, rawDir) {
+  const key = normalizeZoneKey(rawDoor, rawDir);
+
+  // 1) explicit map?
+  if (doorZoneMap[key]) {
+    return doorZoneMap[key];
+  }
+
+  const up = String(rawDoor || '').toUpperCase();
+  if (up.startsWith('APAC_IN_PUN_')) {
+    // strip prefix
+    const rest = up.slice('APAC_IN_PUN_'.length);
+
+    // 2a) parenthesized zone → RED, YELLOW, GREEN, ORANGE, etc.
+    const paren = rest.match(/\(([^)]+)\)/);
+    if (paren) {
+      return paren[1] + (paren[1].toUpperCase() === paren[1] ? ' ZONE' : ' Zone');
+    }
+
+    // 2b) otherwise split on '_' → [Floor, Zone, …]
+    const parts = rest.split('_').filter(Boolean);
+    const maybeZone = parts[1];
+    if (maybeZone) {
+      // e.g. parts = ['PODIUM','GSOC','DOOR…'] → zone = GSOC
+      const zone = maybeZone.trim();
+      // normalize e.g. “GSOC” stays, “RECEPTION” → “Reception Area”
+      if (/RECEPTION/.test(zone)) return 'Reception Area';
+      return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
+    }
+
+    // fallback if nothing at all
+    return 'Unknown Zone';
+  }
+
+  // 3) no match → warn once
+  if (!warnedKeys.has(key)) {
+    console.warn('⛔ Unmapped door-zone key:', key);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Zone';
+}
+
+// — everything else (fetchNewEvents, buildOccupancy, buildVisitedToday, SSE) remains unchanged —
+
+// example usage inside buildOccupancy:
+async function buildOccupancy(allEvents) {
+  // …
+  for (const evt of allEvents) {
+    const zone = mapDoorToZone(evt.Door, evt.Direction);
+    // …
+  }
+  // …
+}
+
+// finally your SSE handler:
+exports.getLiveOccupancy = async (req, res) => {
+  await poolConnect;
+  // … same as before …
+};
+
+
+
+
+
+
+
+
+
+
+
+
 This logic works correct this will create new Zone jusd modify RED - RED ZONE
 YELLOW as Yellow Zone to create new zone using Zone name or door name once check 
 
