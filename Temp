@@ -1,3 +1,41 @@
+if (Direction === 'OutDirection') {
+  if (zone === 'Out of office') {
+    uniquePeople.delete(dedupKey);
+    delete current[dedupKey];
+  } else {
+    // Track non-eviction out swipes
+    uniquePeople.set(dedupKey, PersonnelType);
+    current[dedupKey] = {
+      Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+      CardNumber, PersonnelType,
+      zone: 'Out of Office',
+      door: Door,
+      Direction
+    };
+  }
+  continue;
+}
+
+if (Direction === 'InDirection') {
+  uniquePeople.set(dedupKey, PersonnelType);
+  current[dedupKey] = {
+    Dateonly, Swipe_Time, EmployeeID, ObjectName1,
+    CardNumber, PersonnelType,
+    zone, door: Door, Direction
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
 // controllers/liveOccupancyController.js
 const { DateTime }   = require('luxon');
 const { poolConnect, pool, sql } = require('../config/db');
