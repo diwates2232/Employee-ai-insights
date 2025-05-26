@@ -1,151 +1,4 @@
-// controllers/liveOccupancyController.js
-// … keep your imports, pool setup, etc. …
-
-/** Normalize the raw door + direction into your map’s key format */
-function normalizeZoneKey(rawDoor, rawDir) {
-  const base = String(rawDoor || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-  // explicitly distinguish In vs Out
-  const dir = (rawDir === 'InDirection') ? 'InDirection' : 'OutDirection';
-  return `${base}___${dir}`;
-}
-
-/**
- * Map a swipe’s door+direction → zone.
- * 1) Try explicit lookup in doorZoneMap;
- * 2) If it’s a Pune door (APAC_IN_PUN_), auto-extract zone or color;
- * 3) If OutDirection, append “ - Outer Area” or appropriate “Out of office” logic;
- * 4) Otherwise warn once & return “Unknown Zone”.
- */
-function mapDoorToZone(rawDoor, rawDir) {
-  const key = normalizeZoneKey(rawDoor, rawDir);
-
-  // 1) explicit Excel-derived mapping wins every time
-  if (doorZoneMap[key]) {
-    return doorZoneMap[key];
-  }
-
-  // 2) Pune fallback
-  const up = String(rawDoor || '').toUpperCase();
-  if (up.startsWith('APAC_IN_PUN_')) {
-    const rest    = up.slice('APAC_IN_PUN_'.length);
-    const paren   = rest.match(/\(([^)]+)\)/);
-    let zoneName;
-
-    if (paren) {
-      // e.g. “(RED)” → “RED ZONE”
-      zoneName = paren[1].toUpperCase() + ' ZONE';
-    } else {
-      // otherwise fall back to splitting by underscore or space
-      const parts     = rest.split(/[\s_]+/).filter(Boolean);
-      const maybeZone = parts[1] || parts[0] || '';
-      if (/RECEPTION/.test(maybeZone)) {
-        zoneName = 'Reception Area';
-      } else {
-        // e.g. “GSOC” → “Gsoc Zone” → then uppercase “GSOC Zone”
-        const z = maybeZone.charAt(0).toUpperCase() + maybeZone.slice(1).toLowerCase();
-        zoneName = z.endsWith('Zone') ? z : z.toUpperCase() + ' ZONE';
-      }
-    }
-
-    // 3) if it’s an OutDirection swipe, append “ - Outer Area”
-    if (rawDir === 'OutDirection') {
-      // special case: some doors really eject out-of-office entirely
-      if (zoneName === 'Reception Area') {
-        return 'Out of office';
-      }
-      return zoneName + ' - Outer Area';
-    }
-
-    return zoneName;
-  }
-
-  // 4) truly unknown patterns → Warn & “Unknown Zone”
-  if (!warnedKeys.has(key)) {
-    console.warn('⛔ Unmapped door-zone key:', key);
-    warnedKeys.add(key);
-  }
-  return 'Unknown Zone';
-}
-
-// … the rest of your controller remains unchanged …
-
-
-
-
-
-
-
-
-/** Normalize the raw door + direction into your map’s key format */
-function normalizeZoneKey(rawDoor, rawDir) {
-  const base = String(rawDoor || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-  // const dir = /IN/i.test(rawDir) ? 'InDirection' : 'OutDirection';
-   const dir = (rawDir ==='InDirection') ? 'InDirection' : 'OutDirection';
-  return `${base}___${dir}`;
-}
-
-/**
- * 1) explicit lookup from doorZoneMap;
- * 2) if starts APAC_IN_PUN, extract floor N or parenthesized zone;
- * 3) otherwise warn once & return “Unknown Zone”
- */
-function mapDoorToZone(rawDoor, rawDir) {
-  const key = normalizeZoneKey(rawDoor, rawDir);
-  if (doorZoneMap[key]) {
-    return doorZoneMap[key];
-  }
-
-  const up = String(rawDoor || '').toUpperCase();
-  if (up.startsWith('APAC_IN_PUN_')) {
-    const rest = up.slice('APAC_IN_PUN_'.length);
-    // parenthesized zone e.g. "(RED)"
-    const paren = rest.match(/\(([^)]+)\)/);
-    if (paren) {
-      return paren[1].toUpperCase() + (paren[1].toUpperCase()===paren[1]? ' ZONE':' Zone');
-    }
-    // otherwise floor + zone in text, floor is number+suffix or word e.g. "2NDFLR" or "PODIUM"
-    const parts = rest.split(/[\s_]+/).filter(Boolean);
-    // If first token is floor like "12." or "2NDFLR" or "TOWER"
-    const maybeFloor = parts[0].match(/^(\d+)(ST|ND|RD|TH)?FLR?$/) ? parts[0] : null;
-    const zoneToken   = parts[1] || parts[0];
-    if (zoneToken) {
-      const z = zoneToken.charAt(0) + zoneToken.slice(1).toLowerCase();
-      if (/RECEPTION/.test(zoneToken)) return 'Reception Area';
-      return z.includes('Zone')? z : (z.toUpperCase() + ' Zone');
-    }
-    // fallback
-    if (!warnedKeys.has(key)) {
-      console.warn('⛔ Unmapped APAC_IN_PUN door:', rawDoor, rawDir);
-      warnedKeys.add(key);
-    }
-    return 'Unknown Zone';
-  }
-
-  if (!warnedKeys.has(key)) {
-    console.warn('⛔ Unmapped door-zone key:', key);
-    warnedKeys.add(key);
-  }
-  return 'Unknown Zone';
-}
-
-
-
-
-
-
-
-
-
-read Strickly Each door name and zone to Floor map carefully and line by line and .
-I want create only Zone Which is defined in front of door nad create only floor Which is display in the Defined then use diffrent diffrent logic .understand door name flow read each direction 
-carefully then give me updated js file logic carefully
-
+Lets read all both file carefully and give me updated file as per above logic you suggest carefully
 
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\doorZoneMap.js
 
@@ -329,9 +182,9 @@ module.exports = doorZoneMap;
 
 
 
+
+
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\zoneFloorMap.js
-
-
 
 const zoneFloorMap = {
   "RED ZONE": "Podium Floor",
@@ -353,4 +206,5 @@ const zoneFloorMap = {
 };
 
 module.exports = zoneFloorMap;
+
 
