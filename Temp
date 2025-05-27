@@ -1,3 +1,279 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Container, Row, Col,
+  Navbar, Nav, Button
+} from 'react-bootstrap';
+import { FaSun, FaMoon } from 'react-icons/fa';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  personnelBreakdown
+}) {
+  const [theme, setTheme] = useState('dark');
+  useEffect(() => {
+    const saved = localStorage.getItem('denver-dashboard-theme');
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+  }, []);
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('denver-dashboard-theme', next);
+  };
+
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType, count
+  }));
+
+  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
+
+  return (
+    <>
+      <Navbar expand="lg" className={`px-4 ${bgClass}`}>
+        <Navbar.Brand className="fw-bold">
+          Denver Live Occupancy — Western Union
+        </Navbar.Brand>
+        <Nav className="me-auto">
+          <Nav.Link href="/" className={bgClass}>Dashboard</Nav.Link>
+          <Nav.Link href="/floors" className={bgClass}>Floor Details</Nav.Link>
+        </Nav>
+        <Button
+          variant={theme === 'dark' ? 'light' : 'dark'}
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <FaSun /> : <FaMoon />}
+        </Button>
+      </Navbar>
+
+      <Container fluid className={`${bgClass} py-4 min-vh-100`}>
+        <SummaryCards
+          totalOccupancy={totalOccupancy}
+          employeeCount={employees}
+          contractorCount={contractors}
+          totalVisitedToday={totalVisitedToday}
+          employeesVisitedToday={visitedToday?.employees   ?? 0}
+          contractorsVisitedToday={visitedToday?.contractors ?? 0}
+          theme={theme}
+        />
+
+        <Row className="g-4">
+          <Col md={6} lg={4}>
+            <FloorOccupancyChart data={floorData} theme={theme} />
+          </Col>
+          <Col md={6} lg={4}>
+            <PersonnelDonutChart data={chartData} theme={theme} />
+          </Col>
+          {/* If you want zone summary: */}
+          {/* <Col md={12} lg={4}><SummaryChart summary={zoneSummaryData} theme={theme}/></Col> */}
+        </Row>
+      </Container>
+    </>
+  );
+}
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import {
+  Container, Row, Col,
+  Navbar, Nav, Button
+} from 'react-bootstrap';
+import { FaSun, FaMoon } from 'react-icons/fa';
+
+import FloorDetailsTable from '../components/FloorDetailsTable';
+
+export default function FloorDetailsPage({ floorData = [] }) {
+  const [theme, setTheme] = useState('dark');
+  useEffect(() => {
+    const saved = localStorage.getItem('denver-dashboard-theme');
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+  }, []);
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('denver-dashboard-theme', next);
+  };
+
+  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
+
+  return (
+    <>
+      <Navbar expand="lg" className={`px-4 ${bgClass}`}>
+        <Navbar.Brand className="fw-bold">
+          Denver Live Occupancy — Western Union
+        </Navbar.Brand>
+        <Nav className="me-auto">
+          <Nav.Link href="/" className={bgClass}>Dashboard</Nav.Link>
+          <Nav.Link href="/floors" className={bgClass}>Floor Details</Nav.Link>
+        </Nav>
+        <Button
+          variant={theme === 'dark' ? 'light' : 'dark'}
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <FaSun /> : <FaMoon />}
+        </Button>
+      </Navbar>
+
+      <Container fluid className={`${bgClass} py-4`}>
+        {floorData.length
+          ? <FloorDetailsTable data={floorData} theme={theme}/>
+          : <p className={`text-center mt-4 ${theme === 'dark' ? 'text-light' : 'text-dark'}`}>
+              No floor details available.
+            </p>
+        }
+      </Container>
+    </>
+  );
+}
+
+
+
+
+
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa';
+
+// Western Union palette
+const COLORS = {
+  gold:      '#FFD100',
+  green:     '#009E60',
+  charcoal:  '#58595B',
+  accent:    '#FFB800'
+};
+
+export default function SummaryCards({
+  totalVisitedToday, employeesVisitedToday, contractorsVisitedToday,
+  totalOccupancy, employeeCount, contractorCount,
+  theme
+}) {
+  const cards = [
+    { title: 'Total Headcount',        value: totalVisitedToday, icon: <FaUsers />,      color: COLORS.gold      },
+    { title: 'Employees Today',        value: employeesVisitedToday, icon: <FaUserTie />,  color: COLORS.green     },
+    { title: 'Contractors Today',      value: contractorsVisitedToday, icon: <FaHardHat />, color: COLORS.charcoal  },
+    { title: 'Active Headcount',       value: totalOccupancy,      icon: <FaUsers />,      color: COLORS.accent    },
+    { title: 'Active Employees',       value: employeeCount,       icon: <FaUserTie />,    color: COLORS.green     },
+    { title: 'Active Contractors',     value: contractorCount,     icon: <FaHardHat />,    color: COLORS.charcoal  }
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((c,i) => (
+        <Col key={i} xs={6} sm={4} md={4} lg={2} className="mb-3">
+          <Card
+            className="shadow-sm infographic-card"
+            style={{
+              borderTop: `4px solid ${c.color}`,
+              background: theme === 'dark' ? '#2b2b2b' : '#fff'
+            }}
+          >
+            <Card.Body className="text-center">
+              <div style={{ fontSize: '1.75rem', color: c.color }}>
+                {c.icon}
+              </div>
+              <Card.Title className={theme === 'dark' ? 'text-light' : 'text-dark'}>
+                {c.title}
+              </Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
+                {c.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+}
+
+
+
+
+
+
+
+import React from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis,
+  Tooltip, CartesianGrid, ResponsiveContainer,
+  Legend, defs, linearGradient, stop
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+export default function SummaryChart({ summary = [], theme }) {
+  return (
+    <Card
+      className="mb-4 infographic-card"
+      style={{ background: theme === 'dark' ? '#2b2b2b' : '#fff' }}
+    >
+      <Card.Header
+        style={{ background: '#FFD100', fontWeight: 'bold' }}
+      >
+        Zone Occupancy Overview
+      </Card.Header>
+      <Card.Body style={{ height: 300 }}>
+        <ResponsiveContainer>
+          <BarChart data={summary} margin={{ left: 0, right: 20, top: 20, bottom: 5 }}>
+            <defs>
+              <linearGradient id="zoneGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#009E60" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#009E60" stopOpacity={0.2}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke={ theme==='dark'? '#444' : '#ccc' }/>
+            <XAxis dataKey="zone" tick={{ fontSize: 12, fill: theme==='dark'? '#fff':'#333' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: theme==='dark'? '#fff':'#333' }} />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: theme==='dark'? '#333':'#fff',
+                border: `1px solid ${theme==='dark'? '#555':'#ccc'}`,
+                borderRadius: '4px'
+              }}
+            />
+            <Legend verticalAlign="bottom" style={{ color: theme==='dark'? '#fff':'#333' }}/>
+            <Bar
+              dataKey="count"
+              name="Occupancy"
+              fill="url(#zoneGrad)"
+              radius={[6,6,0,0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read each file carefully and make changes smothly and Give me updated js file carefully
 
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DashboardHome.jsx
