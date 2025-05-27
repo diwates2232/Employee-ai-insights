@@ -11,6 +11,214 @@ import FloorDetailsPage   from './pages/FloorDetailsPage';
 import './App.css';
 
 function App() {
+  const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
+
+  const toggleTheme = e => {
+    e.preventDefault();      // don’t let this click do anything but toggle
+    e.stopPropagation();
+    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+  };
+
+  // live SSE setup omitted for brevity...
+
+  return (
+    <BrowserRouter>
+      {/* Apply theme class to the top‐level wrapper */}
+      <div className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+        <Navbar
+          bg={theme}
+          variant={theme}
+          expand="lg"
+          className="px-4 navbar-infographic"
+        >
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Denver
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
+              Floor Details
+            </Nav.Link>
+            {/* theme toggle as its own Nav.Link (no 'to' prop) */}
+            <Nav.Link
+              href="#"
+              onClick={toggleTheme}
+              className="theme-toggle-icon"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <FaSun /> : <FaMoon />}
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  theme={theme}
+                  /* …other props… */
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={<FloorDetailsPage theme={theme} /* … */ />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+/* src/App.css */
+
+/* ——————————————————————————————————————————————  
+   Western Union Infographic Palette 
+   — define your chart+card colors here  
+—————————————————————————————————————————————— */
+:root {
+  --wu-yellow:       #FFC72C;
+  --wu-black:        #000000;
+  --wu-gray-dark:    #1a1a1a;
+  --wu-gray-light:   #f2f2f2;
+  /* a few accent variants… */
+  --wu-accent-1:     #ffe680;  
+  --wu-accent-2:     #ffdb4d;
+  --wu-accent-3:     #ffd11a;
+}
+
+/* 1) GLOBAL THEME SWAP — applies everywhere */
+.dark-theme {
+  background-color: var(--wu-black);
+  color: #fff;
+}
+.light-theme {
+  background-color: var(--wu-gray-light);
+  color: var(--wu-black);
+}
+
+/* 2) NAVBAR / NAV ITEMS */
+.navbar-infographic {
+  border-bottom: 3px solid var(--wu-yellow);
+}
+.wu-brand {
+  color: var(--wu-yellow) !important;
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+.nav-item-infographic {
+  position: relative;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  color: inherit !important;
+}
+.nav-item-infographic::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: var(--wu-yellow);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.nav-item-infographic:hover::after {
+  width: 80%;
+  left: 10%;
+}
+
+/* 3) THEME TOGGLE ICON */
+.theme-toggle-icon {
+  font-size: 1.2rem;
+  color: var(--wu-yellow) !important;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+/* 4) SUMMARY CARDS  
+   Assuming your cards use a `.summary-card` wrapper: */
+.dark-theme .summary-card {
+  background: var(--wu-black);
+  border: 2px solid var(--wu-yellow);
+  color: #fff;
+}
+.light-theme .summary-card {
+  background: #fff;
+  border: 2px solid var(--wu-yellow);
+  color: var(--wu-black);
+}
+/* add a little infographic accent on hover */
+.summary-card:hover {
+  box-shadow: 0 0 10px var(--wu-accent-3);
+}
+
+/* 5) CHART CONTAINERS  
+   Assuming you wrap charts in a `.chart-container` */
+.dark-theme .chart-container {
+  background: var(--wu-gray-dark);
+  padding: 1rem;
+  border-radius: 4px;
+}
+.light-theme .chart-container {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+/* ——————————————————————————————————————————————
+   USAGE IN YOUR CHART COMPONENT (example Chart.js):
+   
+   import { Chart } from 'react-chartjs-2';
+   const WU_PALETTE = [
+     'var(--wu-yellow)',
+     'var(--wu-accent-1)',
+     'var(--wu-accent-2)',
+     'var(--wu-accent-3)'
+   ];
+   const data = {
+     labels: [...],
+     datasets: [{
+       data: [...],
+       backgroundColor: WU_PALETTE,
+     }]
+   };
+—————————————————————————————————————————————— */
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaMoon, FaSun } from 'react-icons/fa';
+
+import DashboardHome      from './pages/DashboardHome';
+import FloorDetailsPage   from './pages/FloorDetailsPage';
+
+import './App.css';
+
+function App() {
   // theme: 'dark' or 'light'
   const [theme, setTheme] = useState('dark');
 
