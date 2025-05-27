@@ -1,3 +1,71 @@
+// src/pages/DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards         from '../components/SummaryCards';
+import FloorOccupancyChart  from '../components/FloorOccupancyChart';
+// import SummaryChart from '../components/SummaryChart';  // removed if not used
+import PersonnelDonutChart  from '../components/PersonnelDonutChart';
+import FloorInOutTable      from '../components/FloorInOutTable';  // ← NEW
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  personnelBreakdown,
+  floorInOutSummary      // ← NEW
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees   ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        {/* If you’re dropping the zone chart, comment this out: */}
+        {/* <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col> */}
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+
+      {/* NEW: Floor In/Out Swipe Summary Table */}
+      <FloorInOutTable data={floorInOutSummary} />
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DashboardHome.jsx
 
 read this file carefully and give me updated js file carefully dont change another logic 
