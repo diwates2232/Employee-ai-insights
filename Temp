@@ -1,3 +1,368 @@
+// src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Cell
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+const FLOOR_GRADIENTS = [
+  ['#333333', '#4a4a4a'],
+  ['#3b3b3b', '#5a5a5a'],
+  ['#2f2f2f', '#4f4f4f'],
+  ['#242424', '#3f3f3f'],
+  ['#1a1a1a', '#333333']
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body className="bg-dark text-warning">No floor detail data available.</Card>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.total - a.total);
+
+  const renderLabel = ({ x, y, width, value, index }) => {
+    const [dark] = FLOOR_GRADIENTS[index % FLOOR_GRADIENTS.length];
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 6}
+        fill={dark}
+        textAnchor="middle"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {value}
+      </text>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border-0" style={{ background: '#1a1a1a' }}>
+      <Card.Header className="bg-black text-warning text-center">
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sorted}
+            margin={{ top: 30, right: 30, left: 10, bottom: 40 }}
+            barCategoryGap="10%"
+          >
+            <defs>
+              {sorted.map((_, idx) => {
+                const [dark, light] = FLOOR_GRADIENTS[idx % FLOOR_GRADIENTS.length];
+                return (
+                  <linearGradient
+                    id={`floorGrad-${idx}`}
+                    key={idx}
+                    x1="0" y1="0" x2="0" y2="1"
+                  >
+                    <stop offset="0%" stopColor={dark} stopOpacity={1} />
+                    <stop offset="100%" stopColor={light} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+            <CartesianGrid stroke="#444" strokeDasharray="4 4" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{ value: 'Floor', position: 'bottom', offset: 20, fill: '#fff' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{ value: 'Occupancy', angle: -90, position: 'insideLeft', offset: 10, fill: '#fff' }}
+            />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Bar
+              dataKey="total"
+              name="Occupancy"
+              radius={[6, 6, 0, 0]}
+              label={renderLabel}
+            >
+              {sorted.map((_, idx) => (
+                <Cell
+                  key={idx}
+                  fill={`url(#floorGrad-${idx})`}
+                  stroke="#666"
+                  strokeWidth={0.8}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+// src/components/PersonnelDonutChart.jsx
+import React from 'react';
+import {
+  PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, Legend, Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Western Union palette
+const COLORS = ['#FFC72C', '#FFD666', '#FFE599', '#FFF2CC'];
+
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return <Card body className="bg-dark text-warning">No personnel data</Card>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+
+  return (
+    <Card className="mb-4 shadow-sm border-0" style={{ background: '#1a1a1a' }}>
+      <Card.Header className="bg-black text-warning text-center fw-bold">
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: '1rem' }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%" cy="50%"
+              innerRadius={70} outerRadius={110}
+              paddingAngle={4}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan fill="#fff">{`${name}: ${(percent * 100).toFixed(0)}%`}</tspan>
+              )}
+              stroke="#333"
+              strokeWidth={1.5}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell key={entry.personnelType} fill={COLORS[idx % COLORS.length]} />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+// src/components/PersonnelTypeBreakdownTable.jsx
+import React from 'react';
+import { Table, Badge } from 'react-bootstrap';
+
+export default function PersonnelTypeBreakdownTable({ data = [] }) {
+  if (!data.length) {
+    return <p style={{ color: '#fff' }}>No data available for personnel types.</p>;
+  }
+
+  // cycle through a few WU-style badges
+  const badgeColors = ['warning', 'success', 'info', 'secondary'];
+
+  return (
+    <Table
+      striped
+      bordered
+      hover
+      responsive
+      variant="dark"
+      className="mb-4"
+      style={{ borderColor: '#444' }}
+    >
+      <thead>
+        <tr>
+          <th>Personnel Type</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((entry, idx) => (
+          <tr key={idx}>
+            <td>
+              <Badge bg={badgeColors[idx % badgeColors.length]}>
+                {entry.type}
+              </Badge>
+            </td>
+            <td style={{ color: '#fff' }}>{entry.count}</td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+
+
+
+
+
+// src/components/SummaryCards.jsx
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa';
+
+export default function SummaryCards({
+  totalVisitedToday, employeesVisitedToday, contractorsVisitedToday,
+  totalOccupancy, employeeCount, contractorCount
+}) {
+  const cards = [
+    { title: 'Total Headcount',     value: totalVisitedToday,    icon: <FaUsers />,    color: '#FFC72C' },
+    { title: 'Employees Today',      value: employeesVisitedToday,icon: <FaUserTie />,  color: '#FFD666' },
+    { title: 'Contractors Today',    value: contractorsVisitedToday, icon: <FaHardHat />, color: '#FFE599' },
+    { title: 'Active Headcount',     value: totalOccupancy,       icon: <FaUsers />,    color: '#FFF2CC' },
+    { title: 'Active Employees',     value: employeeCount,        icon: <FaUserTie />,  color: '#FFD666' },
+    { title: 'Active Contractors',   value: contractorCount,      icon: <FaHardHat />,  color: '#FFE599' },
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((c, i) => (
+        <Col key={i} sm={6} md={4} lg={2} className="mb-3">
+          <Card
+            className="shadow-sm"
+            style={{
+              background: '#2f2f2f',
+              border: `2px solid ${c.color}`
+            }}
+          >
+            <Card.Body className="text-center">
+              <div style={{ color: c.color, fontSize: '1.5rem' }} className="mb-2">
+                {c.icon}
+              </div>
+              <Card.Title style={{ color: '#fff' }}>{c.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff' }}>
+                {c.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+}
+
+
+
+
+
+
+// src/components/SummaryChart.jsx
+import React from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis,
+  Tooltip, CartesianGrid, ResponsiveContainer,
+  Legend, defs, linearGradient, stop
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+export default function SummaryChart({ summary = [] }) {
+  return (
+    <Card
+      className="mb-4"
+      style={{ background: '#1a1a1a', border: 'none' }}
+    >
+      <Card.Header style={{ background: '#FFC72C', fontWeight: 'bold' }}>
+        Zone Occupancy Overview
+      </Card.Header>
+      <Card.Body style={{ height: 300 }}>
+        <ResponsiveContainer>
+          <BarChart
+            data={summary}
+            margin={{ left: 0, right: 20, top: 20, bottom: 5 }}
+          >
+            <defs>
+              <linearGradient id="zoneGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#009E60" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#009E60" stopOpacity={0.2}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke="#444" />
+            <XAxis
+              dataKey="zone"
+              tick={{ fontSize: 12, fill: '#fff' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: '#fff' }}
+            />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend wrapperStyle={{ color: '#fff' }} verticalAlign="bottom"/>
+            <Bar
+              dataKey="count"
+              name="Occupancy"
+              fill="url(#zoneGrad)"
+              radius={[6,6,0,0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* src/components/FloorDetailsTable.css */
 
 :root {
