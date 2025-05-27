@@ -13,6 +13,123 @@ import './App.css';
 function AppWrapper() {
   const location = useLocation();
   const [theme, setTheme] = useState('dark');
+  const isFloorPage = location.pathname === '/floor-details';
+  const appliedTheme = isFloorPage ? 'light' : theme;
+
+  // SSE & data-fetching omitted for brevity…
+
+  const toggleTheme = e => {
+    e.preventDefault();
+    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Styles for the 3 labels we want black
+  const labelBg = { backgroundColor: '#000' };
+
+  return (
+    <div className={`${appliedTheme}-theme`}>
+      <Navbar
+        bg={appliedTheme === 'dark' ? 'dark' : 'light'}
+        variant={appliedTheme === 'dark' ? 'dark' : 'light'}
+        expand="lg"
+        className="px-4 navbar-infographic"
+      >
+        <Navbar.Brand
+          as={Link}
+          to="/"
+          className="wu-brand"
+          style={labelBg}
+        >
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+
+        <Nav className="ms-auto align-items-center">
+          <Nav.Link as={Link} to="/" className="nav-item-infographic">
+            Dashboard
+          </Nav.Link>
+
+          <Nav.Link
+            as={Link}
+            to="/floor-details"
+            className="nav-item-infographic"
+            style={labelBg}
+          >
+            Floor Details
+          </Nav.Link>
+
+          <Nav.Link
+            href="#"
+            onClick={toggleTheme}
+            className="theme-toggle-icon"
+            title="Toggle dark/light theme"
+            style={labelBg}
+          >
+            {appliedTheme === 'dark' ? <FaSun /> : <FaMoon />}
+          </Nav.Link>
+        </Nav>
+      </Navbar>
+
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                /* …props… */
+                theme={appliedTheme}
+              />
+            }
+          />
+          <Route
+            path="/floor-details"
+            element={<FloorDetailsPage floorData={/*…*/} />}
+          />
+        </Routes>
+      </Container>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppWrapper />
+    </BrowserRouter>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { FaSun, FaMoon } from 'react-icons/fa';
+
+import DashboardHome    from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
+
+import './App.css';
+
+function AppWrapper() {
+  const location = useLocation();
+  const [theme, setTheme] = useState('dark');
 
   // Force light on the Floor Details route
   const isFloorPage = location.pathname === '/floor-details';
