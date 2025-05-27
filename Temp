@@ -1,3 +1,85 @@
+import React from 'react';
+import {
+  PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, Legend, Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Colorful palette (dark to light purples and pinks)
+const COLORS = ['#4B0082', '#800080', '#BA55D3', '#DDA0DD', '#E6CCE6', '#F3E5F5'];
+
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return <Card body className="bg-dark text-warning">No personnel data</Card>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+
+  return (
+    <Card className="mb-4 shadow-sm border-0" style={{ background: '#1a1a1a' }}>
+      <Card.Header
+        className="text-center fw-bold"
+        style={{ backgroundColor: '#4B0082', color: '#fff' }}
+      >
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: '1rem' }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%" cy="50%"
+              innerRadius={70} outerRadius={110}
+              paddingAngle={4}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan fill="#fff">{`${name}: ${(percent * 100).toFixed(0)}%`}</tspan>
+              )}
+              stroke="#333"
+              strokeWidth={1.5}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell key={entry.personnelType} fill={COLORS[idx % COLORS.length]} />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
 // src/components/PersonnelDonutChart.jsx
 
 import React from 'react';
