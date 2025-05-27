@@ -1,3 +1,44 @@
+import React from 'react';
+import { Table } from 'react-bootstrap';
+
+export default function FloorInOutTable({ data }) {
+  return (
+    <div className="mt-4">
+      <h5>Floor In/Out Summary</h5>
+      <Table striped bordered hover size="sm" variant="dark">
+        <thead>
+          <tr>
+            <th>Floor</th>
+            <th>In Swipes</th>
+            <th>Out Swipes</th>
+            <th>Inconsistency (In − Out)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(({ floor, inSwipes, outSwipes }) => (
+            <tr key={floor}>
+              <td>{floor}</td>
+              <td>{inSwipes}</td>
+              <td>{outSwipes}</td>
+              <td>{inSwipes - outSwipes}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
