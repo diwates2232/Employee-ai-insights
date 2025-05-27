@@ -1,189 +1,6 @@
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
 
-  // 1) Build current map and uniquePeople, evicting true "Out of office"
-  for (const evt of allEvents) {
-    const { EmployeeID, PersonGUID, ObjectName1, PersonnelType,
-            CardNumber, Dateonly, Swipe_Time, Direction, Door } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-    const zone     = mapDoorToZone(Door, Direction);
-
-    // True eviction for real "Out of office"
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      continue;
-    }
-
-    // Any other OutDirection → update their zone, keep them counted
-    if (Direction === 'OutDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = { Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType, zone,
-        door: Door, Direction
-      };
-      continue;
-    }
-
-    // InDirection → normal check‐in
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = { Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType, zone,
-        door: Door, Direction
-      };
-      continue;
-    }
-
-    // Fallback (shouldn’t occur) → evict
-    uniquePeople.delete(dedupKey);
-    delete current[dedupKey];
-  }
-
-  // 2) Build zoneDetails from `current`
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap)
-      // <- filter out real eviction zone here
-      .filter(([zone]) => zone !== 'Out of office')
-      .map(([zone, emps]) => {
-        const byType = emps.reduce((acc, e) => {
-          acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
-          return acc;
-        }, {});
-        return [ zone, { total: emps.length, byPersonnelType: byType, employees: emps } ];
-      })
-  );
-
-  // 3) Build floorBreakdown from zoneDetails
-  const floorMap = {};
-  for (const [zone, data] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[zone] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += data.total;
-    for (const [pt, c] of Object.entries(data.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
-    }
-  }
-
-  // 4) Live headcounts
-  let employeeCount   = 0;
-  let contractorCount = 0;
-  for (const pt of uniquePeople.values()) {
-    if (['Employee','Terminated Personnel'].includes(pt)) employeeCount++;
-    else contractorCount++;
-  }
-
-  // 5) Return, filtering out "Out of office" everywhere
-  return {
-    asOf: new Date().toISOString(),
-
-    // summary without "Out of office"
-    summary: Object.entries(zoneDetails)
-      .map(([zone, d]) => ({ zone, count: d.total })),
-
-    zoneBreakdown: Object.entries(zoneDetails)
-      .map(([zone, d]) => ({ zone, ...d.byPersonnelType, total: d.total })),
-
-    floorBreakdown: Object.entries(floorMap)
-      .map(([floor, d]) => ({ floor, ...d.byPersonnelType, total: d.total })),
-
-    details: zoneDetails,   // already has no "Out of office"
-
-    personnelSummary: { employees: employeeCount, contractors: contractorCount },
-    personnelBreakdown: [
-      { personnelType:'Employee',   count: employeeCount   },
-      { personnelType:'Contractor', count: contractorCount }
-    ]
-  };
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, PersonGUID,
-      ObjectName1, PersonnelType,
-      CardNumber, Dateonly,
-      Swipe_Time, Direction, Door
-    } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-    const zone     = mapDoorToZone(Door, Direction);
-
-    // 1) True "Out of office" → full eviction
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      continue;
-    }
-
-    // 2) Any other OutDirection (outer areas, reception exits, etc.)
-    if (Direction === 'OutDirection') {
-      // Update their latest zone/door but keep them counted
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType, zone,
-        door: Door,
-        Direction
-      };
-      continue;
-    }
-
-    // 3) InDirection → normal check-in
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType, zone,
-        door: Door,
-        Direction
-      };
-      continue;
-    }
-
-    // 4) Any other case (shouldn’t happen) → safe eviction
-    uniquePeople.delete(dedupKey);
-    delete current[dedupKey];
-  }
-
-  // … now build your headcounts, zoneDetails, floorBreakdown exactly as before …
-}
-
-
-
-
-
-
-
-
+Now let see i have update my file as per above code still out of offoce employee count is displyed .thats affect on office live Occupancy 
+Plase Check file line by line and give me updated js file carefully.
 
 
 // controllers/liveOccupancyController.js
@@ -195,8 +12,6 @@ const zoneFloorMap   = require('../data/zoneFloorMap');
 
 // track which door→zone keys we've already warned on
 const warnedKeys = new Set();
-
-
 
 
 /** Normalize the raw door + direction into your map’s key format */
@@ -222,12 +37,6 @@ function mapDoorToZone(rawDoor, rawDir) {
   // 1) explicit lookup
   let zone = doorZoneMap[key];
 
-  // if(rawDoor.match('APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR')){
-  //   console.log('*****************');
-  //      console.log(key);
-  //      console.log(zone);
-  //       console.log('####');
-  // }
 
   // 2) auto-extract for Pune doors
   if (!zone && String(rawDoor || '').toUpperCase().startsWith('APAC_IN_PUN_')) {
@@ -252,11 +61,6 @@ function mapDoorToZone(rawDoor, rawDir) {
       }
     }
   }
-  // if(rawDoor.match('APAC_IN_PUN_PODIUM_GREEN_RECEPTION ENTRY-DOOR')){
-  //   console.log('*****************');
-  //      console.log(zone);
-  //       console.log('####');
-  // }
 
   // 4) still no zone? warn & fallback
   if (!zone) {
@@ -343,7 +147,8 @@ async function fetchNewEvents(since) {
 }
 
 
-/** Build the live‐occupancy snapshot from allEvents */
+
+
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
@@ -359,40 +164,51 @@ async function buildOccupancy(allEvents) {
     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
     const zone     = mapDoorToZone(Door, Direction);
 
-
-
-
-
-    // “Out of office” actually evicts
+    // 1) True "Out of office" → full eviction
     if (Direction === 'OutDirection' && zone === 'Out of office') {
       uniquePeople.delete(dedupKey);
       delete current[dedupKey];
       continue;
     }
 
-    else if(Direction === 'OutDirection' && zone !=='Out of Office'){                   // check carefully this logic is correct or not if it is not correct give me updated logic
+    // 2) Any other OutDirection (outer areas, reception exits, etc.)
+    if (Direction === 'OutDirection' && zone !== 'Out of office') {
+      // Update their latest zone/door but keep them counted
       uniquePeople.set(dedupKey, PersonnelType);
-       current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone, door:Door,Direction };
-        } else {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-    
+      current[dedupKey] = {
+        Dateonly, Swipe_Time,
+        EmployeeID, ObjectName1, CardNumber,
+        PersonnelType, zone,
+        door: Door,
+        Direction
+      };
+      continue;
     }
 
-
-
+    // 3) InDirection → normal check-in
     if (Direction === 'InDirection') {
       uniquePeople.set(dedupKey, PersonnelType);
-
-      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone, door:Door,Direction };
-    } else {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
+      current[dedupKey] = {
+        Dateonly, Swipe_Time,
+        EmployeeID, ObjectName1, CardNumber,
+        PersonnelType, zone,
+        door: Door,
+        Direction
+      };
+      continue;
     }
+  
+
+    //4) Any other case (shouldn’t happen) → safe eviction
+    uniquePeople.delete(dedupKey);
+    delete current[dedupKey];
   }
 
 
-  // live headcounts
+
+
+
+ // live headcounts
   let employeeCount   = 0;
   let contractorCount = 0;
   for (const pt of uniquePeople.values()) {
@@ -400,31 +216,38 @@ async function buildOccupancy(allEvents) {
     else contractorCount++;
   }
 
-  // zone & floor aggregates
+
+
+ // 2) Build zoneDetails from `current`
   const zoneMap = {};
   for (const emp of Object.values(current)) {
     zoneMap[emp.zone] = zoneMap[emp.zone] || [];
     zoneMap[emp.zone].push(emp);
   }
   const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([z, emps]) => {
-      const byType = emps.reduce((acc, e) => {
-        acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
-        return acc;
-      }, {});
-      return [ z, { total: emps.length, byPersonnelType: byType, employees: emps } ];
-    })
+    Object.entries(zoneMap)
+      // <- filter out real eviction zone here
+      .filter(([zone]) => zone !== 'Out of office')
+      .map(([zone, emps]) => {
+        const byType = emps.reduce((acc, e) => {
+          acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
+          return acc;
+        }, {});
+        return [ zone, { total: emps.length, byPersonnelType: byType, employees: emps } ];
+      })
   );
 
+  // 3) Build floorBreakdown from zoneDetails
   const floorMap = {};
-  for (const [z,d] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[z] || 'Unknown Floor';
+  for (const [zone, data] of Object.entries(zoneDetails)) {
+    const floor = zoneFloorMap[zone] || 'Unknown Floor';
     floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += d.total;
-    for (const [pt,c] of Object.entries(d.byPersonnelType)) {
+    floorMap[floor].total += data.total;
+    for (const [pt, c] of Object.entries(data.byPersonnelType)) {
       floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
     }
   }
+
 
   return {
     asOf:             new Date().toISOString(),
