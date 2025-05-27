@@ -1,385 +1,92 @@
--import React, { useState, useEffect } from 'react';
-+import React, { useState, useEffect } from 'react';
- import {
-   Container, Row, Col,
-   Navbar, Nav, Button, Card
- } from 'react-bootstrap';
- import { FaSun, FaMoon } from 'react-icons/fa';
+Read below file carefully .add icons side of Floor deatails navbar to change theme dark to normal ,
+add icons as per theme make changes in colour,
+use infographic template and use Western inion theme to do this .
+Give me both Updated js file carefully.
 
- import SummaryCards from './components/SummaryCards';
- import FloorOccupancyChart from './components/FloorOccupancyChart';
- import PersonnelDonutChart from './components/PersonnelDonutChart';
+// src/App.j
 
--export default function DashboardHome({
-+export default function App({
-   personnelSummary,
-   totalVisitedToday,
-   visitedToday,
-   floorData,
-   personnelBreakdown
- }) {
--  const [theme, setTheme] = useState('dark');
--  useEffect(() => {
--    const saved = localStorage.getItem('denver-dashboard-theme');
--    if (saved === 'light' || saved === 'dark') setTheme(saved);
--  }, []);
--  const toggleTheme = () => {
--    const next = theme === 'dark' ? 'light' : 'dark';
--    setTheme(next);
--    localStorage.setItem('denver-dashboard-theme', next);
--  };
-+  // ── THEME TOGGLE STATE ──────────────────────────────────────────────────────
-+  const [theme, setTheme] = useState('dark');
-+  useEffect(() => {
-+    const saved = localStorage.getItem('denver-dashboard-theme');
-+    if (saved === 'light' || saved === 'dark') {
-+      setTheme(saved);
-+      document.body.className = `theme-${saved}`;
-+    }
-+  }, []);
-+  const toggleTheme = () => {
-+    const next = theme === 'dark' ? 'light' : 'dark';
-+    setTheme(next);
-+    localStorage.setItem('denver-dashboard-theme', next);
-+    document.body.className = `theme-${next}`;
-+  };
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
-   const employees      = personnelSummary?.employees   ?? 0;
-   const contractors    = personnelSummary?.contractors ?? 0;
-   const totalOccupancy = employees + contractors;
+import DashboardHome      from './pages/DashboardHome';
+import FloorDetailsPage   from './pages/FloorDetailsPage';
 
-   const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-     personnelType, count
-   }));
+import './App.css';
 
--  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
--  const panelBg = theme === 'dark' ? 'bg-secondary text-light' : 'bg-white text-dark';
-+  // pick Bootstrap utility classes based on theme
-+  const bgClass    = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
-+  const panelClass = theme === 'dark' ? 'bg-secondary text-light' : 'bg-white text-dark';
+function App() {
+  const [summaryData, setSummaryData]           = useState([]);
+  const [floorData, setFloorData]               = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
 
-   return (
-     <>
-       <Navbar expand="lg" className={`px-4 ${bgClass}`}>
-         <Navbar.Brand className="fw-bold">
-           Denver Live Occupancy — Western Union Denver
-         </Navbar.Brand>
-         <Nav className="me-auto">
-           <Nav.Link href="/" className={bgClass}>Dashboard</Nav.Link>
-           <Nav.Link href="/floors" className={bgClass}>Floor Details</Nav.Link>
-         </Nav>
--        <Button
--          variant={theme === 'dark' ? 'light' : 'dark'}
-+        <Button
-+          variant={theme === 'dark' ? 'light' : 'dark'}
-           onClick={toggleTheme}
-           aria-label="Toggle theme"
-         >
-           {theme === 'dark' ? <FaSun /> : <FaMoon />}
-         </Button>
-       </Navbar>
-
-       <Container fluid className={`${bgClass} py-4 min-vh-100`}>
-         {/* White panel behind summaries & charts */}
--        <Card className={`p-4 mb-4 ${panelBg} shadow-sm`}>
-+        <Card className={`p-4 mb-4 ${panelClass} shadow-sm`}>
-           <SummaryCards
-             totalOccupancy={totalOccupancy}
-             employeeCount={employees}
-             contractorCount={contractors}
-             totalVisitedToday={totalVisitedToday}
-             employeesVisitedToday={visitedToday?.employees   ?? 0}
-             contractorsVisitedToday={visitedToday?.contractors ?? 0}
--            theme={theme}
-           />
-
-           <Row className="g-4">
-             <Col md={6} lg={4}>
--              <FloorOccupancyChart data={floorData} theme={theme} />
-+              <FloorOccupancyChart data={floorData} theme={theme} />
-             </Col>
-             <Col md={6} lg={4}>
--              <PersonnelDonutChart data={chartData} theme={theme} />
-+              <PersonnelDonutChart data={chartData} theme={theme} />
-             </Col>
-           </Row>
-         </Card>
-       </Container>
-     </>
-   );
- }
-
-
-
-
-
-
-
-
- .App {
-   text-align: center;
- }
-
-+/* ── THEME BACKGROUNDS ─────────────────────────────────────────────────────── */
-+body.theme-dark {
-+  background-color: #121212;
-+  color: #e0e0e0;
-+}
-+body.theme-light {
-+  background-color: #f8f9fa;
-+  color: #212529;
-+}
-+
- .App-logo {
-   height: 40vmin;
-   pointer-events: none;
- }
-
-
-
-
-
-
-
-
-
-
-
-import React, { useState, useEffect } from 'react';
-import { 
-  BrowserRouter as Router,
-  Routes, Route, Link 
-} from 'react-router-dom';
-import {
-  Container, Navbar, Nav, Button
-} from 'react-bootstrap';
-import { FaSun, FaMoon } from 'react-icons/fa';
-
-import DashboardHome from './pages/DashboardHome';
-import FloorDetailsPage from './pages/FloorDetailsPage';
-
-export default function App() {
-  // theme state
-  const [theme, setTheme] = useState('dark');
   useEffect(() => {
-    const saved = localStorage.getItem('denver-dashboard-theme');
-    if (saved === 'light' || saved === 'dark') setTheme(saved);
-    else {
-      // default to dark
-      document.body.setAttribute('data-theme', 'dark');
-    }
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setFloorData(payload.floorBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
   }, []);
-  useEffect(() => {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('denver-dashboard-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
-  };
 
   return (
-    <Router>
-      <Navbar
-        expand="lg"
-        className="px-4 py-2"
-        bg={theme === 'dark' ? 'dark' : 'light'}
-        variant={theme === 'dark' ? 'dark' : 'light'}
-      >
-        <Navbar.Brand className="fw-bold">
+    <BrowserRouter>
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
           Live Occupancy — Western Union Denver
         </Navbar.Brand>
-        <Nav className="me-auto">
-          <Nav.Link as={Link} to="/">Dashboard</Nav.Link>
-          <Nav.Link as={Link} to="/floors">Floor Details</Nav.Link>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/"           style={{ color: '#fff' }}>Dashboard</Nav.Link>
+          <Nav.Link as={Link} to="/floor-details" style={{ color: '#fff' }}>Floor Details</Nav.Link>
         </Nav>
-        <Button
-          variant={theme === 'dark' ? 'light' : 'dark'}
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark' ? <FaSun /> : <FaMoon />}
-        </Button>
       </Navbar>
 
-      <Container fluid className="p-0">
+      <Container fluid className="mt-4">
         <Routes>
           <Route
             path="/"
-            element={<DashboardHome theme={theme} />}
+            element={
+              <DashboardHome
+                personnelSummary={personnelSummary}
+                totalVisitedToday={totalVisitedToday}
+                visitedToday={visitedToday}
+                floorData={floorData}
+                personnelBreakdown={personnelBreakdown}
+              />
+            }
           />
           <Route
-            path="/floors"
-            element={<FloorDetailsPage theme={theme} />}
+            path="/floor-details"
+            element={<FloorDetailsPage floorData={floorData} />}
           />
         </Routes>
       </Container>
-    </Router>
+    </BrowserRouter>
   );
 }
 
+export default App;
 
-
-
-
-
-
-/* global theme variables */
-body[data-theme="dark"] {
-  --bg-color: #121212;
-  --fg-color: #e0e0e0;
-  --panel-bg: #1e1e1e;
-  --accent: #FFD100;
-  --accent-dark: #009E60;
-}
-body[data-theme="light"] {
-  --bg-color: #f9f9f9;
-  --fg-color: #333;
-  --panel-bg: #fff;
-  --accent: #FFD100;
-  --accent-dark: #009E60;
-}
-
-/* apply to root */
-body {
-  background-color: var(--bg-color);
-  color: var(--fg-color);
-  transition: background 0.3s, color 0.3s;
-}
-
-/* summary card overrides */
-.infographic-card {
-  background-color: var(--panel-bg) !important;
-  border-color: var(--accent) !important;
-}
-.infographic-card .text-info   { color: var(--accent) !important; }
-.infographic-card .text-success{ color: var(--accent-dark) !important; }
-.infographic-card .text-warning{ color: var(--accent) !important; }
-
-/* chart panels */
-.chart-card {
-  background-color: var(--panel-bg) !important;
-  border: 1px solid var(--fg-color)!important;
-}
-
-/* Navbar override */
-.navbar {
-  background-color: var(--panel-bg) !important;
-}
-
-/* link colors */
-.nav-link, .navbar-brand {
-  color: var(--fg-color) !important;
-}
-
-/* when hovering links */
-.nav-link:hover {
-  color: var(--accent) !important;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.js
-
-
-import React, { useState, useEffect } from 'react';
-import {
-  Container, Row, Col,
-  Navbar, Nav, Button, Card
-} from 'react-bootstrap';
-import { FaSun, FaMoon } from 'react-icons/fa';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  visitedToday,
-  floorData,
-  personnelBreakdown
-}) {
-  const [theme, setTheme] = useState('dark');
-  useEffect(() => {
-    const saved = localStorage.getItem('denver-dashboard-theme');
-    if (saved === 'light' || saved === 'dark') setTheme(saved);
-  }, []);
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('denver-dashboard-theme', next);
-  };
-
-  const employees      = personnelSummary?.employees   ?? 0;
-  const contractors    = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType, count
-  }));
-
-  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
-  const panelBg = theme === 'dark' ? 'bg-secondary text-light' : 'bg-white text-dark';
-
-  return (
-    <>
-      <Navbar expand="lg" className={`px-4 ${bgClass}`}>
-        <Navbar.Brand className="fw-bold">
-          Denver Live Occupancy — Western Union Denver
-        </Navbar.Brand>
-        <Nav className="me-auto">
-          <Nav.Link href="/" className={bgClass}>Dashboard</Nav.Link>
-          <Nav.Link href="/floors" className={bgClass}>Floor Details</Nav.Link>
-        </Nav>
-        <Button
-          variant={theme === 'dark' ? 'light' : 'dark'}
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark' ? <FaSun /> : <FaMoon />}
-        </Button>
-      </Navbar>
-
-      <Container fluid className={`${bgClass} py-4 min-vh-100`}>
-        {/* White panel behind summaries & charts */}
-        <Card className={`p-4 mb-4 ${panelBg} shadow-sm`}>
-          <SummaryCards
-            totalOccupancy={totalOccupancy}
-            employeeCount={employees}
-            contractorCount={contractors}
-            totalVisitedToday={totalVisitedToday}
-            employeesVisitedToday={visitedToday?.employees   ?? 0}
-            contractorsVisitedToday={visitedToday?.contractors ?? 0}
-            theme={theme}
-          />
-
-          <Row className="g-4">
-            <Col md={6} lg={4}>
-              <FloorOccupancyChart data={floorData} theme={theme} />
-            </Col>
-            <Col md={6} lg={4}>
-              <PersonnelDonutChart data={chartData} theme={theme} />
-            </Col>
-          </Row>
-        </Card>
-      </Container>
-    </>
-  );
-}
 
 
 
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.css
+
 
 .App {
   text-align: center;
@@ -419,3 +126,5 @@ C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.css
     transform: rotate(360deg);
   }
 }
+
+
