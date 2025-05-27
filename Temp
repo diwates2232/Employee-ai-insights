@@ -1,104 +1,54 @@
-// src/components/FloorInOutTable.jsx
+// src/pages/DashboardHome.jsx
 
 import React from 'react';
-import { Card, Table } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
 
-// Accent palette (re-used from FloorOccupancyChart)
-const ROW_COLORS = [
-  '#FFC72C',
-  '#C9A9A6',
-  '#FFE680',
-  '#FFF5EE',
-  '#FFD11A',
-  '#96DED1',
-  '#FFEB99'
-];
+import SummaryCards         from '../components/SummaryCards';
+import FloorOccupancyChart  from '../components/FloorOccupancyChart';
+import PersonnelDonutChart  from '../components/PersonnelDonutChart';
+import FloorInOutTable      from '../components/FloorInOutTable';
 
-export default function FloorInOutTable({ data = [] }) {
-  // Compute inconsistency and sort descending
-  const sorted = data
-    .map(({ floor, inSwipes, outSwipes }) => ({
-      floor,
-      inSwipes,
-      outSwipes,
-      inconsistency: inSwipes - outSwipes
-    }))
-    .sort((a, b) => b.inconsistency - a.inconsistency);
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  personnelBreakdown,
+  floorInOutSummary
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
 
-  const top = sorted[0];
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
 
   return (
-    <Card
-      className="mb-4 shadow-sm"
-      style={{
-        background: '#1a1a1a',
-        border: '2px solid #FFC72C'
-      }}
-    >
-      <Card.Header
-        className="text-center fw-bold"
-        style={{ background: '#000', color: '#FFC72C' }}
-      >
-        Floor In/Out Swipe Summary
-      </Card.Header>
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
 
-      {/* Match other charts: fixed body height and auto-scroll */}
-      <Card.Body
-        style={{
-          height: 400,
-          padding: '1rem',
-          overflowY: 'auto'
-        }}
-      >
-        {top && (
-          <div
-            className="mb-3"
-            style={{ color: '#fff', fontSize: '1rem' }}
-          >
-            Highest inconsistency:&nbsp;
-            <span style={{ color: '#FFC72C', fontWeight: 'bold' }}>
-              {top.inconsistency}
-            </span>
-            &nbsp;on&nbsp;
-            <span style={{ color: '#FFC72C', fontWeight: 'bold' }}>
-              {top.floor}
-            </span>
-          </div>
-        )}
-
-        <Table striped bordered hover size="sm" variant="dark" className="mb-0">
-          <thead>
-            <tr>
-              <th>Floor</th>
-              <th>In Swipes</th>
-              <th>Out Swipes</th>
-              <th>Inconsistency (In &minus; Out)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row, idx) => (
-              <tr key={row.floor}>
-                <td style={{ color: '#fff' }}>{row.floor}</td>
-                <td style={{ color: ROW_COLORS[idx % ROW_COLORS.length] }}>
-                  {row.inSwipes}
-                </td>
-                <td style={{ color: ROW_COLORS[(idx + 1) % ROW_COLORS.length] }}>
-                  {row.outSwipes}
-                </td>
-                <td
-                  style={{
-                    color: ROW_COLORS[(idx + 2) % ROW_COLORS.length],
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {row.inconsistency}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card.Body>
-    </Card>
+      {/* Dashboard Charts + In/Out Table in one row */}
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+        <Col md={4}>
+          <FloorInOutTable data={floorInOutSummary} />
+        </Col>
+      </Row>
+    </Container>
   );
 }
 
@@ -108,101 +58,104 @@ export default function FloorInOutTable({ data = [] }) {
 
 
 
+C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.js
 
 
-// src/components/FloorInOutTable.jsx
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
 
+import DashboardHome    from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
 
-import React from 'react';
-import { Card, Table } from 'react-bootstrap';
+import './App.css';
 
-// Accent palette (re-used from FloorOccupancyChart)
-const ROW_COLORS = [
-  '#FFC72C',
-  '#C9A9A6',
-  '#FFE680',
-  '#FFF5EE',
-  '#FFD11A',
-  '#96DED1',
-  '#FFEB99'
-];
+export default function App() {
+  // live data states
+  const [summaryData, setSummaryData]               = useState([]);
+  const [floorData, setFloorData]                   = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [floorInOutSummary, setFloorInOutSummary]   = useState([]); // ← NEW
 
-export default function FloorInOutTable({ data = [] }) {
-  // Compute inconsistency and sort descending
-  const sorted = data
-    .map(({ floor, inSwipes, outSwipes }) => ({
-      floor,
-      inSwipes,
-      outSwipes,
-      inconsistency: inSwipes - outSwipes
-    }))
-    .sort((a, b) => b.inconsistency - a.inconsistency);
-
-  const top = sorted[0];
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = e => {
+      try {
+        const p = JSON.parse(e.data);
+        setSummaryData(p.summary || []);
+        setFloorData(p.floorBreakdown || []);
+        setPersonnelBreakdown(p.personnelBreakdown || []);
+        setTotalVisitedToday(p.totalVisitedToday || 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setFloorInOutSummary(p.floorInOutSummary || []); // ← NEW
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = err => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <Card
-      className="mb-4 shadow-sm"
-      style={{ background: '#1a1a1a', border: '2px solid #FFC72C' }}
-    >
-      <Card.Header
-        className="text-center fw-bold"
-        style={{ background: '#000', color: '#FFC72C' }}
-      >
-        Floor In/Out Swipe Summary
-      </Card.Header>
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4 navbar-infographic">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Denver
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
+              Floor Details
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun color="#FFC72C" />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
 
-      <Card.Body style={{ padding: '1rem' }}>
-        {top && (
-          <div
-            className="mb-3"
-            style={{ color: '#fff', fontSize: '1rem' }}
-          >
-            Highest inconsistency:&nbsp;
-            <span style={{ color: '#FFC72C', fontWeight: 'bold' }}>
-              {top.inconsistency}
-            </span>
-            &nbsp;on&nbsp;
-            <span style={{ color: '#FFC72C', fontWeight: 'bold' }}>
-              {top.floor}
-            </span>
-          </div>
-        )}
-
-        <Table striped bordered hover size="sm" variant="dark">
-          <thead>
-            <tr>
-              <th>Floor</th>
-              <th>In Swipes</th>
-              <th>Out Swipes</th>
-              <th>Inconsistency (In &minus; Out)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row, idx) => (
-              <tr key={row.floor}>
-                <td style={{ color: '#fff' }}>{row.floor}</td>
-                <td style={{ color: ROW_COLORS[idx % ROW_COLORS.length] }}>
-                  {row.inSwipes}
-                </td>
-                <td style={{ color: ROW_COLORS[(idx + 1) % ROW_COLORS.length] }}>
-                  {row.outSwipes}
-                </td>
-                <td
-                  style={{
-                    color: ROW_COLORS[(idx + 2) % ROW_COLORS.length],
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {row.inconsistency}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card.Body>
-    </Card>
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  personnelSummary={personnelSummary}
+                  totalVisitedToday={totalVisitedToday}
+                  visitedToday={visitedToday}
+                  floorData={floorData}
+                  personnelBreakdown={personnelBreakdown}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={
+                <FloorDetailsPage
+                  floorData={floorData}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
   );
 }
 
+
+
+in Footer display Western union logo Strickly Use Western union colours and mention about Global Secururity operation center and and in shorrtly explain Denver dashbord Details
 
