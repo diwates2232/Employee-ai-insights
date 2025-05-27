@@ -1,5 +1,122 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Navbar, Button } from 'react-bootstrap';
+-import SummaryCards from '../components/SummaryCards';
++import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+// add:
++import { FaSun, FaMoon } from 'react-icons/fa';
+
+export default function DashboardHome({...}) {
+  // theme logic unchanged
+  const [theme, setTheme] = useState('dark');
+  // ...
+
+  return (
+    <>
+      <Navbar expand="lg" className={bgClass}>
+        <Container fluid>
+          <Navbar.Brand className="me-auto">Denver Live Dashboard</Navbar.Brand>
+-         <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+-           {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+-         </Button>
++         <Button 
++           variant={theme === 'dark' ? 'light' : 'dark'} 
++           onClick={toggleTheme}
++           aria-label="Toggle theme"
++         >
++           {theme === 'dark' ? <FaSun /> : <FaMoon />}
++         </Button>
+        </Container>
+      </Navbar>
+      {/* ... */}
+    </>
+  );
+}
+
+
+
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Table, Navbar, Button } from 'react-bootstrap';
+-import FloorDetailsTable from '../components/FloorDetailsTable';
++import FloorDetailsTable from '../components/FloorDetailsTable';
++import { FaSun, FaMoon } from 'react-icons/fa';
+
+export default function FloorDetailsPage({ floorData = [] }) {
+  const [theme, setTheme] = useState('dark');
+  // ...
+
+  if (!floorData.length) {
+    return (
+      <Container fluid className={`${bgClass} py-4`}>
+        <Navbar className={bgClass}>
+          <Container fluid>
+            <Navbar.Brand>Floor Details</Navbar.Brand>
+-           <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+-             {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+-           </Button>
++           <Button 
++             variant={theme === 'dark' ? 'light' : 'dark'} 
++             onClick={toggleTheme}
++             aria-label="Toggle theme"
++           >
++             {theme === 'dark' ? <FaSun /> : <FaMoon />}
++           </Button>
+          </Container>
+        </Navbar>
+        <p className={`text-center mt-4 ${theme === 'dark' ? 'text-light' : 'text-dark'}`}>
+          No floor details available.
+        </p>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      <Navbar className={bgClass}>
+        <Container fluid>
+          <Navbar.Brand>Floor Details</Navbar.Brand>
+-         <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+-           {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+-         </Button>
++         <Button 
++           variant={theme === 'dark' ? 'light' : 'dark'} 
++           onClick={toggleTheme}
++           aria-label="Toggle theme"
++         >
++           {theme === 'dark' ? <FaSun /> : <FaMoon />}
++         </Button>
+        </Container>
+      </Navbar>
+
+      <Container fluid className={`${bgClass} py-4`}>
+        {/* ... existing floor cards ... */}
+      </Container>
+    </>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Navbar, Button } from 'react-bootstrap';
 
 import SummaryCards from '../components/SummaryCards';
 import FloorOccupancyChart from '../components/FloorOccupancyChart';
