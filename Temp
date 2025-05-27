@@ -1,3 +1,130 @@
+/* src/components/FloorDetailsTable.css */
+
+:root {
+  --wu-yellow:     #FFC72C;
+  --wu-black:      #000000;
+  --wu-gray-dark:  #1a1a1a;
+  --wu-gray-mid:   #2f2f2f;
+  --wu-gray-light: #444444;
+}
+
+.floor-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.floor-card {
+  flex: 1 1 300px;
+  background: var(--wu-gray-dark);
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.floor-header {
+  background: var(--wu-black);
+  color: var(--wu-yellow);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.floor-badge {
+  background: var(--wu-yellow);
+  color: var(--wu-black);
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-weight: bold;
+}
+
+.floor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--wu-gray-mid);
+}
+
+.floor-table th,
+.floor-table td {
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--wu-gray-light);
+  color: #fff;
+}
+
+.floor-table th {
+  background: var(--wu-black);
+  color: var(--wu-yellow);
+}
+
+
+
+
+
+
+// src/components/FloorDetailsTable.jsx
+import React from 'react';
+import './FloorDetailsTable.css';
+
+export default function FloorDetailsTable({ data = [] }) {
+  if (!Array.isArray(data) || data.length === 0 || !data[0].floor) {
+    return <p style={{ color: '#fff' }}>No floor detail data available.</p>;
+  }
+
+  return (
+    <div className="floor-cards">
+      {data.map(({ floor, total, occupants }) => (
+        <div key={floor} className="floor-card">
+          <div className="floor-header">
+            <h3>{floor}</h3>
+            <span className="floor-badge">{total}</span>
+          </div>
+          <table className="floor-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Swipe Time</th>
+                <th>Type</th>
+                <th>Door Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occupants.map((emp, i) => (
+                <tr key={`${emp.EmployeeID}-${i}`}>
+                  <td>{emp.ObjectName1}</td>
+                  <td>{emp.EmployeeID}</td>                 
+                  <td>{emp.Swipe_Time}</td>
+                  <td>{emp.PersonnelType}</td>
+                  <td>{emp.Door}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 As per requirnment adjust colours and give me Updated js files carefully.Dont make unneccessary changes in this file so make cghanges smothly
 
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorDetailsTable.css
