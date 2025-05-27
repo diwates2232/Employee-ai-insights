@@ -3,6 +3,87 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+import FloorInOutTable from '../components/FloorInOutTable';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  personnelBreakdown,
+  floorInOutSummary
+}) {
+  const employees = personnelSummary?.employees ?? 0;
+  const contractors = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      {/* Dashboard Charts + In/Out Table in one row */}
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+        <Col md={4}>
+          <FloorInOutTable data={floorInOutSummary} />
+        </Col>
+      </Row>
+
+      {/* Footer */}
+      <footer
+        style={{
+          backgroundColor: '#000',
+          color: '#FFC72C',
+          padding: '1rem 0',
+          textAlign: 'center',
+          marginTop: '2rem',
+          borderTop: '2px solid #FFC72C'
+        }}
+      >
+        <div style={{ fontSize: '0.95rem' }}>
+          Global Security Operations Center | Denver Dashboard<br />
+          Live office occupancy, floor-level swipes, and real-time personnel visibility.
+        </div>
+      </footer>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+// src/pages/DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
 import SummaryCards         from '../components/SummaryCards';
 import FloorOccupancyChart  from '../components/FloorOccupancyChart';
 import PersonnelDonutChart  from '../components/PersonnelDonutChart';
