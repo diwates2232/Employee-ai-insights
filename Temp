@@ -1,3 +1,217 @@
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaMoon, FaSun } from 'react-icons/fa';
+
+import DashboardHome      from './pages/DashboardHome';
+import FloorDetailsPage   from './pages/FloorDetailsPage';
+
+import './App.css';
+
+function App() {
+  // theme: 'dark' or 'light'
+  const [theme, setTheme] = useState('dark');
+
+  // live data states
+  const [summaryData, setSummaryData]           = useState([]);
+  const [floorData, setFloorData]               = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+
+  // SSE for live occupancy
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = e => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setFloorData(payload.floorBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = err => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
+
+  // toggle between dark/light themes
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  return (
+    <BrowserRouter>
+      <Navbar
+        bg={theme}
+        variant={theme}
+        expand="lg"
+        className={`px-4 navbar-${theme}`}
+      >
+        <Navbar.Brand as={Link} to="/" className="wu-brand">
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="ms-auto align-items-center">
+          <Nav.Link
+            as={Link}
+            to="/"
+            className={`nav-link-${theme}`}
+          >
+            Dashboard
+          </Nav.Link>
+          <Nav.Link
+            as={Link}
+            to="/floor-details"
+            className={`nav-link-${theme} d-flex align-items-center`}
+          >
+            Floor Details
+            <span
+              onClick={toggleTheme}
+              className="theme-toggle-icon ms-2"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <FaSun /> : <FaMoon />}
+            </span>
+          </Nav.Link>
+        </Nav>
+      </Navbar>
+
+      <div className={`app-container ${theme}-theme`}>
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  personnelSummary={personnelSummary}
+                  totalVisitedToday={totalVisitedToday}
+                  visitedToday={visitedToday}
+                  floorData={floorData}
+                  personnelBreakdown={personnelBreakdown}
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={<FloorDetailsPage floorData={floorData} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+/* src/App.css */
+
+/* Western Union theme colors */
+:root {
+  --wu-yellow: #FFC72C;
+  --wu-black:  #000000;
+}
+
+/* base */
+.app-container {
+  transition: background-color 0.3s ease;
+}
+
+/* dark theme */
+.dark-theme {
+  background-color: var(--wu-black);
+  color: #fff;
+}
+.navbar-dark {
+  border-bottom: 2px solid var(--wu-yellow);
+}
+.nav-link-dark {
+  color: #fff;
+}
+.nav-link-dark:hover {
+  color: var(--wu-yellow);
+}
+
+/* light (normal) theme */
+.light-theme {
+  background-color: #f8f9fa;
+  color: var(--wu-black);
+}
+.navbar-light {
+  background-color: #fff !important;
+  border-bottom: 2px solid var(--wu-yellow);
+}
+.nav-link-light {
+  color: var(--wu-black);
+}
+.nav-link-light:hover {
+  color: var(--wu-yellow);
+}
+
+/* Brand styling */
+.wu-brand {
+  color: var(--wu-yellow) !important;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+/* Theme toggle icon */
+.theme-toggle-icon {
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--wu-yellow);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Infographic touches */
+.nav-link {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  position: relative;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: var(--wu-yellow);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.nav-link:hover::after {
+  width: 80%;
+  left: 10%;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 Read below file carefully .add icons side of Floor deatails navbar to change theme dark to normal ,
 add icons as per theme make changes in colour,
 use infographic template and use Western inion theme to do this .
