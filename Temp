@@ -1,3 +1,146 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  BrowserRouter as Router,
+  Routes, Route, Link 
+} from 'react-router-dom';
+import {
+  Container, Navbar, Nav, Button
+} from 'react-bootstrap';
+import { FaSun, FaMoon } from 'react-icons/fa';
+
+import DashboardHome from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
+
+export default function App() {
+  // theme state
+  const [theme, setTheme] = useState('dark');
+  useEffect(() => {
+    const saved = localStorage.getItem('denver-dashboard-theme');
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+    else {
+      // default to dark
+      document.body.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('denver-dashboard-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+  };
+
+  return (
+    <Router>
+      <Navbar
+        expand="lg"
+        className="px-4 py-2"
+        bg={theme === 'dark' ? 'dark' : 'light'}
+        variant={theme === 'dark' ? 'dark' : 'light'}
+      >
+        <Navbar.Brand className="fw-bold">
+          Live Occupancy — Western Union Denver
+        </Navbar.Brand>
+        <Nav className="me-auto">
+          <Nav.Link as={Link} to="/">Dashboard</Nav.Link>
+          <Nav.Link as={Link} to="/floors">Floor Details</Nav.Link>
+        </Nav>
+        <Button
+          variant={theme === 'dark' ? 'light' : 'dark'}
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <FaSun /> : <FaMoon />}
+        </Button>
+      </Navbar>
+
+      <Container fluid className="p-0">
+        <Routes>
+          <Route
+            path="/"
+            element={<DashboardHome theme={theme} />}
+          />
+          <Route
+            path="/floors"
+            element={<FloorDetailsPage theme={theme} />}
+          />
+        </Routes>
+      </Container>
+    </Router>
+  );
+}
+
+
+
+
+
+
+
+/* global theme variables */
+body[data-theme="dark"] {
+  --bg-color: #121212;
+  --fg-color: #e0e0e0;
+  --panel-bg: #1e1e1e;
+  --accent: #FFD100;
+  --accent-dark: #009E60;
+}
+body[data-theme="light"] {
+  --bg-color: #f9f9f9;
+  --fg-color: #333;
+  --panel-bg: #fff;
+  --accent: #FFD100;
+  --accent-dark: #009E60;
+}
+
+/* apply to root */
+body {
+  background-color: var(--bg-color);
+  color: var(--fg-color);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* summary card overrides */
+.infographic-card {
+  background-color: var(--panel-bg) !important;
+  border-color: var(--accent) !important;
+}
+.infographic-card .text-info   { color: var(--accent) !important; }
+.infographic-card .text-success{ color: var(--accent-dark) !important; }
+.infographic-card .text-warning{ color: var(--accent) !important; }
+
+/* chart panels */
+.chart-card {
+  background-color: var(--panel-bg) !important;
+  border: 1px solid var(--fg-color)!important;
+}
+
+/* Navbar override */
+.navbar {
+  background-color: var(--panel-bg) !important;
+}
+
+/* link colors */
+.nav-link, .navbar-brand {
+  color: var(--fg-color) !important;
+}
+
+/* when hovering links */
+.nav-link:hover {
+  color: var(--accent) !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.js
 
 
