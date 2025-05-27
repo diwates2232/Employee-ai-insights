@@ -1,3 +1,201 @@
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Navbar, Button } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  personnelBreakdown
+}) {
+  // theme: 'dark' or 'light'
+  const [theme, setTheme] = useState('dark');
+
+  // persist theme preference
+  useEffect(() => {
+    const saved = localStorage.getItem('denver-dashboard-theme');
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('denver-dashboard-theme', next);
+  };
+
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  // dynamic classes
+  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
+
+  return (
+    <>
+      <Navbar expand="lg" className={bgClass}>
+        <Container fluid>
+          <Navbar.Brand className="me-auto">Denver Live Dashboard</Navbar.Brand>
+          <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+            {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+          </Button>
+        </Container>
+      </Navbar>
+
+      <Container fluid className={`${bgClass} py-4 min-vh-100`}>
+        <SummaryCards
+          totalOccupancy={totalOccupancy}
+          employeeCount={employees}
+          contractorCount={contractors}
+          totalVisitedToday={totalVisitedToday}
+          employeesVisitedToday={visitedToday?.employees   ?? 0}
+          contractorsVisitedToday={visitedToday?.contractors ?? 0}
+          theme={theme}
+        />
+
+        <Row className="g-4">
+          <Col md={4}>
+            <FloorOccupancyChart data={floorData} theme={theme} />
+          </Col>
+          <Col md={4}>
+            <PersonnelDonutChart data={chartData} theme={theme} />
+          </Col>
+        </Row>
+      </Container>
+    </>
+  );
+}
+
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Table, Navbar, Button } from 'react-bootstrap';
+import FloorDetailsTable from '../components/FloorDetailsTable';
+
+export default function FloorDetailsPage({ floorData = [] }) {
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('denver-dashboard-theme');
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('denver-dashboard-theme', next);
+  };
+
+  const bgClass = theme === 'dark' ? 'bg-dark text-light' : 'bg-light text-dark';
+
+  if (!floorData.length) {
+    return (
+      <Container fluid className={`${bgClass} py-4`}>
+        <Navbar className={bgClass}>
+          <Container fluid>
+            <Navbar.Brand>Floor Details</Navbar.Brand>
+            <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+              {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+            </Button>
+          </Container>
+        </Navbar>
+        <p className={`text-center mt-4 ${theme === 'dark' ? 'text-light' : 'text-dark'}`}>
+          No floor details available.
+        </p>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      <Navbar className={bgClass}>
+        <Container fluid>
+          <Navbar.Brand>Floor Details</Navbar.Brand>
+          <Button variant={theme === 'dark' ? 'light' : 'dark'} onClick={toggleTheme}>
+            {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+          </Button>
+        </Container>
+      </Navbar>
+
+      <Container fluid className={`${bgClass} py-4`}>
+        <Row xs={1} md={2} lg={3} className="g-4">
+          {floorData.map(({ floor, total, occupants }) => (
+            <Col key={floor}>
+              <Card border="primary" className={`${bgClass} h-100`}>
+                <Card.Header>
+                  <strong className={theme === 'dark' ? 'text-light' : 'text-dark'}>
+                    {floor}
+                  </strong>{' '}
+                  — Total: {total}
+                </Card.Header>
+                <Card.Body style={{ overflowY: 'auto', maxHeight: 300 }}>
+                  <Table
+                    striped
+                    bordered
+                    hover
+                    size="sm"
+                    className={`${theme === 'dark' ? 'table-dark' : ''} mb-0`}
+                  >
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Swipe Time</th>
+                        <th>Type</th>
+                        <th>Door Name</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {occupants.map((emp, idx) => (
+                        <tr key={`${emp.EmployeeID}-${idx}`}>
+                          <td>{emp.ObjectName1}</td>
+                          <td>{emp.Swipe_Time}</td>
+                          <td>{emp.PersonnelType}</td>
+                          <td>{emp.Door}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Container>
+    </>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read Both file carefully use infofeaphic theme for this/
 add navigation button to change theme , add dark theme and Normal theme .
 First update this and give me updated js file . and by default use dark theme 
