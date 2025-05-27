@@ -1,58 +1,116 @@
-// src/pages/DashboardHome.jsx
+// src/components/FloorOccupancyChart.jsx
 
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Cell, Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
 
-import SummaryCards         from '../components/SummaryCards';
-import FloorOccupancyChart  from '../components/FloorOccupancyChart';
-// import SummaryChart from '../components/SummaryChart';  // removed if not used
-import PersonnelDonutChart  from '../components/PersonnelDonutChart';
-import FloorInOutTable      from '../components/FloorInOutTable';  // ← NEW
+// Western Union accent palette for bars
+const BAR_COLORS = [
+  '#FFC72C','#C9A9A6', '#FFE680','#FFF5EE', '#FFD11A', '#96DED1','#FFEB99',
+  '#FFC72C', '#FFE680', '#FFD11A', '#FFEB99',
+  '#FFC72C', '#FFE680'
+];
 
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  visitedToday,
-  floorData,
-  personnelBreakdown,
-  floorInOutSummary      // ← NEW
-}) {
-  const employees      = personnelSummary?.employees   ?? 0;
-  const contractors    = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-warning">
+        No floor detail data available.
+      </Card>
+    );
+  }
 
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
+  const sorted = [...data].sort((a, b) => b.total - a.total);
+
+  const legendPayload = sorted.map((f, idx) => ({
+    value: f.floor,
+    type: 'square',
+    id: idx,
+    color: BAR_COLORS[idx % BAR_COLORS.length]
   }));
 
+  const renderLabel = ({ x, y, width, value }) => (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      fill="#fff"
+      textAnchor="middle"
+      fontSize={12}
+      fontWeight="bold"
+    >
+      {value}
+    </text>
+  );
+
   return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        {/* If you’re dropping the zone chart, comment this out: */}
-        {/* <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col> */}
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-
-      {/* NEW: Floor In/Out Swipe Summary Table */}
-      <FloorInOutTable data={floorInOutSummary} />
-    </Container>
+    <Card
+      className="mb-4 shadow-sm"
+      style={{ background: '#1a1a1a', border: '2px solid #FFC72C' }}
+    >
+      <Card.Header
+        className="text-center"
+        style={{ background: '#000', color: '#FFC72C' }}
+      >
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sorted}
+            margin={{ top: 50, right: 30, left: 10, bottom: 40 }}
+            barCategoryGap="10%"
+          >
+            <CartesianGrid stroke="#444" strokeDasharray="4 4" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{ value: 'Floor', position: 'bottom', offset: 20, fill: '#fff' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{
+                value: 'Occupancy',
+                angle: -90,
+                position: 'insideLeft',
+                offset: 10,
+                fill: '#fff'
+              }}
+            />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              payload={legendPayload}
+              wrapperStyle={{ paddingBottom: 10, color: '#fff' }}
+            />
+            <Bar
+              dataKey="total"
+              name="Occupancy"
+              radius={[6, 6, 0, 0]}
+              label={renderLabel}
+            >
+              {sorted.map((_, idx) => (
+                <Cell
+                  key={idx}
+                  fill={BAR_COLORS[idx % BAR_COLORS.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
   );
 }
 
@@ -63,64 +121,131 @@ export default function DashboardHome({
 
 
 
+// src/components/PersonnelDonutChart.jsx
 
-
-
-C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DashboardHome.jsx
-
-read this file carefully and give me updated js file carefully dont change another logic 
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import {
+  PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, Legend, Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-// import SummaryChart from '../components/SummaryChart';  // removed if not used
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-import FloorDetailsTable from '../components/FloorDetailsTable'; // if you want details here
+// Western Union accent palette
+const SLICE_COLORS = [
+  '#FFC72C', // yellow
+  '#228B22',
+  '#FFE680', // light yellow
+  '#FFD11A', // gold
+  '#FFEB99'  // pale gold
+];
 
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,
-  visitedToday,
-  floorData,
-  // zoneSummaryData,    // no longer used
-  personnelBreakdown
-}) {
-  const employees      = personnelSummary?.employees   ?? 0;
-  const contractors    = personnelSummary?.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return (
+      <Card body className="bg-dark text-warning">
+        No personnel data
+      </Card>
+    );
+  }
 
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
+  const sorted = [...data].sort((a, b) => b.count - a.count);
 
   return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        {/* If you’re dropping the zone chart, comment this out: */}
-        {/* <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col> */}
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-
-      {/* If you want a detailed table by floor: */}
-      {/* <FloorDetailsTable data={floorData} /> */}
-    </Container>
+    <Card
+      className="mb-4 shadow-sm"
+      style={{ background: '#1a1a1a', border: '2px solid #FFC72C' }}
+    >
+      <Card.Header
+        className="text-center fw-bold"
+        style={{ background: '#000', color: '#FFC72C' }}
+      >
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: '1rem' }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%" cy="50%"
+              innerRadius={70} outerRadius={110}
+              paddingAngle={4}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan fill="#fff">{`${name}: ${(percent * 100).toFixed(0)}%`}</tspan>
+              )}
+              stroke="#333"
+              strokeWidth={1.5}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={entry.personnelType}
+                  fill={SLICE_COLORS[idx % SLICE_COLORS.length]}
+                />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
   );
 }
+
+
+
+Read all Above deatails Information line by line and Give me updated C:\Users\W0024618\Desktop\swipeData\client-denver\src\components\FloorInOutTable.jsx
+this file carefully.
+also in this file display on top high number of inconsistent data,
+Fill Multiple colours for this 
+
+import React from 'react';
+import { Table } from 'react-bootstrap';
+
+export default function FloorInOutTable({ data }) {
+  return (
+    <div className="mt-4">
+      <h5>Floor In/Out Summary</h5>
+      <Table striped bordered hover size="sm" variant="dark">
+        <thead>
+          <tr>
+            <th>Floor</th>
+            <th>In Swipes</th>
+            <th>Out Swipes</th>
+            <th>Inconsistency (In − Out)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(({ floor, inSwipes, outSwipes }) => (
+            <tr key={floor}>
+              <td>{floor}</td>
+              <td>{inSwipes}</td>
+              <td>{outSwipes}</td>
+              <td>{inSwipes - outSwipes}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
+  );
+}
+
+
