@@ -1,3 +1,184 @@
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Cell, Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+const COLORS = [
+  '#FFC72C', // Floor 1
+  '#FFD666', // Floor 2
+  '#FFE599', // Floor 3
+  '#FFF2CC', // Floor 4
+  '#FFB800', // Floor 5
+  '#CCA300', // Floor 6
+  '#996600', // Floor 7
+  '#663300', // Floor 8
+  '#FF9900', // Floor 9
+  '#CC7A00'  // Floor 10
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-warning">
+        No floor detail data available.
+      </Card>
+    );
+  }
+
+  // sort descending
+  const sorted = [...data].sort((a, b) => b.total - a.total);
+
+  // build legend payload: one entry per floor
+  const legendPayload = sorted.map((f, idx) => ({
+    value: f.floor,
+    type: 'square',
+    id: idx,
+    color: COLORS[idx % COLORS.length]
+  }));
+
+  // label above each bar
+  const renderLabel = ({ x, y, width, value }) => (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      fill="#fff"
+      textAnchor="middle"
+      fontSize={12}
+      fontWeight="bold"
+    >
+      {value}
+    </text>
+  );
+
+  return (
+    <Card className="mb-4 shadow-sm border-0" style={{ background: '#1a1a1a' }}>
+      <Card.Header className="bg-black text-warning text-center">
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sorted}
+            margin={{ top: 50, right: 30, left: 10, bottom: 40 }}
+            barCategoryGap="10%"
+          >
+            <CartesianGrid stroke="#444" strokeDasharray="4 4" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{ value: 'Floor', position: 'bottom', offset: 20, fill: '#fff' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{
+                value: 'Occupancy',
+                angle: -90,
+                position: 'insideLeft',
+                offset: 10,
+                fill: '#fff'
+              }}
+            />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              payload={legendPayload}
+              wrapperStyle={{ paddingBottom: 10 }}
+            />
+            <Bar
+              dataKey="total"
+              name="Occupancy"
+              radius={[6, 6, 0, 0]}
+              label={renderLabel}
+            >
+              {sorted.map((_, idx) => (
+                <Cell
+                  key={idx}
+                  fill={COLORS[idx % COLORS.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+// src/components/SummaryCards.jsx
+
+import React from 'react';
+import { Card, Row, Col } from 'react-bootstrap';
+import { FaUsers, FaUserTie, FaHardHat } from 'react-icons/fa';
+
+export default function SummaryCards({
+  totalVisitedToday, employeesVisitedToday, contractorsVisitedToday,
+  totalOccupancy, employeeCount, contractorCount
+}) {
+  const cards = [
+    { title: 'Total Headcount',     value: totalVisitedToday,    icon: <FaUsers />,    color: '#FFC72C' },
+    { title: 'Employees Today',      value: employeesVisitedToday,icon: <FaUserTie />,  color: '#FFD666' },
+    { title: 'Contractors Today',    value: contractorsVisitedToday, icon: <FaHardHat />, color: '#FFE599' },
+    { title: 'Active Headcount',     value: totalOccupancy,       icon: <FaUsers />,    color: '#FFF2CC' },
+    { title: 'Active Employees',     value: employeeCount,        icon: <FaUserTie />,  color: '#FFD666' },
+    { title: 'Active Contractors',   value: contractorCount,      icon: <FaHardHat />,  color: '#FFE599' },
+  ];
+
+  return (
+    <Row className="mb-4">
+      {cards.map((c, i) => (
+        <Col key={i} sm={6} md={4} lg={2} className="mb-3">
+          <Card
+            className="shadow-sm"
+            style={{
+              background: '#2f2f2f',
+              border: `2px solid ${c.color}`,
+              borderRadius: '8px'
+            }}
+          >
+            <Card.Body className="text-center">
+              <div style={{ color: c.color, fontSize: '1.5rem' }} className="mb-2">
+                {c.icon}
+              </div>
+              <Card.Title style={{ color: '#fff' }}>{c.title}</Card.Title>
+              <Card.Text style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff' }}>
+                {c.value}
+              </Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
 So make Changes as per request and give me updated js file carefully
 
 // src/components/FloorOccupancyChart.jsx
