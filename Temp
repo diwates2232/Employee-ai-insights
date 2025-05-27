@@ -1,3 +1,248 @@
+// src/components/PersonnelDonutChart.jsx
+
+import React from 'react';
+import {
+  PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, Legend, Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Dark → faint palette for slices
+const COLORS = [
+  '#2E004F', // deep purple
+  '#5C007F',
+  '#8A00AF',
+  '#B800DF',
+  '#D958FF',
+  '#EEAAFF'
+];
+
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return (
+      <Card body className="bg-dark text-warning">
+        No personnel data
+      </Card>
+    );
+  }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+
+  return (
+    <Card
+      className="mb-4 shadow-sm"
+      style={{
+        background: '#1a1a1a',
+        border: `2px solid ${COLORS[0]}`
+      }}
+    >
+      <Card.Header
+        className="text-center fw-bold"
+        style={{ background: '#2E004F', color: '#fff' }}
+      >
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: '1rem' }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%" cy="50%"
+              innerRadius={70} outerRadius={110}
+              paddingAngle={4}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan fill="#fff">{`${name}: ${(percent * 100).toFixed(0)}%`}</tspan>
+              )}
+              stroke="#333"
+              strokeWidth={1.5}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={entry.personnelType}
+                  fill={COLORS[idx % COLORS.length]}
+                />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Cell, Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Dark→faint palette (10 colours)
+const COLORS = [
+  ['#001f3f', '#3b6ea5'],  // navy
+  ['#004d40', '#5ca08b'],  // teal
+  ['#3e2723', '#7a5a52'],  // brown
+  ['#4a148c', '#8462b9'],  // purple
+  ['#b71c1c', '#e57373'],  // red
+  ['#bf360c', '#e59866'],  // deep orange
+  ['#ff6f00', '#ffbb57'],  // amber
+  ['#33691e', '#78a048'],  // dark green
+  ['#01579b', '#6fb1d7'],  // dark blue
+  ['#263238', '#6b7b8c']   // blue grey
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-warning">
+        No floor detail data available.
+      </Card>
+    );
+  }
+
+  const sorted = [...data].sort((a, b) => b.total - a.total);
+
+  const legendPayload = sorted.map((f, idx) => ({
+    value: f.floor,
+    type: 'square',
+    id: idx,
+    color: COLORS[idx % COLORS.length][0]
+  }));
+
+  const renderLabel = ({ x, y, width, value }) => (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      fill="#fff"
+      textAnchor="middle"
+      fontSize={12}
+      fontWeight="bold"
+    >
+      {value}
+    </text>
+  );
+
+  return (
+    <Card
+      className="mb-4 shadow-sm"
+      style={{
+        background: '#1a1a1a',
+        border: `2px solid ${COLORS[0][0]}`
+      }}
+    >
+      <Card.Header className="text-center" style={{ background: '#001f3f', color: '#fff' }}>
+        Floor-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sorted}
+            margin={{ top: 50, right: 30, left: 10, bottom: 40 }}
+            barCategoryGap="10%"
+          >
+            <CartesianGrid stroke="#444" strokeDasharray="4 4" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{ value: 'Floor', position: 'bottom', offset: 20, fill: '#fff' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: '#fff' }}
+              label={{
+                value: 'Occupancy',
+                angle: -90,
+                position: 'insideLeft',
+                offset: 10,
+                fill: '#fff'
+              }}
+            />
+            <Tooltip
+              wrapperStyle={{
+                backgroundColor: '#2f2f2f',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                color: '#fff'
+              }}
+            />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              payload={legendPayload}
+              wrapperStyle={{ paddingBottom: 10, color: '#fff' }}
+            />
+            <Bar
+              dataKey="total"
+              name="Occupancy"
+              radius={[6, 6, 0, 0]}
+              label={renderLabel}
+            >
+              {sorted.map((_, idx) => {
+                const [dark, light] = COLORS[idx % COLORS.length];
+                return (
+                  <Cell
+                    key={idx}
+                    fill={dark}
+                    fillOpacity={1}
+                  />
+                );
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Same for this file make changes in both file . add border for each chart give me both updated files carefdully so i can easily swap this file
 use multiple Colours Which is Attractive.
 
