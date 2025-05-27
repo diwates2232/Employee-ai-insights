@@ -1,2 +1,160 @@
+// src/App.js
 
-data: {"asOf":"2025-05-27T12:08:25.976Z","currentCount":38,"floorBreakdown":[{"floor":"Floor 06","total":1,"occupants":[{"LocaleMessageTime":"2025-05-27T04:34:36.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:34:36","EmployeeID":"W0026151","PersonGUID":"5EC24130-835B-4D6F-8CFC-E9C2B1993F4B","ObjectName1":"Dean, Taje","PersonnelType":"Contractor","CardNumber":"617976","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. Fitness Center East_11:01:02"}]},{"floor":"Floor 09","total":15,"occupants":[{"LocaleMessageTime":"2025-05-27T04:17:22.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:17:22","EmployeeID":"305776","PersonGUID":"52B69EA4-1DD6-44A4-972A-EA2F87D2858E","ObjectName1":"D'Nicuola, Jeff","PersonnelType":"Employee","CardNumber":"232397","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T04:29:29.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:29:29","EmployeeID":"301969","PersonGUID":"93311BFA-4087-4AA6-89C1-17BC44519CED","ObjectName1":"Khuu, May","PersonnelType":"Employee","CardNumber":"232358","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T04:49:10.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:49:10","EmployeeID":"248939","PersonGUID":"26EE614B-8819-4306-99DA-2E25730C894D","ObjectName1":"Wyant, Cammy J","PersonnelType":"Employee","CardNumber":"233020","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T04:53:38.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:53:38","EmployeeID":"74480","PersonGUID":"04BEC3F6-0BB7-4BD1-940E-012D6A8BE14A","ObjectName1":"Schloeman, William","PersonnelType":"Employee","CardNumber":"608728","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:30:59.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:30:59","EmployeeID":"305419","PersonGUID":"AA9DF454-4C00-47E1-9DA2-8A54CDD40A1E","ObjectName1":"Piper, Monica","PersonnelType":"Employee","CardNumber":"232648","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:33:56.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:33:56","EmployeeID":"241754","PersonGUID":"353E34D8-54EA-431E-9571-1A8976708C6E","ObjectName1":"Weeks, Michael B","PersonnelType":"Employee","CardNumber":"233041","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:36:24.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:36:24","EmployeeID":"235929","PersonGUID":"8DF3B053-E938-45CE-916A-BE6D0CCF487C","ObjectName1":"O'Brien, Sean","PersonnelType":"Employee","CardNumber":"231424","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:41:23.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:41:23","EmployeeID":"304063","PersonGUID":"14BCACEF-F1A0-4FF4-AB07-C99957582F5F","ObjectName1":"Arellano, Adam Jose","PersonnelType":"Employee","CardNumber":"232642","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:55:27.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:55:27","EmployeeID":"304061","PersonGUID":"B851D00C-3BF7-4BB5-B30A-53527FF1929A","ObjectName1":"Flores, Tatiana","PersonnelType":"Employee","CardNumber":"232737","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:56:07.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:56:07","EmployeeID":"77953","PersonGUID":"65598C97-4BA5-4A19-AEA1-75F33D956E0D","ObjectName1":"Porter, Mark","PersonnelType":"Employee","CardNumber":"232252","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:58:12.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:58:12","EmployeeID":"303447","PersonGUID":"E0E22D2B-94E6-415B-8105-A7DBDACD5A9D","ObjectName1":"Draper, Stephanie L","PersonnelType":"Employee","CardNumber":"232601","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:05:44.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:05:44","EmployeeID":"304012","PersonGUID":"037A44C7-8C42-4706-933A-6B2783A8FDAA","ObjectName1":"Korf, Adam","PersonnelType":"Employee","CardNumber":"233005","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Stairwell-IN"},{"LocaleMessageTime":"2025-05-27T06:07:36.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:07:36","EmployeeID":"309977","PersonGUID":"45B42A87-9290-4FE4-92CA-1F03A07AACA2","ObjectName1":"Montoya, Gloria Esthela","PersonnelType":"Employee","CardNumber":"232745","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:07:47.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:07:47","EmployeeID":"318565","PersonGUID":"0E2C4159-5E2D-427A-AC20-8A2DA3B4015C","ObjectName1":"Stair, Wendy","PersonnelType":"Employee","CardNumber":"613314","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:07:48.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:07:48","EmployeeID":"302286","PersonGUID":"346CF98F-7FE3-41B7-8F84-9F1413112E7F","ObjectName1":"Nelson, Brent","PersonnelType":"Employee","CardNumber":"232230","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"}]},{"floor":"Floor 11","total":9,"occupants":[{"LocaleMessageTime":"2025-05-27T04:47:12.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:47:12","EmployeeID":"319779","PersonGUID":"031037CA-9C9C-4A85-B8BB-5FF3F418D0F7","ObjectName1":"Lewis, David Wayne","PersonnelType":"Employee","CardNumber":"613494","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:15:31.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:15:31","EmployeeID":"244571","PersonGUID":"7FD2CFAA-857B-4233-8A01-A555DDCD52BD","ObjectName1":"Kessel, Lynn","PersonnelType":"Employee","CardNumber":"231185","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:25:20.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:25:20","EmployeeID":"140217","PersonGUID":"312D55E5-5194-4153-BA20-7CE81155B835","ObjectName1":"Splatt, Gordon","PersonnelType":"Employee","CardNumber":"232580","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:32:52.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:32:52","EmployeeID":"301804","PersonGUID":"E224334F-BF39-4245-B90C-95B27F33F4D3","ObjectName1":"Romo, Abraham","PersonnelType":"Employee","CardNumber":"232430","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:00:24.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:00:24","EmployeeID":"238543","PersonGUID":"672F28DF-58D0-4155-A4E6-1CDD37979BCA","ObjectName1":"Barnett Miller, Enrique Alberto","PersonnelType":"Employee","CardNumber":"613882","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:00:24.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:00:24","EmployeeID":"134153","PersonGUID":"E17C8918-4A15-42A1-81F5-6559AA9D902B","ObjectName1":"Young, John","PersonnelType":"Employee","CardNumber":"231258","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:03:15.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:03:15","EmployeeID":"319892","PersonGUID":"6CBA3A1E-41BC-4741-879A-894A678FAAFD","ObjectName1":"Smith, Chris","PersonnelType":"Employee","CardNumber":"603092","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:03:19.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:03:19","EmployeeID":"312510","PersonGUID":"319FB82F-4382-4CA4-A217-798265A27ABF","ObjectName1":"Bouwman, Simon R","PersonnelType":"Employee","CardNumber":"231338","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:06:46.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:06:46","EmployeeID":"327585","PersonGUID":"21383C03-0ECE-49DF-8469-8F0A19E54726","ObjectName1":"Hopkins, Daycen","PersonnelType":"Employee","CardNumber":"613730","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"}]},{"floor":"Floor 13","total":5,"occupants":[{"LocaleMessageTime":"2025-05-27T04:52:37.000Z","Dateonly":"2025-05-27","Swipe_Time":"04:52:37","EmployeeID":"199599","PersonGUID":"2909F487-2D9B-4413-A230-EF5D02BA465A","ObjectName1":"Formento, Dennis","PersonnelType":"Employee","CardNumber":"231699","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:24:51.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:24:51","EmployeeID":"326497","PersonGUID":"AEBD1DFE-8D69-48CB-A40E-8FB8CBE46AAF","ObjectName1":"Vidal, Cinthia","PersonnelType":"Employee","CardNumber":"613566","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:32:33.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:32:33","EmployeeID":"322279","PersonGUID":"3F8E320A-C19E-4491-8CBE-0FADBF62DE14","ObjectName1":"McDonough, Scott A","PersonnelType":"Employee","CardNumber":"604422","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:38:02.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:38:02","EmployeeID":"325898","PersonGUID":"E371CF1D-E373-4313-883C-2A65ADE909FC","ObjectName1":"Thomas, Christopher","PersonnelType":"Employee","CardNumber":"613615","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:56:44.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:56:44","EmployeeID":"328766","PersonGUID":"8A384BEF-3157-4C36-A6EB-F2D33BC66734","ObjectName1":"Dulik, AJ","PersonnelType":"Employee","CardNumber":"613914","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. South Lobby Doors-IN"}]},{"floor":"Floor 12","total":6,"occupants":[{"LocaleMessageTime":"2025-05-27T05:46:58.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:46:58","EmployeeID":"309641","PersonGUID":"77C13508-7AA1-410D-8100-883DD652CE17","ObjectName1":"Carney, Jason","PersonnelType":"Employee","CardNumber":"231520","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:49:50.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:49:50","EmployeeID":"320371","PersonGUID":"7A321BDC-712E-480D-AEFF-EF26A5D67C10","ObjectName1":"Krishnam, Shreya","PersonnelType":"Employee","CardNumber":"603026","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:51:09.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:51:09","EmployeeID":"241450","PersonGUID":"C0CA116F-7AE7-46E1-8A62-49C201D9B18C","ObjectName1":"Bourne, Jason","PersonnelType":"Employee","CardNumber":"604556","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T05:56:31.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:56:31","EmployeeID":"325565","PersonGUID":"F550D4F1-23BE-4DAD-81A1-DDEEC87D628A","ObjectName1":"Vogels, Nathan","PersonnelType":"Employee","CardNumber":"612336","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:00:01.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:00:01","EmployeeID":"327686","PersonGUID":"11087B4E-04B6-42EA-9CAE-FFA556CF447D","ObjectName1":"Bird, Ryan","PersonnelType":"Employee","CardNumber":"602969","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-27T06:08:01.000Z","Dateonly":"2025-05-27","Swipe_Time":"06:08:01","EmployeeID":"310484","PersonGUID":"5AB18732-6C0D-4B75-9DA2-A12083079DF0","ObjectName1":"Vukanti, Ranjith Reddy","PersonnelType":"Employee","CardNumber":"614372","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. South Lobby Doors-IN"}]},{"floor":"Floor 15","total":1,"occupants":[{"LocaleMessageTime":"2025-05-27T05:36:51.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:36:51","EmployeeID":"321791","PersonGUID":"58F1EFD1-B0E5-4354-B1F5-3CE53B319B7F","ObjectName1":"Walker, Andrew","PersonnelType":"Employee","CardNumber":"604275","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 15. Executive Entrance_10:03:9F"}]},{"floor":"Floor 14","total":1,"occupants":[{"LocaleMessageTime":"2025-05-27T05:53:36.000Z","Dateonly":"2025-05-27","Swipe_Time":"05:53:36","EmployeeID":"C0007550","PersonGUID":"62E40063-728C-4D00-A5B3-399425D71672","ObjectName1":"Flannery, Erin","PersonnelType":"Contractor","CardNumber":"602954","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 14. North Lobby Doors-IN"}]}],"personnelSummary":{"employees":36,"contractors":2},"personnelBreakdown":[{"personnelType":"Employee","count":36},{"personnelType":"Contractor","count":2}],"totalVisitedToday":38,"visitedToday":{"employees":36,"contractors":2,"total":38},"swipeStats":{"totalInSwipes":91,"totalOutSwipes":24,"inOnlyEmployees":35,"inOnlyContractors":1},"floorInOutSummary":[{"floor":"Floor 01","inSwipes":3,"outSwipes":3,"inOnlyCount":0,"inOnlyPersons":[]},{"floor":"Floor 14","inSwipes":7,"outSwipes":3,"inOnlyCount":1,"inOnlyPersons":["C0007550"]},{"floor":"Floor 13","inSwipes":12,"outSwipes":4,"inOnlyCount":5,"inOnlyPersons":["199599","326497","322279","325898","328766"]},{"floor":"Floor 12","inSwipes":13,"outSwipes":4,"inOnlyCount":5,"inOnlyPersons":["320371","241450","325565","327686","310484"]},{"floor":"Floor 11","inSwipes":15,"outSwipes":4,"inOnlyCount":9,"inOnlyPersons":["319779","244571","140217","301804","238543","134153","319892","312510","327585"]},{"floor":"Floor 09","inSwipes":21,"outSwipes":3,"inOnlyCount":15,"inOnlyPersons":["305776","301969","248939","74480","305419","241754","235929","304063","304061","77953","303447","304012","309977","318565","302286"]},{"floor":"Floor 06","inSwipes":18,"outSwipes":3,"inOnlyCount":0,"inOnlyPersons":[]},{"floor":"Floor 15","inSwipes":2,"outSwipes":0,"inOnlyCount":1,"inOnlyPersons":["321791"]}]}
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import DashboardHome    from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
+
+import './App.css';
+
+export default function App() {
+  // live data states
+  const [summaryData, setSummaryData]             = useState([]);
+  const [floorData, setFloorData]                 = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = e => {
+      try {
+        const p = JSON.parse(e.data);
+        setSummaryData(p.summary || []);
+        setFloorData(p.floorBreakdown || []);
+        setPersonnelBreakdown(p.personnelBreakdown || []);
+        setTotalVisitedToday(p.totalVisitedToday || 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = err => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar
+          bg="dark"
+          variant="dark"
+          expand="lg"
+          className="px-4 navbar-infographic"
+        >
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Denver
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
+              Floor Details
+            </Nav.Link>
+            {/* Optional static icon */}
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun color="#FFC72C" />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  personnelSummary={personnelSummary}
+                  totalVisitedToday={totalVisitedToday}
+                  visitedToday={visitedToday}
+                  floorData={floorData}
+                  personnelBreakdown={personnelBreakdown}
+                  theme="dark"
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={<FloorDetailsPage floorData={floorData} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards from '../components/SummaryCards';
+import FloorOccupancyChart from '../components/FloorOccupancyChart';
+// import SummaryChart from '../components/SummaryChart';  // removed if not used
+import PersonnelDonutChart from '../components/PersonnelDonutChart';
+import FloorDetailsTable from '../components/FloorDetailsTable'; // if you want details here
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  // zoneSummaryData,    // no longer used
+  personnelBreakdown
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees   ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      <Row className="g-4">
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+        {/* If you’re dropping the zone chart, comment this out: */}
+        {/* <Col md={4}>
+          <SummaryChart summary={zoneSummaryData} />
+        </Col> */}
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+      </Row>
+
+      {/* If you want a detailed table by floor: */}
+      {/* <FloorDetailsTable data={floorData} /> */}
+    </Container>
+  );
+}
+
+
+
+
