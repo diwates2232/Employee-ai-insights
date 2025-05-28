@@ -1,33 +1,7 @@
-// inside buildOccupancyForToday, before filtering:
-function stripTimeSuffix(doorRaw) {
-  // remove any “_hh:mm:ss” or “_hh:mm:XX” suffix
-  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
-}
-
-// then:
-const validEvents = freshEvents
-  .filter(e => isTodayInDenver(e.Dateonly))
-  .filter(evt => {
-    const dir     = evt.Direction.trim();
-    let doorRaw   = evt.Door.trim().toUpperCase();
-    doorRaw       = stripTimeSuffix(doorRaw);
-
-    const isStrict = Object.entries(monitoredDoors).some(
-      ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
-    );
-
-    const isSuffix = (
-      dir === 'InDirection'  && doorRaw.endsWith('-IN')  ||
-      dir === 'OutDirection' && doorRaw.endsWith('-OUT')
-    );
-
-    return isStrict || isSuffix;
-  });
+Again Check fuile line by line alos check API responce ,
 
 
-
-
-
+data: {"asOf":"2025-05-28T11:49:37.192Z","currentCount":27,"floorBreakdown":[{"floor":"Floor 13","total":4,"occupants":[{"LocaleMessageTime":"2025-05-28T04:51:50.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:51:50","EmployeeID":"W0022449","PersonGUID":"E0ECF741-9548-463A-9B4E-A3E55D50D4AC","ObjectName1":"Angel, Maria","PersonnelType":"Contractor","CardNumber":"613873","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:46:58.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:46:58","EmployeeID":"199599","PersonGUID":"2909F487-2D9B-4413-A230-EF5D02BA465A","ObjectName1":"Formento, Dennis","PersonnelType":"Employee","CardNumber":"231699","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:48:08.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:48:08","EmployeeID":"322279","PersonGUID":"3F8E320A-C19E-4491-8CBE-0FADBF62DE14","ObjectName1":"McDonough, Scott A","PersonnelType":"Employee","CardNumber":"604422","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:48:10.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:48:10","EmployeeID":"325898","PersonGUID":"E371CF1D-E373-4313-883C-2A65ADE909FC","ObjectName1":"Thomas, Christopher","PersonnelType":"Employee","CardNumber":"613615","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"}]},{"floor":"Floor 09","total":11,"occupants":[{"LocaleMessageTime":"2025-05-28T05:19:55.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:19:55","EmployeeID":"W0026151","PersonGUID":"5EC24130-835B-4D6F-8CFC-E9C2B1993F4B","ObjectName1":"Dean, Taje","PersonnelType":"Contractor","CardNumber":"617976","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:07:09.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:07:09","EmployeeID":"305776","PersonGUID":"52B69EA4-1DD6-44A4-972A-EA2F87D2858E","ObjectName1":"D'Nicuola, Jeff","PersonnelType":"Employee","CardNumber":"232397","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:46:13.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:46:13","EmployeeID":"248939","PersonGUID":"26EE614B-8819-4306-99DA-2E25730C894D","ObjectName1":"Wyant, Cammy J","PersonnelType":"Employee","CardNumber":"233020","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:54:23.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:54:23","EmployeeID":"74480","PersonGUID":"04BEC3F6-0BB7-4BD1-940E-012D6A8BE14A","ObjectName1":"Schloeman, William","PersonnelType":"Employee","CardNumber":"608728","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:56:05.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:56:05","EmployeeID":"236044","PersonGUID":"D00F0768-631A-4234-9BA0-BE42B26E2E13","ObjectName1":"Leung, Christine S","PersonnelType":"Employee","CardNumber":"232607","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:57:12.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:57:12","EmployeeID":"304009","PersonGUID":"FBE93F6C-C387-4609-9EB0-F0FD05E0354F","ObjectName1":"Johnson, Vicki","PersonnelType":"Employee","CardNumber":"232554","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:27:06.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:27:06","EmployeeID":"305419","PersonGUID":"AA9DF454-4C00-47E1-9DA2-8A54CDD40A1E","ObjectName1":"Piper, Monica","PersonnelType":"Employee","CardNumber":"232648","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:36:13.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:36:13","EmployeeID":"306613","PersonGUID":"87E1A0E8-05D8-4BDF-AB17-B7D85F034844","ObjectName1":"Dobnak, Josh","PersonnelType":"Employee","CardNumber":"232432","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Stairwell-IN"},{"LocaleMessageTime":"2025-05-28T05:37:28.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:37:28","EmployeeID":"304047","PersonGUID":"86C82938-8955-497F-BC68-9AF4332F637D","ObjectName1":"Snead, Tyler William","PersonnelType":"Employee","CardNumber":"233076","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:43:21.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:43:21","EmployeeID":"304063","PersonGUID":"14BCACEF-F1A0-4FF4-AB07-C99957582F5F","ObjectName1":"Arellano, Adam Jose","PersonnelType":"Employee","CardNumber":"232642","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:45:46.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:45:46","EmployeeID":"77953","PersonGUID":"65598C97-4BA5-4A19-AEA1-75F33D956E0D","ObjectName1":"Porter, Mark","PersonnelType":"Employee","CardNumber":"232252","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. South Lobby Doors-IN"}]},{"floor":"Floor 06","total":1,"occupants":[{"LocaleMessageTime":"2025-05-28T03:35:32.000Z","Dateonly":"2025-05-28","Swipe_Time":"03:35:32","EmployeeID":"W0022451","PersonGUID":"35327275-1D0C-4BF7-8817-6A76B5F9E29A","ObjectName1":"Alamo, Martin","PersonnelType":"Contractor","CardNumber":"613770","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. Fitness Center West_11:01:B9"}]},{"floor":"Floor 11","total":7,"occupants":[{"LocaleMessageTime":"2025-05-28T04:51:12.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:51:12","EmployeeID":"319779","PersonGUID":"031037CA-9C9C-4A85-B8BB-5FF3F418D0F7","ObjectName1":"Lewis, David Wayne","PersonnelType":"Employee","CardNumber":"613494","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:12:54.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:12:54","EmployeeID":"244571","PersonGUID":"7FD2CFAA-857B-4233-8A01-A555DDCD52BD","ObjectName1":"Kessel, Lynn","PersonnelType":"Employee","CardNumber":"231185","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:18:04.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:18:04","EmployeeID":"301804","PersonGUID":"E224334F-BF39-4245-B90C-95B27F33F4D3","ObjectName1":"Romo, Abraham","PersonnelType":"Employee","CardNumber":"232430","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:23:11.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:23:11","EmployeeID":"140217","PersonGUID":"312D55E5-5194-4153-BA20-7CE81155B835","ObjectName1":"Splatt, Gordon","PersonnelType":"Employee","CardNumber":"232580","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:33:52.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:33:52","EmployeeID":"131247","PersonGUID":"834A4571-5BC4-4FB8-B43A-6F8A5BB6E44D","ObjectName1":"Chabolla, Martha","PersonnelType":"Employee","CardNumber":"232357","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:41:52.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:41:52","EmployeeID":"326514","PersonGUID":"21816A0E-ACFE-4F92-8C32-FAF56FB3AEAC","ObjectName1":"Boshears, Rhen James","PersonnelType":"Employee","CardNumber":"614273","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:49:08.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:49:08","EmployeeID":"301966","PersonGUID":"B0BF3506-A8A6-4A81-9D2F-6EDB5EF16924","ObjectName1":"Laird, Heather","PersonnelType":"Employee","CardNumber":"232962","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 11. North Lobby Doors-IN"}]},{"floor":"Floor 12","total":3,"occupants":[{"LocaleMessageTime":"2025-05-28T05:05:11.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:05:11","EmployeeID":"309641","PersonGUID":"77C13508-7AA1-410D-8100-883DD652CE17","ObjectName1":"Carney, Jason","PersonnelType":"Employee","CardNumber":"231520","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:12:30.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:12:30","EmployeeID":"244644","PersonGUID":"4BB56406-252D-432C-B1DA-D4A911CCFB26","ObjectName1":"Saenz, Robert J","PersonnelType":"Employee","CardNumber":"229002","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:43:47.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:43:47","EmployeeID":"241450","PersonGUID":"C0CA116F-7AE7-46E1-8A62-49C201D9B18C","ObjectName1":"Bourne, Jason","PersonnelType":"Employee","CardNumber":"604556","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 12. North Lobby Doors-IN"}]},{"floor":"Floor 15","total":1,"occupants":[{"LocaleMessageTime":"2025-05-28T05:39:03.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:39:03","EmployeeID":"321791","PersonGUID":"58F1EFD1-B0E5-4354-B1F5-3CE53B319B7F","ObjectName1":"Walker, Andrew","PersonnelType":"Employee","CardNumber":"604275","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 15. Executive Entrance_10:03:9F"}]}],"personnelSummary":{"employees":24,"contractors":3},"personnelBreakdown":[{"personnelType":"Contractor","count":3},{"personnelType":"Employee","count":24}],"totalVisitedToday":27,"visitedToday":{"employees":24,"contractors":3,"total":27},"swipeStats":{"totalInSwipes":110,"totalOutSwipes":50},"floorInOutSummary":[{"floor":"Floor 12","inSwipes":9,"outSwipes":8,"inOnlyCount":9,"inOnlyPersons":["E0ECF741-9548-463A-9B4E-A3E55D50D4AC___00:01:24","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:13:27","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:40:15","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___04:49:34","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___04:50:40","77C13508-7AA1-410D-8100-883DD652CE17___05:05:11","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:05:58","4BB56406-252D-432C-B1DA-D4A911CCFB26___05:12:30","C0CA116F-7AE7-46E1-8A62-49C201D9B18C___05:43:47"]},{"floor":"Floor 01","inSwipes":5,"outSwipes":5,"inOnlyCount":5,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___00:24:13","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:02:55","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:16:53","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:32:59","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___04:59:33"]},{"floor":"Floor 14","inSwipes":6,"outSwipes":6,"inOnlyCount":6,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:04:49","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:32:19","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:35:18","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:48:45","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:34:32","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:00:47"]},{"floor":"Floor 13","inSwipes":12,"outSwipes":7,"inOnlyCount":12,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:09:12","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:39:25","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:55:56","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:56:03","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___02:03:25","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:37:19","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___03:17:15","2909F487-2D9B-4413-A230-EF5D02BA465A___04:46:58","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___04:51:50","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:03:25","3F8E320A-C19E-4491-8CBE-0FADBF62DE14___05:48:08","E371CF1D-E373-4313-883C-2A65ADE909FC___05:48:10"]},{"floor":"Floor 11","inSwipes":11,"outSwipes":5,"inOnlyCount":11,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:17:23","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:59:47","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:43:34","031037CA-9C9C-4A85-B8BB-5FF3F418D0F7___04:51:12","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:08:44","7FD2CFAA-857B-4233-8A01-A555DDCD52BD___05:12:54","E224334F-BF39-4245-B90C-95B27F33F4D3___05:18:04","312D55E5-5194-4153-BA20-7CE81155B835___05:23:11","834A4571-5BC4-4FB8-B43A-6F8A5BB6E44D___05:33:52","21816A0E-ACFE-4F92-8C32-FAF56FB3AEAC___05:41:52","B0BF3506-A8A6-4A81-9D2F-6EDB5EF16924___05:49:08"]},{"floor":"Floor 09","inSwipes":17,"outSwipes":7,"inOnlyCount":17,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:22:30","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___02:08:23","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:46:37","35327275-1D0C-4BF7-8817-6A76B5F9E29A___03:26:46","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___04:00:01","52B69EA4-1DD6-44A4-972A-EA2F87D2858E___04:07:09","26EE614B-8819-4306-99DA-2E25730C894D___04:46:13","04BEC3F6-0BB7-4BD1-940E-012D6A8BE14A___04:54:23","D00F0768-631A-4234-9BA0-BE42B26E2E13___04:56:05","FBE93F6C-C387-4609-9EB0-F0FD05E0354F___04:57:12","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:11:41","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:19:55","AA9DF454-4C00-47E1-9DA2-8A54CDD40A1E___05:27:06","87E1A0E8-05D8-4BDF-AB17-B7D85F034844___05:36:13","86C82938-8955-497F-BC68-9AF4332F637D___05:37:28","14BCACEF-F1A0-4FF4-AB07-C99957582F5F___05:43:21","65598C97-4BA5-4A19-AEA1-75F33D956E0D___05:45:46"]},{"floor":"Floor 06","inSwipes":10,"outSwipes":10,"inOnlyCount":10,"inOnlyPersons":["5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:26:28","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___01:48:37","35327275-1D0C-4BF7-8817-6A76B5F9E29A___01:55:50","35327275-1D0C-4BF7-8817-6A76B5F9E29A___02:18:31","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___02:49:46","E0ECF741-9548-463A-9B4E-A3E55D50D4AC___03:34:15","35327275-1D0C-4BF7-8817-6A76B5F9E29A___03:35:27","4BB56406-252D-432C-B1DA-D4A911CCFB26___05:11:11","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:14:41","5EC24130-835B-4D6F-8CFC-E9C2B1993F4B___05:18:18"]},{"floor":"Floor 15","inSwipes":2,"outSwipes":2,"inOnlyCount":2,"inOnlyPersons":["E0ECF741-9548-463A-9B4E-A3E55D50D4AC___01:30:14","58F1EFD1-B0E5-4354-B1F5-3CE53B319B7F___05:38:56"]}]}
 
 
 
@@ -127,6 +101,12 @@ function isTodayInDenver(dateOnly) {
   return swipeDate === today;
 }
 
+
+// function stripTimeSuffix(doorRaw) {
+//   // remove any “_hh:mm:ss” or “_hh:mm:XX” suffix
+//   return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+// }
+
 /**
  * Build live occupancy + swipe summaries.
  * @param {Array} allEvents   – cumulative events (for occupancy)
@@ -171,23 +151,35 @@ function buildOccupancyForToday(allEvents, freshEvents) {
   // 4) Swipe stats from freshEvents only
   const totalInSwipes  = freshEvents.filter(e => e.Direction === 'InDirection'  && isTodayInDenver(e.Dateonly)).length;
   const totalOutSwipes = freshEvents.filter(e => e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)).length;
+  
+
+function stripTimeSuffix(doorRaw) {
+  // remove any “_hh:mm:ss” or “_hh:mm:XX” suffix
+  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+}
 
   // 5) Floor In/Out summary from freshEvents only
-  const validEvents = freshEvents
-    .filter(e => isTodayInDenver(e.Dateonly))
-    .filter(evt => {
-      const dir     = evt.Direction.trim();
-      const doorRaw = evt.Door.trim().toUpperCase();
+ const validEvents = freshEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    const dir     = evt.Direction.trim();
+    let doorRaw   = evt.Door.trim().toUpperCase();
+    doorRaw       = stripTimeSuffix(doorRaw);
 
-      const isStrict = Object.entries(monitoredDoors).some(([key, reqDir]) =>
-        doorRaw.includes(key) && reqDir === dir
-      );
-      const isSuffix = (
-        dir === 'InDirection'  && doorRaw.endsWith('-IN')  ||
-        dir === 'OutDirection' && doorRaw.endsWith('-OUT')
-      );
-      return isStrict || isSuffix;
-    });
+    const isStrict = Object.entries(monitoredDoors).some(
+      ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+    );
+
+    const isSuffix = (
+      dir === 'InDirection'  && doorRaw.endsWith('-IN')  ||
+      dir === 'OutDirection' && doorRaw.endsWith('-OUT')
+    );
+
+    return isStrict || isSuffix;
+  });
+
+
+
 
   const floorMapIO = {};
   validEvents.forEach(evt => {
