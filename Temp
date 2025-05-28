@@ -1,3 +1,27 @@
+  // Only consider freshEvents for this summary
+  const validEvents = freshEvents
+    .filter(e => isTodayInDenver(e.Dateonly))
+    .filter(evt => {
+      const dir     = evt.Direction.trim();
+      const doorRaw = evt.Door.trim().toUpperCase();
+      return Object.entries(monitoredDoors).some(([key, reqDir]) =>
+        doorRaw.includes(key) && reqDir === dir
+      ) || (
+        (dir === 'InDirection' && doorRaw.endsWith('-IN')) ||
+        (dir === 'OutDirection' && doorRaw.endsWith('-OUT'))
+      );
+    });
+
+
+
+
+
+
+
+
+
+
+
 - function buildOccupancyForToday(allEvents) {
 + function buildOccupancyForToday(allEvents, freshEvents) {
 
