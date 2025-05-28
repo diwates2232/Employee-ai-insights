@@ -1,3 +1,34 @@
+// inside buildOccupancyForToday, before filtering:
+function stripTimeSuffix(doorRaw) {
+  // remove any “_hh:mm:ss” or “_hh:mm:XX” suffix
+  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+}
+
+// then:
+const validEvents = freshEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    const dir     = evt.Direction.trim();
+    let doorRaw   = evt.Door.trim().toUpperCase();
+    doorRaw       = stripTimeSuffix(doorRaw);
+
+    const isStrict = Object.entries(monitoredDoors).some(
+      ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+    );
+
+    const isSuffix = (
+      dir === 'InDirection'  && doorRaw.endsWith('-IN')  ||
+      dir === 'OutDirection' && doorRaw.endsWith('-OUT')
+    );
+
+    return isStrict || isSuffix;
+  });
+
+
+
+
+
+
 
 
 // controllers/denverLiveOccupancyController.js
