@@ -1,3 +1,32 @@
+// 2) Filter: strict list OR suffix-based fallback
+const validEvents = todayEvents.filter(evt => {
+  const dir     = evt.Direction.trim();         // "InDirection" or "OutDirection"
+  const doorRaw = evt.Door.trim().toUpperCase(); 
+
+  // a) strict list match
+  const isStrict = Object.entries(monitoredDoors).some(
+    ([key, reqDir]) => doorRaw.includes(key) && reqDir === dir
+  );
+
+  // b) fallback: treat any door ending in "-IN" as InDirection, "-OUT" as OutDirection
+  const isSuffix = (
+    (dir === 'InDirection'  && doorRaw.endsWith('-IN'))  ||
+    (dir === 'OutDirection' && doorRaw.endsWith('-OUT'))
+  );
+
+  return isStrict || isSuffix;
+});
+
+
+
+
+
+
+
+
+
+
+
 This is my updated js file then check root cause and fix the issue .
 // controllers/denverLiveOccupancyController.js
 
