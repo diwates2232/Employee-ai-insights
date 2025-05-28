@@ -1,311 +1,11 @@
-module.exports = {
-  monitoredDoors: {
-    '2ND FLOOR ENTRY DOOR': 'InDirection',
-    '2ND FLOOR EXIT DOOR': 'OutDirection',
-    '3RD FLOOR ENTRY DOOR': 'InDirection',
-    '3RD FLOOR EXIT DOOR': 'OutDirection',
-    '4TH FLOOR ENTRY DOOR': 'InDirection',
-    '4TH FLOOR EXIT DOOR': 'OutDirection',
-    // Add more doors as needed
-  }
-};
-
-
-
-
-
-
-
-
-
-
-// controllers/denverLiveOccupancyController.js
-
-// … earlier imports and helper functions …
-
-function buildOccupancyForToday(allEvents) {
-  // --- TRACK swipe counts & per-person direction history ---
-  const swipeHistory   = new Map();
-  const firstEvent     = new Map();
-  let totalInSwipes    = 0;
-  let totalOutSwipes   = 0;
-
-  allEvents.forEach(evt => {
-    if (!isTodayInDenver(evt.Dateonly)) return;
-    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber || evt.ObjectName1;
-
-    if (!swipeHistory.has(key)) {
-      swipeHistory.set(key, new Set());
-      firstEvent.set(key, evt);
-    }
-    swipeHistory.get(key).add(evt.Direction);
-
-    if (evt.Direction === 'InDirection') totalInSwipes++;
-    if (evt.Direction === 'OutDirection') totalOutSwipes++;
-  });
-
-  // --- DEDUPE & current occupancy ---
-  const todayIn = allEvents.filter(e =>
-    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
-  );
-
-  const uniquePeople = new Map();
-  const current = {};
-
-  allEvents.forEach(evt => {
-    if (!isTodayInDenver(evt.Dateonly)) return;
-    const {
-      EmployeeID, PersonGUID,
-      ObjectName1, PersonnelType,
-      CardNumber, Dateonly,
-      Swipe_Time, Direction, Door
-    } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-    const zone     = mapDoorToFloor(Door, Direction);
-
-    // Eviction logic
-    if (Direction === 'OutDirection' && zone === 'Out of office') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      return;
-    }
-
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
-    } else {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-    }
-  });
-
-  // Latest swipe per person
-  const latestByPerson = new Map();
-  todayIn.forEach(e => {
-    const prev = latestByPerson.get(e.PersonGUID);
-    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
-    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
-      latestByPerson.set(e.PersonGUID, e);
-    }
-  });
-  const finalList = Array.from(latestByPerson.values());
-
-  // --- TALLY & GROUP BY FLOOR ---
-  let employees   = 0;
-  let contractors = 0;
-  const floorMap  = {};
-
-  finalList.forEach(e => {
-    const fl = mapDoorToFloor(e.Door, e.Direction);
-    floorMap[fl] = floorMap[fl] || [];
-    floorMap[fl].push(e);
-
-    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
-      employees++;
-    } else {
-      contractors++;
-    }
-  });
-
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
-    floor,
-    total: occupants.length,
-    occupants
-  }));
-
-  // --- COMPUTE in-only counts ---
-  let inOnlyEmployees   = 0;
-  let inOnlyContractors = 0;
-  swipeHistory.forEach((dirs, key) => {
-    if (dirs.has('InDirection') && !dirs.has('OutDirection')) {
-      const evt = firstEvent.get(key);
-      if (!evt) return;
-      if (evt.PersonnelType === 'Employee' || evt.PersonnelType === 'Terminated Personnel') {
-        inOnlyEmployees++;
-      } else {
-        inOnlyContractors++;
-      }
-    }
-  });
-
-  const swipeStats = {
-    totalInSwipes,
-    totalOutSwipes,
-    inOnlyEmployees,
-    inOnlyContractors
-  };
-
-  // --- NEW: per-floor In/Out summary with first-swipe-only logic ---
-  // 1) Filter to today’s events
-  const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
-
-  // 2) Prepare de-dupe trackers
-  const countedIn  = new Set();
-  const countedOut = new Set();
-  const floorMapIO = {};
-
-  // 3) Count only first In/Out per person per floor
-  todayEvents.forEach(evt => {
-    const floorKey  = mapDoorToFloor(evt.Door, evt.Direction);
-    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${floorKey}`;
-
-    if (!floorMapIO[floorKey]) {
-      floorMapIO[floorKey] = { inSwipes: 0, outSwipes: 0 };
-    }
-
-    if (evt.Direction === 'InDirection') {
-      if (!countedIn.has(personKey)) {
-        floorMapIO[floorKey].inSwipes++;
-        countedIn.add(personKey);
-      }
-    } else if (evt.Direction === 'OutDirection') {
-      if (!countedOut.has(personKey)) {
-        floorMapIO[floorKey].outSwipes++;
-        countedOut.add(personKey);
-      }
-    }
-  });
-
-  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => ({
-    floor,
-    inSwipes:  stats.inSwipes,
-    outSwipes: stats.outSwipes,
-    inconsistency: stats.inSwipes - stats.outSwipes
-  }));
-
-  // --- FINAL PAYLOAD ---
-  return {
-    asOf:               new Date().toISOString(),
-    currentCount:       finalList.length,
-    floorBreakdown,
-    personnelSummary:   { employees, contractors },
-    personnelBreakdown: finalList.reduce((acc, e) => {
-      acc[e.PersonnelType] = (acc[e.PersonnelType] || 0) + 1;
-      return acc;
-    }, {}),
-    totalVisitedToday:  finalList.length,
-    visitedToday:       { employees, contractors, total: finalList.length },
-    swipeStats,
-    floorInOutSummary
-  };
-}
-
-
-
-
-
-
-
-
-
-
-// controllers/denverLiveOccupancyController.js
-
- function buildOccupancyForToday(allEvents) {
-   // … existing code up to swipeStats …
-
-   // --- NEW: per-floor In/Out summary ---
-   const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
--  const floorMapIO = {};
--
--  todayEvents.forEach(evt => {
--    const floor = mapDoorToFloor(evt.Door, evt.Direction);
--    const key   = evt.EmployeeID;
--
--    if (!floorMapIO[floor]) {
--      floorMapIO[floor] = {
--        inSwipes:  0,
--        outSwipes: 0,
--        inSet:  new Set(),
--        outSet: new Set()
--      };
--    }
--
--    if (evt.Direction === 'InDirection') {
--      floorMapIO[floor].inSwipes++;
--      floorMapIO[floor].inSet.add(key);
--    } else if (evt.Direction === 'OutDirection') {
--      floorMapIO[floor].outSwipes++;
--      floorMapIO[floor].outSet.add(key);
--    }
--  });
-+  const floorMapIO = {};
-+  // Track per-person first In/Out per floor
-+  const countedIn  = new Set();
-+  const countedOut = new Set();
-+
-+  todayEvents.forEach(evt => {
-+    const floor = mapDoorToFloor(evt.Door, evt.Direction);
-+    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${floor}`;
-+
-+    if (!floorMapIO[floor]) {
-+      floorMapIO[floor] = { inSwipes: 0, outSwipes: 0 };
-+    }
-+
-+    if (evt.Direction === 'InDirection') {
-+      // only count the first In swipe for this person on this floor today
-+      if (!countedIn.has(personKey)) {
-+        floorMapIO[floor].inSwipes++;
-+        countedIn.add(personKey);
-+      }
-+    } else if (evt.Direction === 'OutDirection') {
-+      // only count the first Out swipe for this person on this floor today
-+      if (!countedOut.has(personKey)) {
-+        floorMapIO[floor].outSwipes++;
-+        countedOut.add(personKey);
-+      }
-+    }
-+  });
- 
--  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
--    const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
--    return {
--      floor,
--      inSwipes:      stats.inSwipes,
--      outSwipes:     stats.outSwipes,
--      inOnlyCount:   inOnly.length,
--      inOnlyPersons: inOnly
--    };
--  });
-+  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, {inSwipes, outSwipes}]) => ({
-+    floor,
-+    inSwipes,
-+    outSwipes,
-+    inconsistency: inSwipes - outSwipes
-+  }));
- 
-   // --- FINAL PAYLOAD ---
-   return {
-     // … other fields …
-     floorInOutSummary
-   };
- }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Read this file carefully , Read each line by logic,
-Issue is there Floor In/Out Swipe Summary Swipe data Count each time means our API continously fetct swipe data ,
-in this swipe data display Data come again and again so Entry of Swipe Intime continously increased as per API time it does not chcck time .thats Why we are getting Wrong InDirection Swipe count 
-Fix this Issue 
+This is my Current Controller js file as per requirnment please update this file and give me updated js file .Dont make changes unneccessary.
 
 // controllers/denverLiveOccupancyController.js
 
 const { DateTime }      = require('luxon');
 const { denver }        = require('../config/siteConfig');
 const doorFloorMap      = require('../data/denverDoorFloorMap');
+const {monitoredDoors} =require ('../data/strictDoorList');
 const sql               = require('mssql');
 
 const warnedKeys = new Set();
@@ -492,7 +192,7 @@ function buildOccupancyForToday(allEvents) {
   }));
 
   // --- COMPUTE in-only counts ---
-  let inOnlyEmployees   = 0;
+   let inOnlyEmployees   = 0;
   let inOnlyContractors = 0;
   swipeHistory.forEach((dirs, key) => {
     if (dirs.has('InDirection') && !dirs.has('OutDirection')) {
@@ -506,6 +206,7 @@ function buildOccupancyForToday(allEvents) {
     }
   });
 
+
   const swipeStats = {
     totalInSwipes,
     totalOutSwipes,
@@ -513,42 +214,49 @@ function buildOccupancyForToday(allEvents) {
     inOnlyContractors
   };
 
-  // --- NEW: per-floor In/Out summary ---
+
+   // --- NEW: per-floor In/Out summary with first-swipe-only logic ---
+  // 1) Filter to today’s events
   const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+
+  // 2) Prepare de-dupe trackers
+  const countedIn  = new Set();
+  const countedOut = new Set();
   const floorMapIO = {};
 
+  // 3) Count only first In/Out per person per floor
   todayEvents.forEach(evt => {
-    const floor = mapDoorToFloor(evt.Door, evt.Direction);
-    const key   = evt.EmployeeID;
+    const floorKey  = mapDoorToFloor(evt.Door, evt.Direction);
+    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${floorKey}`;
 
-    if (!floorMapIO[floor]) {
-      floorMapIO[floor] = {
-        inSwipes:  0,
-        outSwipes: 0,
-        inSet:  new Set(),
-        outSet: new Set()
-      };
+    if (!floorMapIO[floorKey]) {
+      floorMapIO[floorKey] = { inSwipes: 0, outSwipes: 0 };
     }
 
     if (evt.Direction === 'InDirection') {
-      floorMapIO[floor].inSwipes++;
-      floorMapIO[floor].inSet.add(key);
+      if (!countedIn.has(personKey)) {
+        floorMapIO[floorKey].inSwipes++;
+        countedIn.add(personKey);
+      }
     } else if (evt.Direction === 'OutDirection') {
-      floorMapIO[floor].outSwipes++;
-      floorMapIO[floor].outSet.add(key);
+      if (!countedOut.has(personKey)) {
+        floorMapIO[floorKey].outSwipes++;
+        countedOut.add(personKey);
+      }
     }
   });
 
-  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
-    const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
-    return {
-      floor,
-      inSwipes:      stats.inSwipes,
-      outSwipes:     stats.outSwipes,
-      inOnlyCount:   inOnly.length,
-      inOnlyPersons: inOnly
-    };
-  });
+
+
+
+
+ const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => ({
+    floor,
+    inSwipes:  stats.inSwipes,
+    outSwipes: stats.outSwipes,
+    inconsistency: stats.inSwipes - stats.outSwipes
+  }));
+
 
   // --- FINAL PAYLOAD ---
   return {
@@ -556,11 +264,6 @@ function buildOccupancyForToday(allEvents) {
     currentCount:       finalList.length,
     floorBreakdown,
     personnelSummary:   { employees, contractors },
-
-    // personnelBreakdown: [
-    //   { personnelType: 'Employee',   count: employees   },
-    //   { personnelType: 'Contractor', count: contractors }
-    // ],
 
 
 personnelBreakdown: (() => {
@@ -571,9 +274,6 @@ personnelBreakdown: (() => {
   });
   return Array.from(map, ([personnelType, count]) => ({ personnelType, count }));
 })(),
-
-
-
 
 
     totalVisitedToday:  finalList.length,
