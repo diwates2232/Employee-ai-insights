@@ -1,3 +1,24 @@
+module.exports = {
+  monitoredDoors: {
+    '2ND FLOOR ENTRY DOOR': 'InDirection',
+    '2ND FLOOR EXIT DOOR': 'OutDirection',
+    '3RD FLOOR ENTRY DOOR': 'InDirection',
+    '3RD FLOOR EXIT DOOR': 'OutDirection',
+    '4TH FLOOR ENTRY DOOR': 'InDirection',
+    '4TH FLOOR EXIT DOOR': 'OutDirection',
+    // Add more doors as needed
+  }
+};
+
+
+
+
+
+
+
+
+
+
 // controllers/denverLiveOccupancyController.js
 
 // … earlier imports and helper functions …
