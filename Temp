@@ -1,3 +1,200 @@
+// controllers/denverLiveOccupancyController.js
+
+const { DateTime }      = require('luxon');
+const { denver }        = require('../config/siteConfig');
+const doorFloorMap      = require('../data/denverDoorFloorMap');
+const { monitoredDoors } = require('../data/strictDoorList');
+const sql               = require('mssql');
+
+const warnedKeys = new Set();
+
+/** Normalize door+direction key **/
+function normalizeKey(rawDoor, rawDir) {
+  const d = String(rawDoor || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'IN' : 'OUT';
+  return `${d}___${dir}`;
+}
+
+/** Determine floor label, fallback to “HQ. N.” parsing **/
+function mapDoorToFloor(rawDoor, rawDir) {
+  const key = normalizeKey(rawDoor, rawDir);
+  if (doorFloorMap[key]) {
+    return doorFloorMap[key];
+  }
+  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
+  if (m) {
+    return `Floor ${m[1]}`;
+  }
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
+
+// ... fetchNewEvents and isTodayInDenver unchanged ...
+
+function buildOccupancyForToday(allEvents) {
+  // --- TRACK swipe counts & per-person direction history ---
+  const swipeHistory   = new Map();
+  const firstEvent     = new Map();
+  let totalInSwipes    = 0;
+  let totalOutSwipes   = 0;
+
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber || evt.ObjectName1;
+
+    if (!swipeHistory.has(key)) {
+      swipeHistory.set(key, new Set());
+      firstEvent.set(key, evt);
+    }
+    swipeHistory.get(key).add(evt.Direction);
+
+    if (evt.Direction === 'InDirection') totalInSwipes++;
+    if (evt.Direction === 'OutDirection') totalOutSwipes++;
+  });
+
+  // --- DEDUPE & current occupancy (unchanged) ---
+  const todayIn = allEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  );
+  const uniquePeople = new Map();
+  const current = {};
+  // ... (existing occupancy logic) ...
+
+  const latestByPerson = new Map();
+  todayIn.forEach(e => {
+    const prev = latestByPerson.get(e.PersonGUID);
+    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
+    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      latestByPerson.set(e.PersonGUID, e);
+    }
+  });
+  const finalList = Array.from(latestByPerson.values());
+
+  // --- TALLY & GROUP BY FLOOR (unchanged) ---
+  let employees   = 0;
+  let contractors = 0;
+  const floorMap  = {};
+  finalList.forEach(e => {
+    const fl = mapDoorToFloor(e.Door, e.Direction);
+    floorMap[fl] = floorMap[fl] || [];
+    floorMap[fl].push(e);
+
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      employees++;
+    } else {
+      contractors++;
+    }
+  });
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    total: occupants.length,
+    occupants
+  }));
+
+  // --- COMPUTE in-only counts (unchanged) ---
+  let inOnlyEmployees   = 0;
+  let inOnlyContractors = 0;
+  swipeHistory.forEach((dirs, key) => {
+    if (dirs.has('InDirection') && !dirs.has('OutDirection')) {
+      const evt = firstEvent.get(key);
+      if (!evt) return;
+      if (evt.PersonnelType === 'Employee' || evt.PersonnelType === 'Terminated Personnel') {
+        inOnlyEmployees++;
+      } else {
+        inOnlyContractors++;
+      }
+    }
+  });
+  const swipeStats = { totalInSwipes, totalOutSwipes, inOnlyEmployees, inOnlyContractors };
+
+  // --- NEW: per-floor In/Out summary with strict-door filtering ---
+  // 1) Only today’s events
+  const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+
+  // 2) Filter by strict monitored doors
+  const validEvents = todayEvents.filter(evt => {
+    const doorName  = evt.Door.trim().toUpperCase();
+    const direction = evt.Direction.trim();
+    return monitoredDoors[doorName] === direction;
+  });
+
+  // 3) Count every distinct swipe (no dedupe), track in/out per person per floor
+  const floorMapIO = {};
+  validEvents.forEach(evt => {
+    const floorKey  = mapDoorToFloor(evt.Door, evt.Direction);
+    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${evt.Swipe_Time}`;
+
+    if (!floorMapIO[floorKey]) {
+      floorMapIO[floorKey] = { inSwipes: 0, outSwipes: 0, inSet: new Set(), outSet: new Set() };
+    }
+
+    if (evt.Direction === 'InDirection') {
+      floorMapIO[floorKey].inSwipes++;
+      floorMapIO[floorKey].inSet.add(personKey);
+    } else if (evt.Direction === 'OutDirection') {
+      floorMapIO[floorKey].outSwipes++;
+      floorMapIO[floorKey].outSet.add(personKey);
+    }
+  });
+
+  // 4) Build summary with anomaly detection
+  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+    const inOnly = [...stats.inSet].filter(k => !stats.outSet.has(k));
+    return {
+      floor,
+      inSwipes:    stats.inSwipes,
+      outSwipes:   stats.outSwipes,
+      inOnlyCount: inOnly.length,
+      inOnlyPersons: inOnly
+    };
+  });
+
+  // --- FINAL PAYLOAD ---
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       finalList.length,
+    floorBreakdown,
+    personnelSummary:   { employees, contractors },
+    personnelBreakdown: (() => {
+      const map = new Map();
+      finalList.forEach(e => {
+        const type = e.PersonnelType || 'Unknown';
+        map.set(type, (map.get(type) || 0) + 1);
+      });
+      return Array.from(map, ([personnelType, count]) => ({ personnelType, count }));
+    })(),
+    totalVisitedToday:  finalList.length,
+    visitedToday:       { employees, contractors, total: finalList.length },
+    swipeStats,
+    floorInOutSummary
+  };
+}
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+  // ... SSE setup unchanged ...
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 This is my Current Controller js file as per requirnment please update this file and give me updated js file .Dont make changes unneccessary.
 
 // controllers/denverLiveOccupancyController.js
