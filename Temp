@@ -1,3 +1,39 @@
+// … inside buildOccupancy, after you compute `employeeCount`, `contractorCount`, and before returning:
+
+return {
+  asOf:           new Date().toISOString(),
+  summary:        Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, count: d.total })),
+  zoneBreakdown:  Object.entries(zoneDetails).map(([z,d]) => ({ zone: z, ...d.byPersonnelType, total: d.total })),
+  floorBreakdown: Object.entries(floorMap).map(([f,d]) => ({ floor: f, ...d.byPersonnelType, total: d.total })),
+  details:        zoneMap,
+
+  personnelSummary: { employees: employeeCount, contractors: contractorCount },
+
+  // Dynamically build breakdown of *all* personnel types currently in `uniquePeople`
+  personnelBreakdown: (() => {
+    const map = new Map();
+    // uniquePeople: Map<dedupKey, PersonnelType>
+    for (const pt of uniquePeople.values()) {
+      map.set(pt, (map.get(pt) || 0) + 1);
+    }
+    return Array.from(map, ([personnelType, count]) => ({ personnelType, count }));
+  })(),
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read controller file carefully and line by line nad solve the error .
 
 Live occupancy SSE error: ReferenceError: finalList is not defined
