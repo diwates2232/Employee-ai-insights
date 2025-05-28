@@ -1,204 +1,296 @@
-// src/components/PersonnelDonutChart.jsx
+Read carefully this file and make changes carefully only if needed. dont make unnecessary changes
 
-import React from 'react';
-import {
-  PieChart, Pie, Cell, Tooltip,
-  ResponsiveContainer, Legend, Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
+// controllers/denverLiveOccupancyController.js
 
-// Expanded Western Union–style palette for up to 10 categories
-const SLICE_COLORS = [
-  '#FFC72C', // yellow
-  '#228B22', // forest green
-  '#FFE680', // light yellow
-  '#FFD11A', // gold
-  '#FFEB99', // pale gold
-  '#C9A9A6', // muted rose
-  '#96DED1', // teal
-  '#FF8C00', // dark orange
-  '#8B0000', // dark red
-  '#4B0082'  // indigo
-];
+const { DateTime }      = require('luxon');
+const { denver }        = require('../config/siteConfig');
+const doorFloorMap      = require('../data/denverDoorFloorMap');
+const sql               = require('mssql');
 
-export default function PersonnelDonutChart({ data = [] }) {
-  // Sum all counts across every category in `data`
-  const total = data.reduce((sum, e) => sum + e.count, 0);
+const warnedKeys = new Set();
 
-  if (!data.length || total === 0) {
-    return (
-      <Card body className="bg-dark text-warning">
-        No personnel data
-      </Card>
-    );
-  }
-
-  // Sort descending by count so largest slice is first
-  const sorted = [...data].sort((a, b) => b.count - a.count);
-
-  return (
-    <Card
-      className="mb-4 shadow-sm"
-      style={{ background: '#1a1a1a', border: '2px solid #FFC72C' }}
-    >
-      <Card.Header
-        className="text-center fw-bold"
-        style={{ background: '#000', color: '#FFC72C' }}
-      >
-        Personnel Type Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: '1rem' }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={sorted}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%" cy="50%"
-              innerRadius={70} outerRadius={110}
-              paddingAngle={4}
-              labelLine={false}
-              label={({ percent, name }) => (
-                <tspan fill="#fff">
-                  {`${name}: ${(percent * 100).toFixed(0)}%`}
-                </tspan>
-              )}
-              stroke="#333"
-              strokeWidth={1.5}
-            >
-              {sorted.map((entry, idx) => (
-                <Cell
-                  key={entry.personnelType}
-                  fill={SLICE_COLORS[idx % SLICE_COLORS.length]}
-                />
-              ))}
-              <Label
-                value={total}
-                position="center"
-                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip
-              wrapperStyle={{
-                backgroundColor: '#2f2f2f',
-                border: '1px solid #444',
-                borderRadius: '4px',
-                color: '#fff'
-              }}
-              formatter={(value, name) => [`${value}`, `${name}`]}
-            />
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
+/** Normalize door+direction key **/
+function normalizeKey(rawDoor, rawDir) {
+  const d = String(rawDoor || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const dir = /IN/i.test(rawDir) ? 'IN' : 'OUT';
+  return `${d}___${dir}`;
 }
 
+/** Determine floor label, fallback to “HQ. N.” parsing **/
+function mapDoorToFloor(rawDoor, rawDir) {
+  const key = normalizeKey(rawDoor, rawDir);
+  if (doorFloorMap[key]) {
+    return doorFloorMap[key];
+  }
+  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
+  if (m) {
+    return `Floor ${m[1]}`;
+  }
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
 
+async function fetchNewEvents(since) {
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
+  req.input('since', sql.DateTime2, since);
 
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT 
+        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+        t1.ObjectName1,
+        CASE
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR) 
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]' ,'varchar(50)'),
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]' ,'varchar(50)'),
+          sc.value
+        ) AS CardNumber,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     t2    ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType t3    ON t2.PersonnelTypeId = t3.ObjectID
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Name = 'Direction'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
+        WHERE Name IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
+      WHERE
+        t1.MessageType = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID,
+      PersonGUID,
+      ObjectName1,
+      PersonnelType,
+      CardNumber,
+      AdmitCode,
+      Direction,
+      Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
 
+  return recordset;
+}
 
+function isTodayInDenver(dateOnly) {
+  const swipeDate = DateTime.fromISO(dateOnly, { zone: 'America/Denver' }).toFormat('yyyy-LL-dd');
+  const today     = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
+  return swipeDate === today;
+}
 
+function buildOccupancyForToday(allEvents) {
+  // --- TRACK swipe counts & per-person direction history ---
+  const swipeHistory   = new Map();
+  const firstEvent     = new Map();
+  let totalInSwipes    = 0;
+  let totalOutSwipes   = 0;
 
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber || evt.ObjectName1;
 
+    if (!swipeHistory.has(key)) {
+      swipeHistory.set(key, new Set());
+      firstEvent.set(key, evt);
+    }
+    swipeHistory.get(key).add(evt.Direction);
 
+    if (evt.Direction === 'InDirection') totalInSwipes++;
+    if (evt.Direction === 'OutDirection') totalOutSwipes++;
+  });
 
+  // --- DEDUPE & current occupancy ---
+  const todayIn = allEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  );
 
+  const uniquePeople = new Map();
+  const current = {};
 
+  for (const evt of allEvents) {
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
 
-Read below file carefully this chart display only Employee and Contractor Breakdown 
-There is also another personeel type data is present , like Property managenment , Visitors ...like 
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToFloor(Door, Direction);
 
+    // OutDirection at “Out of office” evicts
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      continue;
+    }
 
-// src/components/PersonnelDonutChart.jsx
-
-import React from 'react';
-import {
-  PieChart, Pie, Cell, Tooltip,
-  ResponsiveContainer, Legend, Label
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// Western Union accent palette
-const SLICE_COLORS = [
-  '#FFC72C', // yellow
-  '#228B22',
-  '#FFE680', // light yellow
-  '#FFD11A', // gold
-  '#FFEB99'  // pale gold
-];
-
-export default function PersonnelDonutChart({ data = [] }) {
-  const total = data.reduce((sum, e) => sum + e.count, 0);
-  if (!data.length || total === 0) {
-    return (
-      <Card body className="bg-dark text-warning">
-        No personnel data
-      </Card>
-    );
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
+    } else {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+    }
   }
 
-  const sorted = [...data].sort((a, b) => b.count - a.count);
+  const latestByPerson = new Map();
+  todayIn.forEach(e => {
+    const prev = latestByPerson.get(e.PersonGUID);
+    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
+    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      latestByPerson.set(e.PersonGUID, e);
+    }
+  });
+  const finalList = Array.from(latestByPerson.values());
 
-  return (
-    <Card
-      className="mb-4 shadow-sm"
-      style={{ background: '#1a1a1a', border: '2px solid #FFC72C' }}
-    >
-      <Card.Header
-        className="text-center fw-bold"
-        style={{ background: '#000', color: '#FFC72C' }}
-      >
-        Personnel Type Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: '1rem' }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={sorted}
-              dataKey="count"
-              nameKey="personnelType"
-              cx="50%" cy="50%"
-              innerRadius={70} outerRadius={110}
-              paddingAngle={4}
-              labelLine={false}
-              label={({ percent, name }) => (
-                <tspan fill="#fff">{`${name}: ${(percent * 100).toFixed(0)}%`}</tspan>
-              )}
-              stroke="#333"
-              strokeWidth={1.5}
-            >
-              {sorted.map((entry, idx) => (
-                <Cell
-                  key={entry.personnelType}
-                  fill={SLICE_COLORS[idx % SLICE_COLORS.length]}
-                />
-              ))}
-              <Label
-                value={total}
-                position="center"
-                style={{ fill: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}
-              />
-            </Pie>
-            <Tooltip
-              wrapperStyle={{
-                backgroundColor: '#2f2f2f',
-                border: '1px solid #444',
-                borderRadius: '4px',
-                color: '#fff'
-              }}
-            />
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ color: '#fff', paddingTop: 10 }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
+  // --- TALLY & GROUP BY FLOOR ---
+  let employees   = 0;
+  let contractors = 0;
+  const floorMap  = {};
+
+  finalList.forEach(e => {
+    const fl = mapDoorToFloor(e.Door, e.Direction);
+    floorMap[fl] = floorMap[fl] || [];
+    floorMap[fl].push(e);
+
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      employees++;
+    } else {
+      contractors++;
+    }
+  });
+
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    total:     occupants.length,
+    occupants
+  }));
+
+  // --- COMPUTE in-only counts ---
+  let inOnlyEmployees   = 0;
+  let inOnlyContractors = 0;
+  swipeHistory.forEach((dirs, key) => {
+    if (dirs.has('InDirection') && !dirs.has('OutDirection')) {
+      const evt = firstEvent.get(key);
+      if (!evt) return;
+      if (evt.PersonnelType === 'Employee' || evt.PersonnelType === 'Terminated Personnel') {
+        inOnlyEmployees++;
+      } else {
+        inOnlyContractors++;
+      }
+    }
+  });
+
+  const swipeStats = {
+    totalInSwipes,
+    totalOutSwipes,
+    inOnlyEmployees,
+    inOnlyContractors
+  };
+
+  // --- NEW: per-floor In/Out summary ---
+  const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+  const floorMapIO = {};
+
+  todayEvents.forEach(evt => {
+    const floor = mapDoorToFloor(evt.Door, evt.Direction);
+    const key   = evt.EmployeeID;
+
+    if (!floorMapIO[floor]) {
+      floorMapIO[floor] = {
+        inSwipes:  0,
+        outSwipes: 0,
+        inSet:  new Set(),
+        outSet: new Set()
+      };
+    }
+
+    if (evt.Direction === 'InDirection') {
+      floorMapIO[floor].inSwipes++;
+      floorMapIO[floor].inSet.add(key);
+    } else if (evt.Direction === 'OutDirection') {
+      floorMapIO[floor].outSwipes++;
+      floorMapIO[floor].outSet.add(key);
+    }
+  });
+
+  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+    const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+    return {
+      floor,
+      inSwipes:      stats.inSwipes,
+      outSwipes:     stats.outSwipes,
+      inOnlyCount:   inOnly.length,
+      inOnlyPersons: inOnly
+    };
+  });
+
+  // --- FINAL PAYLOAD ---
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       finalList.length,
+    floorBreakdown,
+    personnelSummary:   { employees, contractors },
+    personnelBreakdown: [
+      { personnelType: 'Employee',   count: employees   },
+      { personnelType: 'Contractor', count: contractors }
+    ],
+    totalVisitedToday:  finalList.length,
+    visitedToday:       { employees, contractors, total: finalList.length },
+    swipeStats,
+    floorInOutSummary
+  };
 }
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const events = [];
+
+  const push = async () => {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+
+    const payload = buildOccupancyForToday(events);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
