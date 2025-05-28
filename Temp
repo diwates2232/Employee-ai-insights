@@ -1,3 +1,57 @@
+// 5) Floor In/Out summary from allEvents (cumulative + deduplicated)
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    const dir     = evt.Direction.trim();
+    let doorRaw   = evt.Door.trim().toUpperCase();
+    doorRaw       = stripTimeSuffix(doorRaw);
+
+    const isStrict = Object.entries(monitoredDoors).some(
+      ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+    );
+    const isSuffix = (
+      dir === 'InDirection'  && doorRaw.endsWith('-IN')  ||
+      dir === 'OutDirection' && doorRaw.endsWith('-OUT')
+    );
+    return isStrict || isSuffix;
+  });
+
+// Deduplicate: latest swipe only per employee + floor + direction
+const dedupedMap = new Map();
+validEvents.forEach(event => {
+  const key = `${event.EmployeeID}_${event.Floor}_${event.Direction}`;
+  if (!dedupedMap.has(key) || new Date(event.Swipe_Time) > new Date(dedupedMap.get(key).Swipe_Time)) {
+    dedupedMap.set(key, event);
+  }
+});
+const dedupedEvents = Array.from(dedupedMap.values());
+
+
+
+
+
+// Create floorInOutSummary
+const floorInOutSummary = {};
+dedupedEvents.forEach(evt => {
+  const floor = evt.Floor || 'Unknown';
+  const direction = evt.Direction;
+
+  if (!floorInOutSummary[floor]) {
+    floorInOutSummary[floor] = { In: 0, Out: 0 };
+  }
+
+  if (direction === 'InDirection') {
+    floorInOutSummary[floor].In++;
+  } else if (direction === 'OutDirection') {
+    floorInOutSummary[floor].Out++;
+  }
+});
+
+
+
+
+
+
 
 // controllers/denverLiveOccupancyController.js
 
