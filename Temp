@@ -1,6 +1,16 @@
 data: {"asOf":"2025-05-28T12:49:39.106Z","currentCount":139,"floorBreakdown":[{"floor":"Floor 13","total":17,"occupants":[{"LocaleMessageTime":"2025-05-28T04:51:50.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:51:50","EmployeeID":"W0022449","PersonGUID":"E0ECF741-9548-463A-9B4E-A3E55D50D4AC","ObjectName1":"Angel, Maria","PersonnelType":"Contractor","CardNumber":"613873","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T04:46:58.000Z","Dateonly":"2025-05-28","Swipe_Time":"04:46:58","EmployeeID":"199599","PersonGUID":"2909F487-2D9B-4413-A230-EF5D02BA465A","ObjectName1":"Formento, Dennis","PersonnelType":"Employee","CardNumber":"231699","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:48:08.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:48:08","EmployeeID":"322279","PersonGUID":"3F8E320A-C19E-4491-8CBE-0FADBF62DE14","ObjectName1":"McDonough, Scott A","PersonnelType":"Employee","CardNumber":"604422","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:48:10.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:48:10","EmployeeID":"325898","PersonGUID":"E371CF1D-E373-4313-883C-2A65ADE909FC","ObjectName1":"Thomas, Christopher","PersonnelType":"Employee","CardNumber":"613615","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T05:56:18.000Z","Dateonly":"2025-05-28","Swipe_Time":"05:56:18","EmployeeID":"238213","PersonGUID":"8B681337-8AD2-44EE-A178-89F7E4EDC048","ObjectName1":"Arias Chaves, Johann","PersonnelType":"Employee","CardNumber":"608894","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T06:01:35.000Z","Dateonly":"2025-05-28","Swipe_Time":"06:01:35","EmployeeID":"326497","PersonGUID":"AEBD1DFE-8D69-48CB-A40E-8FB8CBE46AAF","ObjectName1":"Vidal, Cinthia","PersonnelType":"Employee","CardNumber":"613566","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. South Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T06:18:45.000Z","Dateonly":"2025-05-28","Swipe_Time":"06:18:45","EmployeeID":"240618","PersonGUID":"ABB6CE21-D20F-406E-A3C0-5E15B1446369","ObjectName1":"Kelsay, Misti M","PersonnelType":"Employee","CardNumber":"232038","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"},{"LocaleMessageTime":"2025-05-28T06:20:36.000Z","Dateonly":"2025-05-28","Swipe_Time":"06:20:36","EmployeeID":"313891","PersonGUID":"63CB674A-9F00-43E9-9BFC-0FC858B55605","ObjectName1":"Huggins, 
 
-
+ function normalizeKey(rawDoor, rawDir) {
+-  let d = String(rawDoor || '').trim().toUpperCase();
++  let d = String(rawDoor || '')
++    .trim()
++    // collapse any run of whitespace to a single space
++    .replace(/\s+/g, ' ')
++    .toUpperCase();
+   d = d.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+   const dir = rawDir.trim() === 'InDirection' ? 'IN' : 'OUT';
+   return `${d}___${dir}`;
+ }
 
 
 
