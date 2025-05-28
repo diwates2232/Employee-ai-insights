@@ -1,3 +1,22 @@
+personnelBreakdown: (() => {
+  const map = new Map();
+  finalList.forEach(e => {
+    const type = e.PersonnelType || 'Unknown';
+    map.set(type, (map.get(type) || 0) + 1);
+  });
+  return Array.from(map, ([personnelType, count]) => ({ personnelType, count }));
+})(),
+
+
+
+
+
+
+
+
+
+
+
 Read carefully this file and make changes carefully only if needed. dont make unnecessary changes
 
 // controllers/denverLiveOccupancyController.js
