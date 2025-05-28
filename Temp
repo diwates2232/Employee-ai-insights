@@ -1,39 +1,4 @@
-data: {"asOf":"2025-05-28T09:22:15.208Z","currentCount":3,"floorBreakdown":[{"floor":"Floor 13","total":1,"occupants":[{"LocaleMessageTime":"2025-05-28T03:17:15.000Z","Dateonly":"2025-05-28","Swipe_Time":"03:17:15","EmployeeID":"W0022449","PersonGUID":"E0ECF741-9548-463A-9B4E-A3E55D50D4AC","ObjectName1":"Angel, Maria","PersonnelType":"Contractor","CardNumber":"613873","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 13. North Lobby Doors-IN"}]},{"floor":"Floor 06","total":2,"occupants":[{"LocaleMessageTime":"2025-05-28T02:52:08.000Z","Dateonly":"2025-05-28","Swipe_Time":"02:52:08","EmployeeID":"W0026151","PersonGUID":"5EC24130-835B-4D6F-8CFC-E9C2B1993F4B","ObjectName1":"Dean, Taje","PersonnelType":"Contractor","CardNumber":"617976","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. Fitness Center East_11:01:02"},{"LocaleMessageTime":"2025-05-28T02:18:31.000Z","Dateonly":"2025-05-28","Swipe_Time":"02:18:31","EmployeeID":"W0022451","PersonGUID":"35327275-1D0C-4BF7-8817-6A76B5F9E29A","ObjectName1":"Alamo, Martin","PersonnelType":"Contractor","CardNumber":"613770","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. South Entrance-IN"}]}],"personnelSummary":{"employees":0,"contractors":3},"personnelBreakdown":[{"personnelType":"Contractor","count":3}],"totalVisitedToday":3,"visitedToday":{"employees":0,"contractors":3,"total":3},"swipeStats":{"totalInSwipes":54,"totalOutSwipes":32,"inOnlyEmployees":0,"inOnlyContractors":0},"floorInOutSummary":[]}
-
-
-
-// Step 2 replacement: loose match on monitoredDoors keys
-const validEvents = todayEvents.filter(evt => {
-  const dir = evt.Direction.trim();
-  // find any monitoredDoor whose key appears in the raw evt.Door
-  return Object.entries(monitoredDoors).some(([key, reqDir]) => {
-    return evt.Door.toUpperCase().includes(key) && reqDir === dir;
-  });
-});
-
-
-
-
-// 2) Filter by strict monitored doors (loose substring match)
-const validEvents = todayEvents.filter(evt => {
-  const dir = evt.Direction.trim();
-  const doorRaw = evt.Door.toUpperCase();
-  return Object.entries(monitoredDoors).some(([key, reqDir]) =>
-    doorRaw.includes(key) && reqDir === dir
-  );
-});
-
-
-
-
-
-
-
-
-
-
-
-Lets Check file line by line and confirm each function works perfectly or not also check API respoce
+This is my updated js file then check root cause and fix the issue .
 // controllers/denverLiveOccupancyController.js
 
 const { DateTime }      = require('luxon');
@@ -256,13 +221,16 @@ function buildOccupancyForToday(allEvents) {
 // --- NEW: per-floor In/Out summary with strict-door filtering ---
   // 1) Only today’s events
   const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+// Step 2 replacement: loose match on monitoredDoors keys
 
-  // 2) Filter by strict monitored doors
-  const validEvents = todayEvents.filter(evt => {
-    const doorName  = evt.Door.trim().toUpperCase();
-    const direction = evt.Direction.trim();
-    return monitoredDoors[doorName] === direction;
-  });
+// 2) Filter by strict monitored doors (loose substring match)
+const validEvents = todayEvents.filter(evt => {
+  const dir = evt.Direction.trim();
+  const doorRaw = evt.Door.toUpperCase();
+  return Object.entries(monitoredDoors).some(([key, reqDir]) =>
+    doorRaw.includes(key) && reqDir === dir
+  );
+});
 
   // 3) Count every distinct swipe (no dedupe), track in/out per person per floor
   const floorMapIO = {};
@@ -354,5 +322,25 @@ exports.getDenverLiveOccupancy = async (req, res) => {
 
 
 
+for more information check data 
 
-data: {"asOf":"2025-05-28T09:08:43.642Z","currentCount":3,"floorBreakdown":[{"floor":"Floor 09","total":1,"occupants":[{"LocaleMessageTime":"2025-05-28T02:08:23.000Z","Dateonly":"2025-05-28","Swipe_Time":"02:08:23","EmployeeID":"W0022449","PersonGUID":"E0ECF741-9548-463A-9B4E-A3E55D50D4AC","ObjectName1":"Angel, Maria","PersonnelType":"Contractor","CardNumber":"613873","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 09. North Lobby Doors-IN"}]},{"floor":"Floor 06","total":2,"occupants":[{"LocaleMessageTime":"2025-05-28T02:52:08.000Z","Dateonly":"2025-05-28","Swipe_Time":"02:52:08","EmployeeID":"W0026151","PersonGUID":"5EC24130-835B-4D6F-8CFC-E9C2B1993F4B","ObjectName1":"Dean, Taje","PersonnelType":"Contractor","CardNumber":"617976","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. Fitness Center East_11:01:02"},{"LocaleMessageTime":"2025-05-28T02:18:31.000Z","Dateonly":"2025-05-28","Swipe_Time":"02:18:31","EmployeeID":"W0022451","PersonGUID":"35327275-1D0C-4BF7-8817-6A76B5F9E29A","ObjectName1":"Alamo, Martin","PersonnelType":"Contractor","CardNumber":"613770","AdmitCode":"Admit","Direction":"InDirection","Door":"US.CO.HQ. 06. South Entrance-IN"}]}],"personnelSummary":{"employees":0,"contractors":3},"personnelBreakdown":[{"personnelType":"Contractor","count":3}],"totalVisitedToday":3,"visitedToday":{"employees":0,"contractors":3,"total":3},"swipeStats":{"totalInSwipes":53,"totalOutSwipes":31,"inOnlyEmployees":0,"inOnlyContractors":0},"floorInOutSummary":[]}
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\strictDoorList.js
+
+oors: {
+    'US.CO.HQ. 12. South Lobby Doors-IN': 'InDirection',
+    'US.CO.HQ. 12. North Stairwell-IN': 'InDirection',
+    'US.CO.HQ. 12. Freight Elevator Lobby-IN': 'InDirection',
+    'US.CO.HQ. 12. South Stairwell-IN': 'InDirection',
+    'US.CO.HQ. 11. North Stairwell-IN': 'InDirection',
+    'US.CO.HQ. 11. Freight Elevator Lobby-IN':'InDirection',
+    'US.CO.HQ. 11. South Stairwell-IN': 'InDirection',
+ 'US.CO.HQ. 09. Freight Elevator Lobby-OUT':'OutDirection',
+'US.CO.HQ. 09. North Lobby Doors-OUT':'OutDirection',
+'US.CO.HQ. 09. North Stairwell-OUT':'OutDirection',
+'US.CO.HQ. 09. South Lobby Doors-OUT':'OutDirection',
+'US.CO.HQ. 09. South Stairwell-OUT':'OutDirection',
+'US.CO.HQ. 11. Freight Elevator Lobby-OUT':'OutDirection',
+'US.CO.HQ. 11. North Lobby Doors-OUT':'OutDirection',
+'US.CO.HQ. 11. North Stairwell-OUT':'OutDirection',
+
+};
