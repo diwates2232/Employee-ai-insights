@@ -1,5 +1,186 @@
 // controllers/denverLiveOccupancyController.js
 
+// … earlier imports and helper functions …
+
+function buildOccupancyForToday(allEvents) {
+  // --- TRACK swipe counts & per-person direction history ---
+  const swipeHistory   = new Map();
+  const firstEvent     = new Map();
+  let totalInSwipes    = 0;
+  let totalOutSwipes   = 0;
+
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber || evt.ObjectName1;
+
+    if (!swipeHistory.has(key)) {
+      swipeHistory.set(key, new Set());
+      firstEvent.set(key, evt);
+    }
+    swipeHistory.get(key).add(evt.Direction);
+
+    if (evt.Direction === 'InDirection') totalInSwipes++;
+    if (evt.Direction === 'OutDirection') totalOutSwipes++;
+  });
+
+  // --- DEDUPE & current occupancy ---
+  const todayIn = allEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  );
+
+  const uniquePeople = new Map();
+  const current = {};
+
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const {
+      EmployeeID, PersonGUID,
+      ObjectName1, PersonnelType,
+      CardNumber, Dateonly,
+      Swipe_Time, Direction, Door
+    } = evt;
+
+    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+    const zone     = mapDoorToFloor(Door, Direction);
+
+    // Eviction logic
+    if (Direction === 'OutDirection' && zone === 'Out of office') {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+      return;
+    }
+
+    if (Direction === 'InDirection') {
+      uniquePeople.set(dedupKey, PersonnelType);
+      current[dedupKey] = { Dateonly, Swipe_Time, EmployeeID, ObjectName1, CardNumber, PersonnelType, zone };
+    } else {
+      uniquePeople.delete(dedupKey);
+      delete current[dedupKey];
+    }
+  });
+
+  // Latest swipe per person
+  const latestByPerson = new Map();
+  todayIn.forEach(e => {
+    const prev = latestByPerson.get(e.PersonGUID);
+    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
+    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      latestByPerson.set(e.PersonGUID, e);
+    }
+  });
+  const finalList = Array.from(latestByPerson.values());
+
+  // --- TALLY & GROUP BY FLOOR ---
+  let employees   = 0;
+  let contractors = 0;
+  const floorMap  = {};
+
+  finalList.forEach(e => {
+    const fl = mapDoorToFloor(e.Door, e.Direction);
+    floorMap[fl] = floorMap[fl] || [];
+    floorMap[fl].push(e);
+
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      employees++;
+    } else {
+      contractors++;
+    }
+  });
+
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occupants]) => ({
+    floor,
+    total: occupants.length,
+    occupants
+  }));
+
+  // --- COMPUTE in-only counts ---
+  let inOnlyEmployees   = 0;
+  let inOnlyContractors = 0;
+  swipeHistory.forEach((dirs, key) => {
+    if (dirs.has('InDirection') && !dirs.has('OutDirection')) {
+      const evt = firstEvent.get(key);
+      if (!evt) return;
+      if (evt.PersonnelType === 'Employee' || evt.PersonnelType === 'Terminated Personnel') {
+        inOnlyEmployees++;
+      } else {
+        inOnlyContractors++;
+      }
+    }
+  });
+
+  const swipeStats = {
+    totalInSwipes,
+    totalOutSwipes,
+    inOnlyEmployees,
+    inOnlyContractors
+  };
+
+  // --- NEW: per-floor In/Out summary with first-swipe-only logic ---
+  // 1) Filter to today’s events
+  const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+
+  // 2) Prepare de-dupe trackers
+  const countedIn  = new Set();
+  const countedOut = new Set();
+  const floorMapIO = {};
+
+  // 3) Count only first In/Out per person per floor
+  todayEvents.forEach(evt => {
+    const floorKey  = mapDoorToFloor(evt.Door, evt.Direction);
+    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${floorKey}`;
+
+    if (!floorMapIO[floorKey]) {
+      floorMapIO[floorKey] = { inSwipes: 0, outSwipes: 0 };
+    }
+
+    if (evt.Direction === 'InDirection') {
+      if (!countedIn.has(personKey)) {
+        floorMapIO[floorKey].inSwipes++;
+        countedIn.add(personKey);
+      }
+    } else if (evt.Direction === 'OutDirection') {
+      if (!countedOut.has(personKey)) {
+        floorMapIO[floorKey].outSwipes++;
+        countedOut.add(personKey);
+      }
+    }
+  });
+
+  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => ({
+    floor,
+    inSwipes:  stats.inSwipes,
+    outSwipes: stats.outSwipes,
+    inconsistency: stats.inSwipes - stats.outSwipes
+  }));
+
+  // --- FINAL PAYLOAD ---
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       finalList.length,
+    floorBreakdown,
+    personnelSummary:   { employees, contractors },
+    personnelBreakdown: finalList.reduce((acc, e) => {
+      acc[e.PersonnelType] = (acc[e.PersonnelType] || 0) + 1;
+      return acc;
+    }, {}),
+    totalVisitedToday:  finalList.length,
+    visitedToday:       { employees, contractors, total: finalList.length },
+    swipeStats,
+    floorInOutSummary
+  };
+}
+
+
+
+
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
  function buildOccupancyForToday(allEvents) {
    // … existing code up to swipeStats …
 
