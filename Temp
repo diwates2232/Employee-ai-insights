@@ -1,3 +1,33 @@
+--- controllers/denverLiveOccupancyController.js
++++ controllers/denverLiveOccupancyController.js
+@@
+-/** Normalize door+direction key **/
+-function normalizeKey(rawDoor, rawDir) {
+-  const d   = String(rawDoor || '')
+-    .trim()
+-    .replace(/\s+/g, ' ')
+-    .toUpperCase();
+-  const dir = /IN/i.test(rawDir) ? 'IN' : 'OUT';
+-  return `${d}___${dir}`;
+-}
++/** Normalize door+direction key **/
++function normalizeKey(rawDoor, rawDir) {
++  // strip any trailing “_HH:MM:SS” from door
++  let d = String(rawDoor || '').trim().toUpperCase();
++  d = d.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
++  // classify direction exactly
++  const dir = rawDir.trim() === 'InDirection' ? 'IN' : 'OUT';
++  return `${d}___${dir}`;
++}
+
+
+
+
+
+
+
+
+
 // controllers/denverLiveOccupancyController.js
 
 const { DateTime }       = require('luxon');
