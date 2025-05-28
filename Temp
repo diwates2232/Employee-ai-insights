@@ -1,3 +1,99 @@
+// controllers/denverLiveOccupancyController.js
+
+ function buildOccupancyForToday(allEvents) {
+   // … existing code up to swipeStats …
+
+   // --- NEW: per-floor In/Out summary ---
+   const todayEvents = allEvents.filter(e => isTodayInDenver(e.Dateonly));
+-  const floorMapIO = {};
+-
+-  todayEvents.forEach(evt => {
+-    const floor = mapDoorToFloor(evt.Door, evt.Direction);
+-    const key   = evt.EmployeeID;
+-
+-    if (!floorMapIO[floor]) {
+-      floorMapIO[floor] = {
+-        inSwipes:  0,
+-        outSwipes: 0,
+-        inSet:  new Set(),
+-        outSet: new Set()
+-      };
+-    }
+-
+-    if (evt.Direction === 'InDirection') {
+-      floorMapIO[floor].inSwipes++;
+-      floorMapIO[floor].inSet.add(key);
+-    } else if (evt.Direction === 'OutDirection') {
+-      floorMapIO[floor].outSwipes++;
+-      floorMapIO[floor].outSet.add(key);
+-    }
+-  });
++  const floorMapIO = {};
++  // Track per-person first In/Out per floor
++  const countedIn  = new Set();
++  const countedOut = new Set();
++
++  todayEvents.forEach(evt => {
++    const floor = mapDoorToFloor(evt.Door, evt.Direction);
++    const personKey = `${evt.PersonGUID || evt.EmployeeID || evt.CardNumber}___${floor}`;
++
++    if (!floorMapIO[floor]) {
++      floorMapIO[floor] = { inSwipes: 0, outSwipes: 0 };
++    }
++
++    if (evt.Direction === 'InDirection') {
++      // only count the first In swipe for this person on this floor today
++      if (!countedIn.has(personKey)) {
++        floorMapIO[floor].inSwipes++;
++        countedIn.add(personKey);
++      }
++    } else if (evt.Direction === 'OutDirection') {
++      // only count the first Out swipe for this person on this floor today
++      if (!countedOut.has(personKey)) {
++        floorMapIO[floor].outSwipes++;
++        countedOut.add(personKey);
++      }
++    }
++  });
+ 
+-  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+-    const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+-    return {
+-      floor,
+-      inSwipes:      stats.inSwipes,
+-      outSwipes:     stats.outSwipes,
+-      inOnlyCount:   inOnly.length,
+-      inOnlyPersons: inOnly
+-    };
+-  });
++  const floorInOutSummary = Object.entries(floorMapIO).map(([floor, {inSwipes, outSwipes}]) => ({
++    floor,
++    inSwipes,
++    outSwipes,
++    inconsistency: inSwipes - outSwipes
++  }));
+ 
+   // --- FINAL PAYLOAD ---
+   return {
+     // … other fields …
+     floorInOutSummary
+   };
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read this file carefully , Read each line by logic,
 Issue is there Floor In/Out Swipe Summary Swipe data Count each time means our API continously fetct swipe data ,
 in this swipe data display Data come again and again so Entry of Swipe Intime continously increased as per API time it does not chcck time .thats Why we are getting Wrong InDirection Swipe count 
