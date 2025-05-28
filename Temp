@@ -1,3 +1,27 @@
+- function buildOccupancyForToday(allEvents) {
++ function buildOccupancyForToday(allEvents, freshEvents) {
+
+
+
+
+- const payload = buildOccupancyForToday(events);
++ const payload = buildOccupancyForToday(events, fresh);
+
+
+
+  // --- NEW: count only fresh swipes for this push ---
+  const totalInSwipes  = freshEvents.filter(e => e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)).length;
+  const totalOutSwipes = freshEvents.filter(e => e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)).length;
+
+
+
+
+
+
+
+
+
+
 Now read below Api responce Check all Api responce carefully, and now Currently Swipe counts are increasing continously solve this issue
 
 
