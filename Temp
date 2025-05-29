@@ -1,5 +1,244 @@
 // controllers/denverLiveOccupancyController.js
 
+const { DateTime } = require('luxon');
+const { denver } = require('../config/siteConfig');
+const doorFloorMap = require('../data/denverDoorFloorMap');
+const { monitoredDoors } = require('../data/strictDoorList');
+const sql = require('mssql');
+const normalizeKey = require('../data/normalizeKey');
+
+const warnedKeys = new Set();
+const normalizedMonitoredKeys = new Set(
+  Object.entries(monitoredDoors).map(([door, dir]) => normalizeKey(door, dir))
+);
+
+function mapDoorToFloor(rawDoor, rawDir) {
+  const key = normalizeKey(rawDoor, rawDir);
+  if (doorFloorMap[key]) return doorFloorMap[key];
+  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
+  if (m) return `Floor ${m[1]}`;
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
+
+function isTodayInDenver(dateOnly) {
+  const swipeDate = DateTime.fromISO(dateOnly, { zone: 'America/Denver' }).toFormat('yyyy-LL-dd');
+  const today = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
+  return swipeDate === today;
+}
+
+async function fetchNewEvents(since) {
+  const pool = await denver.pool.connect();
+  const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+  const { recordset } = await req.query(`
+    SELECT
+      PersonGUID, EmployeeID, CardNumber, Direction, Door,
+      Swipe_Time, Dateonly, LocaleMessageTime, PersonnelType
+    FROM ACVSUJournal_00010020.dbo.LiveSwipeEvent
+    WHERE LocaleMessageTime > @since
+    ORDER BY LocaleMessageTime ASC
+  `);
+  return recordset;
+}
+
+function computeTotalVisitedToday(allEvents) {
+  const seen = new Set();
+  allEvents.forEach(evt => {
+    if (evt.Direction === 'InDirection' && isTodayInDenver(evt.Dateonly)) {
+      const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+      seen.add(key);
+    }
+  });
+  return seen.size;
+}
+
+function buildOccupancyForToday(allEvents, freshEvents) {
+  const lastSwipeMap = new Map();
+
+  // Build latest swipe per person
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+    const prev = lastSwipeMap.get(key);
+    const now = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+    if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      lastSwipeMap.set(key, evt);
+    }
+  });
+
+  // Keep only those whose last swipe is InDirection
+  const liveOccupants = Array.from(lastSwipeMap.values()).filter(evt =>
+    evt.Direction === 'InDirection'
+  );
+
+  // Fallback if none detected
+  let finalList = liveOccupants;
+  if (finalList.length === 0) {
+    finalList = freshEvents.filter(e =>
+      e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+    );
+  }
+
+  let liveEmployees = 0;
+  let liveContractors = 0;
+  const floorMap = {};
+  finalList.forEach(e => {
+    const fl = mapDoorToFloor(e.Door, e.Direction);
+    floorMap[fl] = floorMap[fl] || [];
+    floorMap[fl].push(e);
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      liveEmployees++;
+    } else {
+      liveContractors++;
+    }
+  });
+
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => ({
+    floor,
+    total: occ.length,
+    occupants: occ
+  }));
+
+  const personnelBreakdown = Object.entries(
+    finalList.reduce((m, e) => {
+      m.set(e.PersonnelType, (m.get(e.PersonnelType) || 0) + 1);
+      return m;
+    }, new Map())
+  ).map(([personnelType, count]) => ({ personnelType, count }));
+
+  const totalInSwipes = freshEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+  const totalOutSwipes = freshEvents.filter(e =>
+    e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+
+  const validEvents = allEvents
+    .filter(e => isTodayInDenver(e.Dateonly))
+    .filter(evt => {
+      const key = normalizeKey(evt.Door.trim(), evt.Direction.trim());
+      return normalizedMonitoredKeys.has(key);
+    });
+
+  const dedupedIO = new Map();
+  validEvents.forEach(evt => {
+    const fl = mapDoorToFloor(evt.Door, evt.Direction);
+    const mapKey = `${evt.PersonGUID}___${fl}___${evt.Direction}`;
+    const prev = dedupedIO.get(mapKey);
+    const now = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+    if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      dedupedIO.set(mapKey, evt);
+    }
+  });
+
+  const floorIO = {};
+  Array.from(dedupedIO.values()).forEach(evt => {
+    const fl = mapDoorToFloor(evt.Door, evt.Direction);
+    if (fl === 'Out of office') return;
+    floorIO[fl] = floorIO[fl] || {
+      inSwipes: 0,
+      outSwipes: 0,
+      inSet: new Set(),
+      outSet: new Set()
+    };
+    if (evt.Direction === 'InDirection') {
+      floorIO[fl].inSwipes++;
+      floorIO[fl].inSet.add(evt.PersonGUID);
+    } else {
+      floorIO[fl].outSwipes++;
+      floorIO[fl].outSet.add(evt.PersonGUID);
+    }
+  });
+
+  const floorInOutSummary = Object.entries(floorIO).map(([floor, stats]) => {
+    const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+    return {
+      floor,
+      inSwipes: stats.inSwipes,
+      outSwipes: stats.outSwipes,
+      inOnlyCount: inOnly.length,
+      inOnlyPersons: inOnly
+    };
+  });
+
+  const totalVisitedToday = computeTotalVisitedToday(allEvents);
+  const seenMap = new Map();
+  allEvents.forEach(evt => {
+    if (evt.Direction !== 'InDirection' || !isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+    if (!seenMap.has(key)) seenMap.set(key, evt.PersonnelType);
+  });
+
+  let visitedEmployees = 0;
+  let visitedContractors = 0;
+  seenMap.forEach(type => {
+    if (type === 'Employee' || type === 'Terminated Personnel') {
+      visitedEmployees++;
+    } else {
+      visitedContractors++;
+    }
+  });
+
+  return {
+    asOf: new Date().toISOString(),
+    currentCount: finalList.length,
+    floorBreakdown,
+    personnelSummary: { employees: liveEmployees, contractors: liveContractors },
+    personnelBreakdown,
+    totalVisitedToday,
+    visitedToday: {
+      employees: visitedEmployees,
+      contractors: visitedContractors,
+      total: seenMap.size
+    },
+    swipeStats: { totalInSwipes, totalOutSwipes },
+    floorInOutSummary
+  };
+}
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const events = [];
+
+  const push = async () => {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+    const payload = buildOccupancyForToday(events, fresh);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
+
+
+
+
+
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
 const { DateTime }       = require('luxon');
 const { denver }         = require('../config/siteConfig');
 const doorFloorMap       = require('../data/denverDoorFloorMap');
