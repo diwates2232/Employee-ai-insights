@@ -1,3 +1,62 @@
+// controllers/denverLiveOccupancyController.js
+// ─── after your isTodayInDenver() ─────────────────────────────────────
+
+/**
+ * Count unique badge‐holders who swiped IN at least once today.
+ * @param {Array} allEvents – cumulative events for today
+ * @returns {number}
+ */
+function computeVisitedToday(allEvents) {
+  const seen = new Set();
+  allEvents.forEach(evt => {
+    if (evt.Direction === 'InDirection' && isTodayInDenver(evt.Dateonly)) {
+      const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+      seen.add(key);
+    }
+  });
+  return seen.size;
+}
+
+function buildOccupancyForToday(allEvents, freshEvents) {
+  // ─── A) Evict truly out‐of‐office people ───────────────────────────  
+  // (same as before…)
+
+  // ─── B) Compute cumulative visited‐today BEFORE any evictions ──────
+  const totalVisitedToday = computeVisitedToday(allEvents);
+
+  // ─── 1) Occupancy: dedupe by latest InDirection per person ────────  
+  // …as you already have, producing finalList…
+
+  // ─── 2,3,4,5…) same floorBreakdown, personnelBreakdown, swipeStats…
+
+  // ─── 6) Build the visitedToday object (using the cumulative total) ─
+  const visitedToday = {
+    total: totalVisitedToday,
+    // If you also want employees/contractors _visited_ (not just inside), you could:
+    // employees: /* compute by filtering allEvents InDirection + today + PersonnelType */,
+    // contractors: /* same for contractors */
+  };
+
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       finalList.length,       // real‐time headcount
+    floorBreakdown,
+    personnelSummary:   { employees, contractors },
+    personnelBreakdown,
+    totalVisitedToday,                           // NEW cumulative count
+    visitedToday,                                // uses that same total
+    swipeStats,
+    floorInOutSummary
+  };
+}
+
+
+
+
+
+
+
+
 
 
 // controllers/denverLiveOccupancyController.js
