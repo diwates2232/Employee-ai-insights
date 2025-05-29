@@ -1,3 +1,46 @@
+--- a/controllers/denverLiveOccupancyController.js
++++ b/controllers/denverLiveOccupancyController.js
+@@
+ function buildOccupancyForToday(allEvents, freshEvents) {
+@@
+-  // ─── 6) Today visited ─────────────────────────────────────────────
+-  const visitedToday = { employees, contractors, total: finalList.length };
++  // ─── 6) Today visited ─────────────────────────────────────────────
++  // total unique people who swiped in today
++  const totalVisitedToday = computeVisitedToday(allEvents);
++  // current head-count
++  const currentCount = finalList.length;
+
+   return {
+-    asOf:               new Date().toISOString(),
+-    currentCount:       finalList.length,
++    asOf:               new Date().toISOString(),
++    currentCount,                   // people currently inside
+     floorBreakdown,
+     personnelSummary:   { employees, contractors },
+     personnelBreakdown,
+-    //totalVisitedToday,                           // NEW cumulative count
+-      visitedToday,
+-    totalVisitedToday:  finalList.length,
+-    visitedToday,
++    totalVisitedToday,              // unique people who visited today
++    visitedToday: {                 // breakdown of today's visitors currently inside
++      employees,
++      contractors,
++      total: currentCount
++    },
+     swipeStats:         { totalInSwipes, totalOutSwipes },
+     floorInOutSummary
+   };
+
+
+
+
+
+
+
+
+
 // controllers/denverLiveOccupancyController.js
 
 const { DateTime }       = require('luxon');
