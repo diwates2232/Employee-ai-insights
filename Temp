@@ -1,4 +1,25 @@
- C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+// controllers/denverLiveOccupancyController.js
+
+const { monitoredDoors } = require('../data/strictDoorList');
+const normalizeKey       = require('../data/normalizeKey');
+
+// build a Set of normalized door___direction keys
+const normalizedMonitoredKeys = new Set(
+  Object.entries(monitoredDoors).map(
+    ([door, dir]) => normalizeKey(door, dir)
+  )
+);
+
+
+
+
+
+
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\strictDoorList.js:2
   Object.entries(monitoredDoors).map(
                  ^
