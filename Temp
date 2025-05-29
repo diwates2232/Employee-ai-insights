@@ -1,1 +1,28 @@
 Saurabh","CardNumber":"612213","PersonnelType":"Employee","zone":"2nd Floor, Pune","door":"APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR_10:05:4B","Direction":"InDirection"}]},"personnelSummary":{"employees":188,"contractors":42},"ertStatus":{"Incident Controller":[{"name":"Sameer Kanade","email":"sameer.kanade@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Lloyds Dass","email":"lloyds.dass@company.com","phone":"xxx-xxx-xxxx","present":false}],"First Aid Team":[{"name":"Sameer Kanade","email":"sameer.kanade@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Vishal Chaudhari","email":"vishal.chaudhari@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Vinit Kumar","email":"vinit.kumar@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Sagar Jamdade","email":"sagar.jamdade@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Lloyds Dass","email":"lloyds.dass@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Sonu Pandey","email":"sonu.pandey@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Bhupendra Rangare","email":"bhupendra.rangare@company.com","phone":"xxx-xxx-xxxx","present":false}],"ERT Team Leader":[{"name":"Vishal Chaudhari","email":"vishal.chaudhari@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Vinit Kumar","email":"vinit.kumar@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Sagar Jamdade","email":"sagar.jamdade@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Satish Bhoyane","email":"satish.bhoyane@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Sonu Pandey","email":"sonu.pandey@company.com","phone":"xxx-xxx-xxxx","present":false},{"name":"Bhupendra Rangare","email":"bhupendra.rangare@company.com","phone":"xxx-xxx-xxxx","present":false}],"BCM Team":[{"name":"Rohit Singla","email":"rohit.singla@company.com","phone":"xxx-xxx-xxxx","present":false}],"Site Head":[{"name":"Rajeev Mago","email":"rajeev.mago@company.com","phone":"xxx-xxx-xxxx","present":false}],"Site Operations":[{"name":"Rohit Singla","email":"rohit.singla@company.com","phone":"xxx-xxx-xxxx","present":false}],"HR":[{"name":"Suma Roy","email":"suma.roy@company.com","phone":"xxx-xxx-xxxx","present":false}]},"personnelBreakdown":[{"personnelType":"Property Management","count":11},{"personnelType":"Employee","count":188},{"personnelType":"Contractor","count":15},{"personnelType":"Visitor","count":14},{"personnelType":"Temp Badge","count":2}],"totalVisitedToday":633,"visitedToday":{"employees":549,"contractors":84,"total":633}}
+
+
+-  const ertStatus = Object.fromEntries(
+-    Object.entries(ertMembers).map(([role, members]) => {
+-      const list = members.map(m => {
+-        // brittle exact match:
+-        const present = Object.values(current).some(e => e.ObjectName1 === m.name);
+-        return { ...m, present };
+-      });
+-      return [ role, list ];
+-    })
+-  );
++  const ertStatus = Object.fromEntries(
++    Object.entries(ertMembers).map(([role, members]) => {
++      const list = members.map(m => {
++        // normalize both actual and expected names:
++        const target = m.name.trim().toLowerCase();
++        const present = Object.values(current).some(e => {
++          return String(e.ObjectName1 || '')
++            .trim()
++            .toLowerCase() === target;
++        });
++        return { ...m, present };
++      });
++      return [ role, list ];
++    })
++  );
