@@ -1,3 +1,49 @@
+// data/denverDoorFloorMap.js
+
+const { normalizeKey } = require('../controllers/denverLiveOccupancyController');
+const rawMap = {
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___IN":   "Floor 12",
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___OUT":  "Out of office",
+  // …all the rest, exactly as you have them…
+};
+
+const doorToFloorMap = {};
+for (const [rawKey, floor] of Object.entries(rawMap)) {
+  const [doorRaw, dirRaw] = rawKey.split('___');
+  const normKey = normalizeKey(doorRaw, dirRaw);
+  doorToFloorMap[normKey] = floor;
+}
+
+module.exports = doorToFloorMap;
+
+
+
+
+
+
+
+// in controllers/denverLiveOccupancyController.js
+
+function normalizeKey(rawDoor, rawDir) {
+  let d = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+
+  // strip ANY _HH:MM:SS where HH/MM/SS are hex or digits
+  d = d.replace(/_[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}$/i, '');
+  const dir = rawDir.trim() === 'InDirection' ? 'IN' : 'OUT';
+  return `${d}___${dir}`;
+}
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\denverDoorFloorMap.js
 This is our denver door Floor map.js file 
 is like   "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN  door name IN Direction of swipe  ,  "Floor 12", Floor details .
