@@ -4,19 +4,6 @@ Live occupancy SSE error: ReferenceError: ertStatus is not defined
     at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1069:23)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
     at async exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1076:5)
-Live occupancy SSE error: ReferenceError: ertStatus is not defined
-    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1069:23)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1076:5)
-
-
-
-
-
-read file and error carefully .dont make unneccesarry changes below file carefully
-
-// controllers/liveOccupancyController.js
-
 
 
 
@@ -278,7 +265,7 @@ async function buildOccupancy(allEvents) {
     floorBreakdown:   Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total })),
     details:          zoneMap,
     personnelSummary: { employees: employeeCount, contractors: contractorCount },
-  
+     ertStatus,
     // personnelBreakdown:[
     //   { personnelType:'Employee',   count: employeeCount },
     //   { personnelType:'Contractor', count: contractorCount }
