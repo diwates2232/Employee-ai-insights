@@ -1,3 +1,68 @@
+-  // ─── 5) Floor In/Out summary (deduped per person+floor+dir) ───────
+-  const validEvents = allEvents
+-    .filter(e => isTodayInDenver(e.Dateonly))
+-    .filter(evt => {
+-      const dir     = evt.Direction.trim();
+-      let doorRaw   = stripTimeSuffix(evt.Door.trim().toUpperCase());
+-      const isStrict = Object.entries(monitoredDoors).some(
+-        ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+-      );
+-      const isSuffix = (
+-        (dir === 'InDirection'  && doorRaw.endsWith('-IN'))  ||
+-        (dir === 'OutDirection' && doorRaw.endsWith('-OUT'))
+-      );
+-      return isStrict || isSuffix;
+-    });
++  // ─── 5) Floor In/Out summary (only doors in strictDoorList) ───────
++  const validEvents = allEvents
++    .filter(e => isTodayInDenver(e.Dateonly))
++    .filter(evt => {
++      // normalize to “KEY___DIRECTION”
++      const key = normalizeKey(evt.Door.trim(), evt.Direction.trim());
++      // only accept if it exactly matches one of your monitoredDoors
++      return monitoredDoors[key] === evt.Direction;
++    });
+ 
+-  const dedupedMap = new Map();
++  const dedupedMap = new Map();
+   validEvents.forEach(evt => {
+-    const fl  = mapDoorToFloor(evt.Door, evt.Direction);
+     const key = `${evt.EmployeeID}___${mapDoorToFloor(evt.Door, evt.Direction)}___${evt.Direction}`;
+     const prev = dedupedMap.get(key);
+     const now  = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+     if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+       dedupedMap.set(key, evt);
+     }
+   });
+ 
+   const floorMapIO = {};
+   Array.from(dedupedMap.values()).forEach(evt => {
+     const fl = mapDoorToFloor(evt.Door, evt.Direction);
++    // just in case strip any “Out of office” (shouldn’t appear)
++    if (fl === 'Out of office') return;
+     floorMapIO[fl] = floorMapIO[fl] || { inSwipes: 0, outSwipes: 0, inSet: new Set(), outSet: new Set() };
+     if (evt.Direction === 'InDirection') {
+       floorMapIO[fl].inSwipes++;
+       floorMapIO[fl].inSet.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+     } else {
+       floorMapIO[fl].outSwipes++;
+       floorMapIO[fl].outSet.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+     }
+   });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read below file carefully Now file is working perfectly, issue is 
 Floor In/Out Swipe Summary is need to stritckly depend on this C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\data\strictDoorList.js
 door list 
