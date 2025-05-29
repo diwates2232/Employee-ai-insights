@@ -1,3 +1,55 @@
+// Precompute normalized keys for strictDoorList
+const normalizedMonitoredKeys = new Set(
+  Object.entries(monitoredDoors).map(
+    ([door, dir]) => normalizeKey(door, dir)
+  )
+);
+
+
+
+
+
+
+- const validEvents = allEvents
+-   .filter(e => isTodayInDenver(e.Dateonly))
+-   .filter(evt => {
+-     const dir     = evt.Direction.trim();
+-     let doorRaw   = stripTimeSuffix(evt.Door.trim().toUpperCase());
+-     const isStrict = Object.entries(monitoredDoors).some(
+-       ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+-     );
+-     const isSuffix = (
+-       (dir === 'InDirection'  && doorRaw.endsWith('-IN'))  ||
+-       (dir === 'OutDirection' && doorRaw.endsWith('-OUT'))
+-     );
+-     return isStrict || isSuffix;
+-   });
++ // ─── 5) Floor In/Out summary (strict doors only) ───────────────
++ const validEvents = allEvents
++   .filter(e => isTodayInDenver(e.Dateonly))
++   .filter(evt => {
++     // normalize door+direction into canonical key
++     const key = normalizeKey(evt.Door, evt.Direction);
++     // only keep if it matches one of your strictDoorList entries
++     return normalizedMonitoredKeys.has(key);
++   });
+
+
+
+
+
+  Array.from(dedupedMap.values()).forEach(evt => {
+-   const fl = mapDoorToFloor(evt.Door, evt.Direction);
++    const fl = mapDoorToFloor(evt.Door, evt.Direction);
++    // never include pseudo-floor “Out of office”
++    if (fl === 'Out of office') return;
+
+
+
+
+
+
+
 Now headcount issue is resolve check Floor In/Out Swipe Summary
 
 Whole how logic Works for this Explain me 
