@@ -1,3 +1,65 @@
+--- a/controllers/denverLiveOccupancyController.js
++++ b/controllers/denverLiveOccupancyController.js
+@@
+// ─── 4) Swipe stats from freshEvents only ─────────────────────────
+  const totalInSwipes  = freshEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+  const totalOutSwipes = freshEvents.filter(e =>
+    e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+
+// +++ Add this right after your imports, to normalize your strictDoorList once +++
++ const normalizedMonitoredKeys = new Set(
++   Object.entries(monitoredDoors).map(([door, dir]) =>
++     normalizeKey(door, dir)
++   )
++ );
+
+  // ─── 5) Floor In/Out summary (only doors in strictDoorList) ───────
+  const validEvents = allEvents
+    .filter(e => isTodayInDenver(e.Dateonly))
+    .filter(evt => {
+      // normalize to “KEY___DIRECTION”
+      const key = normalizeKey(evt.Door.trim(), evt.Direction.trim());
+      // only accept if it exactly matches one of your monitoredDoors
+      return normalizedMonitoredKeys.has(key);
+    });
+
+  const dedupedMap = new Map();
+  validEvents.forEach(evt => {
++    // first map to floor
++    const fl = mapDoorToFloor(evt.Door, evt.Direction);
++    // then build your dedupe key using that fl
+     const key = `${evt.EmployeeID}___${fl}___${evt.Direction}`;
+     const prev = dedupedMap.get(key);
+     const now  = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+@@
+   const floorMapIO = {};
+   Array.from(dedupedMap.values()).forEach(evt => {
+-      if (fl === 'Out of office') return;
++    // always recompute fl in this scope
++    const fl = mapDoorToFloor(evt.Door, evt.Direction);
++    // guard again, just in case
++    if (fl === 'Out of office') return;
+
+     floorMapIO[fl] = floorMapIO[fl] || { inSwipes: 0, outSwipes: 0, inSet: new Set(), outSet: new Set() };
+     if (evt.Direction === 'InDirection') {
+       floorMapIO[fl].inSwipes++;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 This is our Updated js file , Now In out Summary is not Displayed ,
 also When some swipe their badge on out direction its count is remove from Floor is fine but its count also remove from toady Total personeel type count aslo 
 ex- 
