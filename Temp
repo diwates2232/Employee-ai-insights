@@ -1,99 +1,5 @@
-// controllers/denverLiveOccupancyController.js
+i dont understand What you exact say si read below file and help me to solve this Floor Wise personeel type occupancy issue siolve
 
-// … your existing imports …
-
-const warnedKeys = new Set();
-
-// build a Set of normalized door___direction keys
-const normalizedMonitoredKeys = new Set(
-  Object.entries(monitoredDoors).map(
-    ([door, dir]) => normalizeKey(door, dir)
-  )
-);
-
-// … mapDoorToFloor, stripTimeSuffix, fetchNewEvents, isTodayInDenver, computeVisitedToday …
-
-
-function buildOccupancyForToday(allEvents, freshEvents) {
-  // A) Evict “Out of office”
-  // … unchanged …
-
-  // 1) Live occupancy dedupe by last InDirection
-  // … unchanged …
-
-  const finalList = Array.from(latestByPerson.values());
-
-  // ─── 2) Floor breakdown & personnel counts (live) ───────────────
-  let employees   = 0;
-  let contractors = 0;
-
-  // Temporary structure: floor → array of events
-  const floorMap = {};
-  finalList.forEach(e => {
-    const fl = mapDoorToFloor(e.Door, e.Direction);
-    floorMap[fl] = floorMap[fl] || [];
-    floorMap[fl].push(e);
-    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
-      employees++;
-    } else {
-      contractors++;
-    }
-  });
-
-  // Build floorBreakdown with per-floor personnel‐type counts
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => {
-    // count by personnelType for this floor
-    const byType = occ.reduce((acc, e) => {
-      acc[e.PersonnelType] = (acc[e.PersonnelType] || 0) + 1;
-      return acc;
-    }, {});
-
-    return {
-      floor,
-      total:     occ.length,
-      breakdown: byType,   // e.g. { Employee: 3, Contractor: 2, "Temp Badge": 1 }
-      occupants: occ       // original array of events
-    };
-  });
-
-  // ─── 3) Personnel breakdown ───────────────────────────────────────
-  // … unchanged …
-
-  // ─── 4) Swipe stats (fresh only) ─────────────────────────────────
-  // … unchanged …
-
-  // ─── 5) Floor In/Out summary (strict doors only) ───────────────
-  // … unchanged …
-
-  // ─── 6) Visited today breakdown ─────────────────────────────────
-  const visited = computeVisitedToday(allEvents);
-
-  return {
-    asOf:               new Date().toISOString(),
-    currentCount:       finalList.length,
-    floorBreakdown,     // now includes per-floor breakdown counts
-    personnelSummary:   { employees, contractors },
-    personnelBreakdown, // overall breakdown
-    totalVisitedToday:  visited.total,
-    visitedToday:       { employees: visited.employees, contractors: visited.contractors, total: visited.total },
-    swipeStats:         { totalInSwipes, totalOutSwipes },
-    floorInOutSummary   // unchanged
-  };
-}
-
-// … rest of your SSE endpoint unchanged …
-
-
-
-
-
-
-
-
-
-
-Now Check my updated js file carefully . now check each function Working or not also chcek each swipe monitor perfectly if any swipe meet and door in not listed create unknown floor and monitor their swipe.
-also Currently we got only Floor Wise count i need Floor Wise count like , Employee, Contractor, temp badge like ......
 
 // controllers/denverLiveOccupancyController.js
 
@@ -113,6 +19,8 @@ const normalizedMonitoredKeys = new Set(
     ([door, dir]) => normalizeKey(door, dir)
   )
 );
+
+
 
 
 /** Determine floor label, fallback to “HQ. N.” parsing **/
@@ -279,12 +187,30 @@ function buildOccupancyForToday(allEvents, freshEvents) {
       contractors++;
     }
   });
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => ({
-    floor, total: occ.length, occupants: occ
-  }));
+
+
+  // const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => ({
+  //   floor, total: occ.length, occupants: occ
+  // }));
 
 
 
+   // Build floorBreakdown with per-floor personnel‐type counts
+  const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => {
+    // count by personnelType for this floor
+    const byType = occ.reduce((acc, e) => {
+      acc[e.PersonnelType] = (acc[e.PersonnelType] || 0) + 1;
+      return acc;
+    }, {});
+ return {
+      floor,
+      total:     occ.length,
+      breakdown: byType,   // e.g. { Employee: 3, Contractor: 2, "Temp Badge": 1 }
+      occupants: occ       // original array of events
+    };
+  });
+
+  
 
   // ─── 3) Personnel breakdown ───────────────────────────────────────
   const personnelBreakdown = Array.from(
@@ -307,15 +233,29 @@ function buildOccupancyForToday(allEvents, freshEvents) {
 
 
 
+  // ─── 5) Floor In/Out summary (deduped per person+floor+dir) ───────
+  // const validEvents = allEvents
+  //   .filter(e => isTodayInDenver(e.Dateonly))
+  //   .filter(evt => {
+  //     const dir     = evt.Direction.trim();
+  //     let doorRaw   = stripTimeSuffix(evt.Door.trim().toUpperCase());
+  //     const isStrict = Object.entries(monitoredDoors).some(
+  //       ([key, reqDir]) => doorRaw === key.toUpperCase() && reqDir === dir
+  //     );
+  //     const isSuffix = (
+  //       (dir === 'InDirection'  && doorRaw.endsWith('-IN'))  ||
+  //       (dir === 'OutDirection' && doorRaw.endsWith('-OUT'))
+  //     );
+  //     return isStrict || isSuffix;
+  //   });
+
+
 // ─── 5) Floor In/Out summary (strict doors only) ───────────────
 const validEvents = allEvents
   .filter(e => isTodayInDenver(e.Dateonly))
   .filter(evt => normalizedMonitoredKeys.has(
     normalizeKey(evt.Door, evt.Direction)
   ));
-
-
-
 
 
 
@@ -409,6 +349,4 @@ exports.getDenverLiveOccupancy = async (req, res) => {
   const timer = setInterval(push, 1000);
   req.on('close', () => clearInterval(timer));
 };
-
-
 
