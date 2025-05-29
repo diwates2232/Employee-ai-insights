@@ -1,172 +1,30 @@
-{
-  "Incident Controller": [
-    { "name": "Sameer Kanade",   "email": "sameer.kanade@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Lloyds Dass",      "email": "lloyds.dass@company.com",      "phone": "xxx-xxx-xxxx" }
-  ],
-  "First Aid Team": [
-    { "name": "Sameer Kanade",    "email": "sameer.kanade@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Vishal Chaudhari", "email": "vishal.chaudhari@company.com", "phone": "xxx-xxx-xxxx" },
-    { "name": "Vinit Kumar",      "email": "vinit.kumar@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sagar Jamdade",    "email": "sagar.jamdade@company.com",    "phone": "xxx-xxx-xxxx" },
-    { "name": "Lloyds Dass",      "email": "lloyds.dass@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sonu Pandey",      "email": "sonu.pandey@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Bhupendra Rangare","email": "bhupendra.rangare@company.com","phone": "xxx-xxx-xxxx" }
-  ],
-  "ERT Team Leader": [
-    { "name": "Vishal Chaudhari", "email": "vishal.chaudhari@company.com", "phone": "xxx-xxx-xxxx" },
-    { "name": "Vinit Kumar",      "email": "vinit.kumar@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sagar Jamdade",    "email": "sagar.jamdade@company.com",    "phone": "xxx-xxx-xxxx" },
-    { "name": "Satish Bhoyane",   "email": "satish.bhoyane@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Sonu Pandey",      "email": "sonu.pandey@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Bhupendra Rangare","email": "bhupendra.rangare@company.com","phone": "xxx-xxx-xxxx" }
-  ],
-  "BCM Team": [
-    { "name": "Rohit Singla",     "email": "rohit.singla@company.com",     "phone": "xxx-xxx-xxxx" }
-  ],
-  "Site Head": [
-    { "name": "Rajeev Mago",      "email": "rajeev.mago@company.com",      "phone": "xxx-xxx-xxxx" }
-  ],
-  "Site Operations": [
-    { "name": "Rohit Singla",     "email": "rohit.singla@company.com",     "phone": "xxx-xxx-xxxx" }
-  ],
-  "HR": [
-    { "name": "Suma Roy",         "email": "suma.roy@company.com",         "phone": "xxx-xxx-xxxx" }
-  ]
-}
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+Server running at http://localhost:5000
+✅ MSSQL pool connected
+ReferenceError: current is not defined
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1182:37
+    at Array.map (<anonymous>)
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1180:26
+    at Array.map (<anonymous>)
+    at buildOccupancyForToday (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1179:30)
+    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1260:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.getDenverLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1264:3)
+ReferenceError: current is not defined
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1182:37
+    at Array.map (<anonymous>)
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1180:26
+    at Array.map (<anonymous>)
+    at buildOccupancyForToday (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1179:30)
+    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1260:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.getDenverLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1264:3)
+ReferenceError: current is not defined
 
 
 
 
-
-
-
-
-
-
-
-
-{
-  "Incident Controller": [
-    { "name": "Sameer Kanade",   "email": "sameer.kanade@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Lloyds Dass",      "email": "lloyds.dass@company.com",      "phone": "xxx-xxx-xxxx" }
-  ],
-  "First Aid Team": [
-    { "name": "Sameer Kanade",    "email": "sameer.kanade@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Vishal Chaudhari", "email": "vishal.chaudhari@company.com", "phone": "xxx-xxx-xxxx" },
-    { "name": "Vinit Kumar",      "email": "vinit.kumar@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sagar Jamdade",    "email": "sagar.jamdade@company.com",    "phone": "xxx-xxx-xxxx" },
-    { "name": "Lloyds Dass",      "email": "lloyds.dass@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sonu Pandey",      "email": "sonu.pandey@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Bhupendra Rangare","email": "bhupendra.rangare@company.com","phone": "xxx-xxx-xxxx" }
-  ],
-  "ERT Team Leader": [
-    { "name": "Vishal Chaudhari", "email": "vishal.ch@company.com",        "phone": "xxx-xxx-xxxx" },
-    { "name": "Vinit Kumar",      "email": "vinit.kumar@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Sagar Jamdade",    "email": "sagar.jamdade@company.com",    "phone": "xxx-xxx-xxxx" },
-    { "name": "Satish Bhoyane",   "email": "satish.bhoyane@company.com",   "phone": "xxx-xxx-xxxx" },
-    { "name": "Sonu Pandey",      "email": "sonu.pandey@company.com",      "phone": "xxx-xxx-xxxx" },
-    { "name": "Bhupendra Rangare","email": "bhupendra.rangare@company.com","phone": "xxx-xxx-xxxx" }
-  ],
-  "BCM Team": [
-    { "name": "Rohit Singla",     "email": "rohit.singla@company.com",     "phone": "xxx-xxx-xxxx" }
-  ],
-  "Site Head": [
-    { "name": "Rajeev Mago",      "email": "rajeev.mago@company.com",      "phone": "xxx-xxx-xxxx" }
-  ],
-  "Site Operations": [
-    { "name": "Rohit Singla",     "email": "rohit.singla@company.com",     "phone": "xxx-xxx-xxxx" }
-  ],
-  "HR": [
-    { "name": "Suma Roy",         "email": "suma.roy@company.com",         "phone": "xxx-xxx-xxxx" }
-  ]
-}
-
-
-
-
-
-
-const ertMembers = require('../data/puneErtMembers.json');
-
-
-
-// `current` is your map of deduped, “still-in-office” people
-// it maps dedupKey → { Dateonly, Swipe_Time, EmployeeID, ObjectName1, …, Direction }
-
-const ertStatus = Object.fromEntries(
-  Object.entries(ertMembers).map(([role, members]) => {
-    const list = members.map(m => {
-      // Check if this name appears in current (matching ObjectName1)
-      const present = Object.values(current).some(e => e.ObjectName1 === m.name);
-      return { ...m, present };
-    });
-    return [ role, list ];
-  })
-);
-
-
-
-
-const occupancy = await buildOccupancy(events);
-const todayStats = buildVisitedToday(events);
-
-occupancy.totalVisitedToday = todayStats.total;
-occupancy.visitedToday      = { … };
-
-// **Add** our new field here:
-occupancy.ertStatus = ertStatus;
-
-res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
-
-
-
-
-
-
-
-
-
-
-
-
-
-Incident Controller	1	Sameer Kanade
-	2	Lloyds Dass
-		
-First Aid Team Members	1	Sameer Kanade
-	2	Vishal Chaudhari
-	3	Vinit Kumar
-	4	Sagar Jamdade
-	5	Lloyds Dass
-	6	Sonu Pandey
-	7	Bhupendra Rangare
-		
-		
-ERT Team Leader	1	Vishal Chaudhari
-	2	Vinit Kumar
-	3	Sagar Jamdade
-	4	Satish Bhoyane
-	5	Sonu Pandey
-	6	Bhupendra Rangare
-		
-BCM Team	1	Rohit Singla
-		
-Site Head	1	Rajeev Mago
-		
-Site Operations	2	Rohit Singla
-		
-HR	3	Suma Roy
-
-
-Above is our Ert member data Also Will add Contact and mail aslo 
-
-so below is our Controller file.
-so We want to make a plan like 
-When Swie come monitor Above Listed name Swipe 
-and mention Avilable or nor like thsi 
-
-read below file carefully and go step by step.dont make unneccessary changes in below file 
-
+read file and error carefully .dont make unneccesarry changes below file carefully
 
 // controllers/liveOccupancyController.js
 
