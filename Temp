@@ -1,25 +1,14 @@
-PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
 Server running at http://localhost:5000
 ✅ MSSQL pool connected
-ReferenceError: current is not defined
-    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1182:37
-    at Array.map (<anonymous>)
-    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1180:26
-    at Array.map (<anonymous>)
-    at buildOccupancyForToday (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1179:30)
-    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1260:21)
+Live occupancy SSE error: ReferenceError: ertStatus is not defined
+    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1069:23)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async exports.getDenverLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1264:3)
-ReferenceError: current is not defined
-    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1182:37
-    at Array.map (<anonymous>)
-    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1180:26
-    at Array.map (<anonymous>)
-    at buildOccupancyForToday (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1179:30)
-    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1260:21)
+    at async exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1076:5)
+Live occupancy SSE error: ReferenceError: ertStatus is not defined
+    at push (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1069:23)
     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-    at async exports.getDenverLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\denverLiveOccupancyController.js:1264:3)
-ReferenceError: current is not defined
+    at async exports.getLiveOccupancy (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\controllers\liveOccupancyController.js:1076:5)
+
 
 
 
@@ -28,10 +17,17 @@ read file and error carefully .dont make unneccesarry changes below file careful
 
 // controllers/liveOccupancyController.js
 
+
+
+
+// controllers/liveOccupancyController.js
+
 const { DateTime }   = require('luxon');
 const { poolConnect, pool, sql } = require('../config/db');
 const doorZoneMap    = require('../data/doorZoneMap');
 const zoneFloorMap   = require('../data/zoneFloorMap');
+
+const ertMembers = require('../data/puneErtMembers.json');
 
 // track which door→zone keys we've already warned on
 const warnedKeys = new Set();
@@ -258,6 +254,23 @@ async function buildOccupancy(allEvents) {
     }
   }
 
+
+
+
+
+  const ertStatus = Object.fromEntries(
+  Object.entries(ertMembers).map(([role, members]) => {
+    const list = members.map(m => {
+      // Check if this name appears in current (matching ObjectName1)
+      const present = Object.values(current).some(e => e.ObjectName1 === m.name);
+      return { ...m, present };
+    });
+    return [ role, list ];
+  })
+);
+
+
+
   return {
     asOf:             new Date().toISOString(),
     summary:          Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total })),
@@ -353,6 +366,11 @@ exports.getLiveOccupancy = async (req, res) => {
         contractors: todayStats.contractors,
         total:       todayStats.total
       };
+
+      
+occupancy.ertStatus = ertStatus;
+
+res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
 
       res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
     };
