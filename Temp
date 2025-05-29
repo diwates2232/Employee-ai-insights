@@ -1,3 +1,15 @@
+// ─── 5) Floor In/Out summary (strict doors only) ───────────────
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => normalizedMonitoredKeys.has(
+    normalizeKey(evt.Door, evt.Direction)
+  ));
+
+
+
+
+
+
 // controllers/denverLiveOccupancyController.js
 
 const { monitoredDoors } = require('../data/strictDoorList');
