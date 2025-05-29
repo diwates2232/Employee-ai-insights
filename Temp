@@ -1,193 +1,8 @@
-// controllers/denverLiveOccupancyController.js
+Now headcount issue is resolve check Floor In/Out Swipe Summary
 
-const { DateTime }       = require('luxon');
-const { denver }         = require('../config/siteConfig');
-const doorFloorMap       = require('../data/denverDoorFloorMap');
-const { monitoredDoors } = require('../data/strictDoorList');
-const sql                = require('mssql');
-const normalizeKey       = require('../data/normalizeKey');
-
-const warnedKeys = new Set();
+Whole how logic Works for this Explain me 
 
 
-/** Determine floor label, fallback to “HQ. N.” parsing **/
-function mapDoorToFloor(rawDoor, rawDir) {
-  const key = normalizeKey(rawDoor, rawDir);
-  if (doorFloorMap[key]) return doorFloorMap[key];
-  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
-  if (m) return `Floor ${m[1]}`;
-  if (!warnedKeys.has(key)) {
-    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
-    warnedKeys.add(key);
-  }
-  return 'Unknown Floor';
-}
-
-/** Strip any trailing “_HH:MM:SS” from a door name **/
-function stripTimeSuffix(doorRaw) {
-  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
-}
-
-async function fetchNewEvents(since) {
-  const pool = await denver.pool.connect();
-  const req  = pool.request();
-  req.input('since', sql.DateTime2, since);
-
-  const { recordset } = await req.query(`
-    /* ... your existing SQL ... */
-  `);
-
-  return recordset;
-}
-
-function isTodayInDenver(dateOnly) {
-  const swipeDate = DateTime.fromISO(dateOnly, { zone: 'America/Denver' })
-    .toFormat('yyyy-LL-dd');
-  const today = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
-  return swipeDate === today;
-}
-
-/**
- * Build a breakdown of unique visitors today:
- *  - total unique badges
- *  - employees vs contractors
- */
-function computeVisitedToday(allEvents) {
-  const seen = new Map(); // key -> PersonnelType
-  allEvents.forEach(evt => {
-    if (evt.Direction === 'InDirection' && isTodayInDenver(evt.Dateonly)) {
-      const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-      if (!seen.has(key)) {
-        seen.set(key, evt.PersonnelType);
-      }
-    }
-  });
-  let emp = 0, ctr = 0;
-  seen.forEach(type => {
-    if (type === 'Employee' || type === 'Terminated Personnel') emp++;
-    else ctr++;
-  });
-  return { total: seen.size, employees: emp, contractors: ctr };
-}
-
-
-function buildOccupancyForToday(allEvents, freshEvents) {
-  // ─── A) Evict “Out of office” ───────────────────────────────────
-  const evicted = new Set();
-  const lastByPerson = new Map();
-  allEvents.forEach(evt => {
-    if (!isTodayInDenver(evt.Dateonly)) return;
-    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-    const prev = lastByPerson.get(key);
-    if (!prev || evt.LocaleMessageTime > prev.LocaleMessageTime) {
-      lastByPerson.set(key, evt);
-    }
-  });
-  lastByPerson.forEach(evt => {
-    if (
-      evt.Direction === 'OutDirection'
-      && mapDoorToFloor(evt.Door, evt.Direction) === 'Out of office'
-    ) {
-      evicted.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
-    }
-  });
-  const activeEvents = allEvents.filter(evt => {
-    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-    return !evicted.has(key);
-  });
-
-  // ─── 1) Live occupancy dedupe by last InDirection ───────────────
-  const todayIn = activeEvents.filter(e =>
-    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
-  );
-  const latestByPerson = new Map();
-  todayIn.forEach(e => {
-    const prev = latestByPerson.get(e.PersonGUID);
-    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
-    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
-      latestByPerson.set(e.PersonGUID, e);
-    }
-  });
-  const finalList = Array.from(latestByPerson.values());
-
-  // ─── 2) Floor breakdown & personnel counts (live) ───────────────
-  let employees = 0, contractors = 0;
-  const floorMap = {};
-  finalList.forEach(e => {
-    const fl = mapDoorToFloor(e.Door, e.Direction);
-    floorMap[fl] = floorMap[fl] || [];
-    floorMap[fl].push(e);
-    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
-      employees++;
-    } else {
-      contractors++;
-    }
-  });
-  const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => ({
-    floor, total: occ.length, occupants: occ
-  }));
-
-  // ─── 3) Personnel breakdown ───────────────────────────────────────
-  const personnelBreakdown = Array.from(
-    finalList.reduce((m, e) => {
-      m.set(e.PersonnelType, (m.get(e.PersonnelType) || 0) + 1);
-      return m;
-    }, new Map()),
-    ([personnelType, count]) => ({ personnelType, count })
-  );
-
-  // ─── 4) Swipe stats (fresh only) ─────────────────────────────────
-  const totalInSwipes  = freshEvents.filter(e =>
-    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
-  ).length;
-  const totalOutSwipes = freshEvents.filter(e =>
-    e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)
-  ).length;
-
-  // ─── 5) Floor In/Out summary ─────────────────────────────────────
-  // ... unchanged ...
-
-  // ─── 6) Visited today breakdown ─────────────────────────────────
-  const visited = computeVisitedToday(allEvents);
-
-  return {
-    asOf:               new Date().toISOString(),
-    currentCount:       finalList.length,
-    floorBreakdown,
-    personnelSummary:   { employees, contractors },
-    personnelBreakdown,
-    totalVisitedToday:  visited.total,
-    visitedToday:       {
-      employees:   visited.employees,
-      contractors: visited.contractors,
-      total:       visited.total
-    },
-    swipeStats:         { totalInSwipes, totalOutSwipes },
-    floorInOutSummary   // unchanged
-  };
-}
-
-exports.getDenverLiveOccupancy = async (req, res) => {
-  // unchanged SSE setup ...
-};
-
-
-
-
-
-
-
-
-
-Read below File Carefully .
-in this file Solve issue one by one
-in this file we aregetting headcount as 7 and 
-but we are not getting breakdown of 7 like today visited employee total 7
-employee 3 contractro 4 like 
-
-solve this issue first then we move next step
-
-and another is We dont get Live Occupancy count like Employee 5 their breakdown like employee contractor
 
 // controllers/denverLiveOccupancyController.js
 
@@ -287,23 +102,32 @@ function isTodayInDenver(dateOnly) {
  * @param {Array} freshEvents – just-fetched events (for swipeStats & floorInOut)
  */
 
+
 function computeVisitedToday(allEvents) {
-  const seen = new Set();
+  const seen = new Map(); // key -> PersonnelType
   allEvents.forEach(evt => {
     if (evt.Direction === 'InDirection' && isTodayInDenver(evt.Dateonly)) {
       const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-      seen.add(key);
+      if (!seen.has(key)) {
+        seen.set(key, evt.PersonnelType);
+      }
     }
   });
-  return seen.size;
+  let emp = 0, ctr = 0;
+  seen.forEach(type => {
+    if (type === 'Employee' || type === 'Terminated Personnel') emp++;
+    else ctr++;
+  });
+  return { total: seen.size, employees: emp, contractors: ctr };
 }
 
 
 
+
+
 function buildOccupancyForToday(allEvents, freshEvents) {
-  // ─── A) Evict anyone who swiped truly “out of office” ───────────
+  // ─── A) Evict “Out of office” ───────────────────────────────────
   const evicted = new Set();
-  // scan most recent event per person
   const lastByPerson = new Map();
   allEvents.forEach(evt => {
     if (!isTodayInDenver(evt.Dateonly)) return;
@@ -313,19 +137,22 @@ function buildOccupancyForToday(allEvents, freshEvents) {
       lastByPerson.set(key, evt);
     }
   });
-  // any latest event that maps to Out of office evicts
   lastByPerson.forEach(evt => {
-    if (evt.Direction === 'OutDirection' && mapDoorToFloor(evt.Door, evt.Direction) === 'Out of office') {
+    if (
+      evt.Direction === 'OutDirection'
+      && mapDoorToFloor(evt.Door, evt.Direction) === 'Out of office'
+    ) {
       evicted.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
     }
   });
-  // filter them out
   const activeEvents = allEvents.filter(evt => {
     const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
     return !evicted.has(key);
   });
 
-  // ─── 1) Occupancy: dedupe by latest InDirection per person ───────
+
+
+  // ─── 1) Live occupancy dedupe by last InDirection ───────────────
   const todayIn = activeEvents.filter(e =>
     e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
   );
@@ -339,7 +166,8 @@ function buildOccupancyForToday(allEvents, freshEvents) {
   });
   const finalList = Array.from(latestByPerson.values());
 
-  // ─── 2) Floor breakdown & personnel counts ────────────────────────
+
+ // ─── 2) Floor breakdown & personnel counts (live) ───────────────
   let employees = 0, contractors = 0;
   const floorMap = {};
   finalList.forEach(e => {
@@ -356,6 +184,9 @@ function buildOccupancyForToday(allEvents, freshEvents) {
     floor, total: occ.length, occupants: occ
   }));
 
+
+
+
   // ─── 3) Personnel breakdown ───────────────────────────────────────
   const personnelBreakdown = Array.from(
     finalList.reduce((m, e) => {
@@ -365,13 +196,17 @@ function buildOccupancyForToday(allEvents, freshEvents) {
     ([personnelType, count]) => ({ personnelType, count })
   );
 
-  // ─── 4) Swipe stats from freshEvents only ─────────────────────────
+
+
+  // ─── 4) Swipe stats (fresh only) ─────────────────────────────────
   const totalInSwipes  = freshEvents.filter(e =>
     e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
   ).length;
   const totalOutSwipes = freshEvents.filter(e =>
     e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)
   ).length;
+
+
 
   // ─── 5) Floor In/Out summary (deduped per person+floor+dir) ───────
   const validEvents = allEvents
@@ -424,36 +259,30 @@ function buildOccupancyForToday(allEvents, freshEvents) {
     };
   });
 
+
+
   // ─── 6) Today visited ─────────────────────────────────────────────
-  // const visitedToday = { employees, contractors, total: finalList.length };
-
-  // ─── 6) Today visited ─────────────────────────────────────────────
-  // total unique people who swiped in today
-  const totalVisitedToday = computeVisitedToday(allEvents);
-  // current head-count
-  const currentCount = finalList.length;
-
-
+    // ─── 6) Visited today breakdown ─────────────────────────────────
+  const visited = computeVisitedToday(allEvents);
 
   return {
     asOf:               new Date().toISOString(),
-    //currentCount:       finalList.length,
-     currentCount,
-
+    currentCount:       finalList.length,
     floorBreakdown,
     personnelSummary:   { employees, contractors },
     personnelBreakdown,
-    totalVisitedToday,              // unique people who visited today
-    visitedToday: {                 // breakdown of today's visitors currently inside
-      employees,
-      contractors,
-      total: currentCount
+    totalVisitedToday:  visited.total,
+    visitedToday:       {
+      employees:   visited.employees,
+      contractors: visited.contractors,
+      total:       visited.total
     },
-
     swipeStats:         { totalInSwipes, totalOutSwipes },
-    floorInOutSummary
+    floorInOutSummary   // unchanged
   };
 }
+
+
 
 exports.getDenverLiveOccupancy = async (req, res) => {
   await denver.pool.connect();
@@ -481,5 +310,4 @@ exports.getDenverLiveOccupancy = async (req, res) => {
   const timer = setInterval(push, 1000);
   req.on('close', () => clearInterval(timer));
 };
-
 
