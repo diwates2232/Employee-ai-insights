@@ -1,3 +1,46 @@
+   // ─── 6) Today visited ─────────────────────────────────────────────
+   // total unique people who swiped in today
+   const totalVisitedToday = computeVisitedToday(allEvents);
+-  // current head-count
+-  const currentCount = finalList.length;
++  // current head-count
++  const currentCount = finalList.length;
+
++  // ─── Build a true visited-today breakdown ───────────────────────
++  // map person → their first InDirection event (today)
++  const seenMap = new Map();
++  allEvents.forEach(evt => {
++    if (evt.Direction !== 'InDirection' || !isTodayInDenver(evt.Dateonly)) return;
++    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
++    // only record the first one per person
++    if (!seenMap.has(key)) {
++      seenMap.set(key, evt.PersonnelType);
++    }
++  });
++  // tally by PersonnelType
++  let visitedEmp = 0, visitedContr = 0;
++  seenMap.forEach(type => {
++    if (type === 'Employee' || type === 'Terminated Personnel') {
++      visitedEmp++;
++    } else {
++      visitedContr++;
++    }
++  });
++  const visitedToday = {
++    employees:   visitedEmp,
++    contractors: visitedContr,
++    total:       seenMap.size
++  };
+
+
+
+
+
+
+
+
+
+
 Read below API Responce carefully.
 
 
