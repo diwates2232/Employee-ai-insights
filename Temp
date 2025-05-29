@@ -1,3 +1,30 @@
+// data/denverDoorFloorMap.js
+const normalizeKey = require('./normalizeKey');
+const rawMap = {
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___IN":  "Floor 12",
+  "US.CO.HQ. 12. SOUTH LOBBY DOORS-IN___OUT": "Out of office",
+  // …etc
+};
+
+const doorToFloorMap = {};
+for (const [rawKey, floor] of Object.entries(rawMap)) {
+  const [doorRaw, dirRaw] = rawKey.split('___');
+  const normKey = normalizeKey(doorRaw, dirRaw);
+  doorToFloorMap[normKey] = floor;
+}
+
+module.exports = doorToFloorMap;
+
+
+
+
+
+
+
+
+
+
+
 // data/normalizeKey.js
 
 const HEX_TIME_SUFFIX = /_[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}$/i;
