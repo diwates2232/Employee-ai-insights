@@ -1,3 +1,45 @@
+// ─── 2) Floor breakdown & personnel counts (live) ───────────────
+const floorMap = {};  
+finalList.forEach(evt => {
+  // Determine the floor label
+  const floor = mapDoorToFloor(evt.Door, evt.Direction);
+
+  // Initialize array for this floor if needed
+  if (!floorMap[floor]) floorMap[floor] = [];
+
+  // Collect this event
+  floorMap[floor].push(evt);
+});
+
+// Now build the breakdown array
+const floorBreakdown = Object.entries(floorMap).map(([floor, events]) => {
+  // Count total on this floor
+  const total = events.length;
+
+  // Build a tally of personnel types
+  const breakdown = events.reduce((acc, e) => {
+    acc[e.PersonnelType] = (acc[e.PersonnelType] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    floor,
+    total,
+    breakdown,   // e.g. { Employee: 3, Contractor: 2, "Temp Badge": 1 }
+    occupants: events
+  };
+});
+
+
+
+
+
+
+
+
+
+
+
 i dont understand What you exact say si read below file and help me to solve this Floor Wise personeel type occupancy issue siolve
 
 
