@@ -1,3 +1,27 @@
+// data/normalizeKey.js
+const HEX_TIME_SUFFIX = /_[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}$/i;
+
+function normalizeKey(rawDoor, rawDir) {
+  let d = String(rawDoor || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+  d = d.replace(HEX_TIME_SUFFIX, '');
+  const dir = rawDir.trim() === 'InDirection' ? 'IN' : 'OUT';
+  return `${d}___${dir}`;
+}
+
+module.exports = normalizeKey;
+
+
+
+const normalizeKey = require('./normalizeKey');
+
+
+
+
+
+
 // data/denverDoorFloorMap.js
 const normalizeKey = require('./normalizeKey');
 const rawMap = {
