@@ -1,5 +1,182 @@
 // controllers/denverLiveOccupancyController.js
 
+const { DateTime }       = require('luxon');
+const { denver }         = require('../config/siteConfig');
+const doorFloorMap       = require('../data/denverDoorFloorMap');
+const { monitoredDoors } = require('../data/strictDoorList');
+const sql                = require('mssql');
+const normalizeKey       = require('../data/normalizeKey');
+
+const warnedKeys = new Set();
+
+/** Determine floor label, fallback to “HQ. N.” parsing **/
+function mapDoorToFloor(rawDoor, rawDir) {
+  const key = normalizeKey(rawDoor, rawDir);
+  if (doorFloorMap[key]) return doorFloorMap[key];
+  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
+  if (m) return `Floor ${m[1]}`;
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
+
+/** Strip any trailing “_HH:MM:SS” from a door name **/
+function stripTimeSuffix(doorRaw) {
+  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+}
+
+async function fetchNewEvents(since) {
+  const pool = await denver.pool.connect();
+  const req  = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      /* your existing SQL */
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID, PersonGUID, ObjectName1, PersonnelType,
+      CardNumber, AdmitCode, Direction, Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return recordset;
+}
+
+function isTodayInDenver(dateOnly) {
+  const swipeDate = DateTime.fromISO(dateOnly, { zone: 'America/Denver' })
+    .toFormat('yyyy-LL-dd');
+  const today = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
+  return swipeDate === today;
+}
+
+// Unique visitors today (any direction)
+function computeTotalVisitedToday(allEvents) {
+  const seen = new Set();
+  allEvents.forEach(evt => {
+    if (isTodayInDenver(evt.Dateonly)) {
+      seen.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+    }
+  });
+  return seen.size;
+}
+
+function buildOccupancyForToday(allEvents, freshEvents) {
+  // — A) Build latest-swipe map per person
+  const lastByPerson = new Map();
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+    const prev = lastByPerson.get(key);
+    const now  = DateTime.fromISO(evt.LocaleMessageTime).toMillis();
+    if (!prev || now > DateTime.fromISO(prev.LocaleMessageTime).toMillis()) {
+      lastByPerson.set(key, evt);
+    }
+  });
+
+  // — B) Filter to those whose last swipe was InDirection
+  let finalList = Array.from(lastByPerson.values())
+    .filter(evt => evt.Direction === 'InDirection');
+
+  // — C) Fallback: if none, use fresh InDirection swipes
+  if (finalList.length === 0) {
+    const freshIns = freshEvents.filter(e =>
+      e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+    );
+    const fallbackMap = new Map();
+    freshIns.forEach(evt => {
+      const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+      const prev = fallbackMap.get(key);
+      const now  = DateTime.fromISO(evt.LocaleMessageTime).toMillis();
+      if (!prev || now > DateTime.fromISO(prev.LocaleMessageTime).toMillis()) {
+        fallbackMap.set(key, evt);
+      }
+    });
+    finalList = Array.from(fallbackMap.values());
+  }
+
+  // — D) Compute totals and floor occupancy
+  let employeesCount   = 0;
+  let contractorsCount = 0;
+  const floorOcc       = {};
+
+  finalList.forEach(evt => {
+    const floor = mapDoorToFloor(evt.Door, evt.Direction);
+    // exclude "Out of office"
+    if (floor.toLowerCase().includes('out of office')) return;
+
+    // increment personnel type
+    if (evt.PersonnelType === 'Employee' || evt.PersonnelType === 'Terminated Personnel') {
+      employeesCount++;
+    } else {
+      contractorsCount++;
+    }
+
+    // floor-wise
+    floorOcc[floor] = (floorOcc[floor] || 0) + 1;
+  });
+
+  const totalHeadcount = employeesCount + contractorsCount;
+  const totalVisitedToday = computeTotalVisitedToday(allEvents);
+
+  return {
+    totalVisitedToday,
+    employeesCount,
+    contractorsCount,
+    liveOccupancy: {
+      total:       totalHeadcount,
+      employees:   employeesCount,
+      contractors: contractorsCount,
+      floorOccupancy: floorOcc
+    },
+    asOf: new Date().toISOString()
+  };
+}
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  await denver.pool.connect();
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const events = [];
+
+  const push = async () => {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+    const payload = buildOccupancyForToday(events, fresh);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
+
+
+
+
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
 const { DateTime } = require('luxon');
 const { denver } = require('../config/siteConfig');
 const doorFloorMap = require('../data/denverDoorFloorMap');
