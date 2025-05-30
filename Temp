@@ -1,3 +1,36 @@
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    // 1) strip off any "_HH:MM:SS" hex suffix
+    const doorNoSuffix = stripTimeSuffix(evt.Door.trim());
+    // 2) normalize against your strict list
+    const key = normalizeKey(doorNoSuffix, evt.Direction.trim());
+    return normalizedMonitoredKeys.has(key);
+  });
+
+
+
+
+- .filter(evt =>
+-   normalizedMonitoredKeys.has(
+-     normalizeKey(evt.Door, evt.Direction)
+-   )
+- );
++ .filter(evt => {
++   const doorNoSuffix = stripTimeSuffix(evt.Door.trim());
++   const key = normalizeKey(doorNoSuffix, evt.Direction.trim());
++   return normalizedMonitoredKeys.has(key);
++ });
+
+
+
+
+
+
+
+
+
+
 module.exports = {
   monitoredDoors: {
     'US.CO.HQ. 12. South Lobby Doors-IN': 'InDirection',
