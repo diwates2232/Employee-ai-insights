@@ -1,75 +1,98 @@
-// client/src/components/ERTOverview.jsx
-import React from 'react';
-import { Card, Row, Col, ListGroup } from 'react-bootstrap';
+C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.js
 
-/**
- * ertStatus is an object:
- * {
- *   "Incident Controller": [{ name, email, phone, present, zone }, …],
- *   …
- * }
- */
 
-const baseLocationByRole = {
-  "Incident Controller": "Podium Floor – Green Zone",
-  "First Aid Team":      "2nd Floor – Green Zone",
-  "ERT Team Leader":     "3rd Floor – Green Zone",
-  "BCM Team":            "3rd Floor – Green Zone",
-  "Site Head":           "Podium Floor – Green Zone",
-  "Site Operations":     "Podium Floor – Green Zone",
-  "HR":                   "Podium Floor – Green Zone"
-};
 
-export default function ERTOverview({ ertStatus }) {
-  const roles = Object.entries(ertStatus);
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import DashboardHome    from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
+
+import './App.css';
+
+export default function App() {
+  // live data states
+  const [summaryData, setSummaryData]               = useState([]);
+  const [floorData, setFloorData]                   = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [floorInOutSummary, setFloorInOutSummary]   = useState([]); // ← NEW
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = e => {
+      try {
+        const p = JSON.parse(e.data);
+        setSummaryData(p.summary || []);
+        setFloorData(p.floorBreakdown || []);
+        setPersonnelBreakdown(p.personnelBreakdown || []);
+        setTotalVisitedToday(p.totalVisitedToday || 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setFloorInOutSummary(p.floorInOutSummary || []); // ← NEW
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = err => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <div className="mt-5">
-      <h3>🛡️  ERT Member Status</h3>
-      <Row className="g-4 mt-3">
-        {roles.map(([role, members]) => {
-          const baseLocation = baseLocationByRole[role] || "N/A";
-          return (
-            <Col key={role} md={6} lg={4}>
-              <Card className="h-100">
-                <Card.Header className="bg-primary text-white">
-                  {role}
-                </Card.Header>
-                <ListGroup variant="flush">
-                  {members.map(({ name, email, phone, present, zone }) => (
-                    <ListGroup.Item key={name}>
-                      <div className="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                          <strong>{name}</strong><br/>
-                          <small>{email}</small><br/>
-                          <small>{phone}</small>
-                        </div>
-                        {/* colored status dot only */}
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            backgroundColor: present ? '#28a745' : '#dc3545'
-                          }}
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <small><strong>Base:</strong> {baseLocation}</small><br/>
-                        {present && (
-                          <small><strong>Live:</strong> {zone || 'N/A'}</small>
-                        )}
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </Card>
-            </Col>
-          );
-        })}
-      </Row>
-    </div>
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4 navbar-infographic">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Denver
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
+              Floor Details
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun color="#FFC72C" />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  personnelSummary={personnelSummary}
+                  totalVisitedToday={totalVisitedToday}
+                  visitedToday={visitedToday}
+                  floorData={floorData}
+                  personnelBreakdown={personnelBreakdown}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={
+                <FloorDetailsPage
+                  floorData={floorData}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
   );
 }
 
@@ -79,94 +102,99 @@ export default function ERTOverview({ ertStatus }) {
 
 
 
+/* src/App.css */
 
+/* ———————————————————————————————  
+   Western Union Infographic Palette  
+———————————————————————————————————— */
+:root {
+  --wu-yellow:     #FFC72C;
+  --wu-black:      #000000;
+  --wu-gray-dark:  #1a1a1a;
+  --wu-accent-1:   #ffe680;
+  --wu-accent-2:   #ffdb4d;
+  --wu-accent-3:   #ffd11a;
+}
 
+/* ———————————————————————————————  
+   GLOBAL DARK THEME  
+———————————————————————————————————— */
+.dark-theme {
+  background-color: var(--wu-black);
+  color: #fff;
+  min-height: 100vh;
+}
 
+/* ———————————————————————————————  
+   NAVBAR & NAV ITEMS  
+———————————————————————————————————— */
+.navbar-infographic {
+  border-bottom: 3px solid var(--wu-yellow);
+}
+.wu-brand {
+  color: var(--wu-yellow) !important;
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+.nav-item-infographic {
+  position: relative;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  color: #fff !important;
+}
+.nav-item-infographic::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: var(--wu-yellow);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.nav-item-infographic:hover::after {
+  width: 80%;
+  left: 10%;
+}
 
+/* ———————————————————————————————  
+   THEME TOGGLE ICON  
+———————————————————————————————————— */
+.theme-toggle-icon {
+  font-size: 1.2rem;
+  color: var(--wu-yellow) !important;
+  cursor: default;
+  padding: 0.5rem;
+}
 
+/* ———————————————————————————————  
+   SUMMARY CARDS  
+   (Wrap your cards in .summary-card)  
+———————————————————————————————————— */
+.dark-theme .summary-card {
+  background: var(--wu-black);
+  border: 2px solid var(--wu-yellow);
+  color: #fff;
+}
+.summary-card:hover {
+  box-shadow: 0 0 10px var(--wu-accent-3);
+}
 
-
-// client/src/components/ERTOverview.jsx
-import React from 'react';
-import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
-
-/**
- * ertStatus is an object:
- * {
- *   "Incident Controller": [{ name, email, phone, present, zone }, …],
- *   "First Aid Team":      [ … ],
- *   …
- * }
- */
-
-// adjust these to your actual base‐location names per role:
-const baseLocationByRole = {
-  "Incident Controller": "Podium Floor – Green Zone",
-  "First Aid Team":      "2nd Floor – Green Zone",
-  "ERT Team Leader":     "3rd Floor – Green Zone",
-  "BCM Team":            "3rd Floor – Green Zone",
-  "Site Head":           "Podium Floor – Green Zone",
-  "Site Operations":     "Podium Floor – Green Zone",
-  "HR":                   "Podium Floor – Green Zone"
-};
-
-export default function ERTOverview({ ertStatus }) {
-  const roles = Object.entries(ertStatus);
-
-  return (
-    <div className="mt-5">
-      <h3>🛡️  ERT Member Status</h3>
-      <Row className="g-4 mt-3">
-        {roles.map(([role, members]) => {
-          const baseLocation = baseLocationByRole[role] || "N/A";
-          return (
-            <Col key={role} md={6} lg={4}>
-              <Card className="h-100">
-                <Card.Header className="bg-primary text-white">
-                  {role}
-                </Card.Header>
-                <ListGroup variant="flush">
-                  {members.map(({ name, email, phone, present, zone }) => (
-                    <ListGroup.Item key={name}>
-                      <div className="d-flex w-100 justify-content-between">
-                        <div>
-                          <strong>{name}</strong><br/>
-                          <small>{email}</small><br/>
-                          <small>{phone}</small>
-                        </div>
-                        <Badge bg={present ? 'success' : 'danger'} pill>
-                          {present ? 'Present' : 'Absent'}
-                        </Badge>
-                      </div>
-                      <div className="mt-2">
-                        <small><strong>Base:</strong> {baseLocation}</small><br/>
-                        {present && (
-                          <small><strong>Live:</strong> {zone || 'N/A'}</small>
-                        )}
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </Card>
-            </Col>
-          );
-        })}
-      </Row>
-    </div>
-  );
+/* ———————————————————————————————  
+   CHART CONTAINERS  
+   (Wrap your charts in .chart-container)  
+———————————————————————————————————— */
+.dark-theme .chart-container {
+  background: var(--wu-gray-dark);
+  padding: 1rem;
+  border-radius: 4px;
 }
 
 
 
+Pune dashboard
 
-
-
-
-
-
-
-
-
+C:\Users\W0024618\Desktop\swipeData\client\src\App.js
 
 
 
@@ -284,114 +312,45 @@ export default App;
 
 
 
+C:\Users\W0024618\Desktop\swipeData\client\src\App.css
 
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
-import ERTOverview from '../components/ERTOverview';
-
-export default function DashboardHome({
-  personnelSummary,
-  totalVisitedToday,   // <-- number from backend
-  visitedToday,        // <-- { employees, contractors, total }
-  floorData,
-  zoneSummaryData,
-  personnelBreakdown,
-   ertStatus
-}) {
-  const employees       = personnelSummary?.employees   ?? 0;
-  const contractors     = personnelSummary?.contractors ?? 0;
-  const totalOccupancy  = employees + contractors;
-
-  // use the backend’s two‐entry array directly for the donut
-  const chartData = personnelBreakdown.map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
-  return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday?.employees   ?? 0}
-        contractorsVisitedToday={visitedToday?.contractors ?? 0}
-  
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-
-         {/* 4th section: ERT status */}
-        <ERTOverview ertStatus={ertStatus} />
-      </Row>
-    </Container>
-  );
+.App {
+  text-align: center;
 }
 
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
 
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
 
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
 
+.App-link {
+  color: #61dafb;
+}
 
-C:\Users\W0024618\Desktop\swipeData\client\src\components\ERTOverview.jsx
-import React from 'react';
-import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
-
-/**
- * ertStatus is an object:
- * {
- *   "Incident Controller": [{ name, email, phone, present }, …],
- *   "First Aid Team":      [ … ],
- *   …
- * }
- */
-export default function ERTOverview({ ertStatus }) {
-  const roles = Object.entries(ertStatus);
-
-  return (
-    <div className="mt-5">
-      <h3>🛡️ ERT Member Status</h3>
-      <Row className="g-4">
-        {roles.map(([role, members]) => (
-          <Col key={role} md={6} lg={4}>
-            <Card>
-              <Card.Header className="bg-primary text-white">
-                {role}
-              </Card.Header>
-              <ListGroup variant="flush">
-                {members.map(({ name, email, phone, present }) => (
-                  <ListGroup.Item key={name} className="d-flex justify-content-between align-items-center">
-                    <div>
-                      <strong>{name}</strong><br/>
-                      <small>{email}</small><br/>
-                      <small>{phone}</small>
-                    </div>
-                    <Badge bg={present ? 'success' : 'secondary'}>
-                      {present ? 'Present' : 'Absent'}
-                    </Badge>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-    </div>
-  );
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 
