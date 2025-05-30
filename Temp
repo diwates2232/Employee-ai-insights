@@ -14,6 +14,124 @@ import {
   FaMapPin
 } from 'react-icons/fa';
 
+/** Base location per role **/
+const baseLocationByRole = {
+  "Incident Controller":       "Podium Floor – Green Zone",
+  "First Aid Team":            "Podium Floor – Green Zone",
+  "ERT Team Leader":           "Podium Floor – Green Zone",
+  "BCM Team / Site Operations":"Podium Floor – Red Zone",
+  "Site Head":                 "Podium Floor – Red Zone",
+  "HR":                         "Podium Floor – Red Zone"
+};
+
+// 7 warm/neutral highlight colors (no blue)
+const NAME_COLORS = [
+  '#FFD100', // yellow
+  '#FF6F61', // coral
+  '#009E60', // green
+  '#58595B', // gray
+  '#C75D00', // amber
+  '#88B04B', // olive
+  '#FFB800'  // accent yellow
+];
+
+export default function ERTOverview({ ertStatus }) {
+  const roles = Object.entries(ertStatus);
+
+  return (
+    <div className="mt-5">
+      <h3 className="text-warning">🛡️ ERT Member Status</h3>
+      <Row className="g-4 mt-3">
+        {roles.map(([role, members]) => {
+          const baseLoc = baseLocationByRole[role] || "N/A";
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header className="bg-dark text-warning small">
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {members.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item key={m.name} className="py-2">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div>
+                              <strong style={{ color: nameColor }}>
+                                {m.name}
+                              </strong>
+                            </div>
+                            <div className="small text-muted d-flex align-items-center">
+                              <FaEnvelope style={{ color: '#FFD100', marginRight: 4 }} />
+                              <a href={`mailto:${m.email}`}>{m.email}</a>
+                            </div>
+                            <div className="small text-muted d-flex align-items-center">
+                              <FaPhone style={{ color: '#FF6F61', marginRight: 4 }} />
+                              <a href={`tel:${m.phone}`}>{m.phone}</a>
+                            </div>
+                          </div>
+                          <Badge
+                            pill
+                            bg={m.present ? 'success' : 'danger'}
+                            style={{ width: 12, height: 12, padding: 0 }}
+                          />
+                        </div>
+
+                        <div className="mt-2 d-flex flex-wrap gap-2 small">
+                          <Badge bg="info" className="d-flex align-items-center">
+                            <FaMapPin style={{ color: '#009E60', marginRight: 4 }} />
+                            Base: {baseLoc}
+                          </Badge>
+                          {m.present && (
+                            <Badge bg="warning" text="dark" className="d-flex align-items-center">
+                              <FaMapMarkerAlt style={{ color: '#C75D00', marginRight: 4 }} />
+                              Live: {m.zone || 'N/A'}
+                            </Badge>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/ERTOverview.jsx
+import React from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaMapPin
+} from 'react-icons/fa';
+
 // base location per role
 const baseLocationByRole = {
   "Incident Controller":       "Podium Floor – Green Zone",
