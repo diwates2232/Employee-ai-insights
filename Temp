@@ -1,3 +1,75 @@
+// … inside buildOccupancyForToday …
+
+// ─── 5) Floor In/Out summary (strict doors only) ───────────────
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    // Strip any hex-time suffix, then normalize
+    const doorNoSuffix = stripTimeSuffix(evt.Door.trim());
+    const key = normalizeKey(doorNoSuffix, evt.Direction.trim());
+    // Only keep if you explicitly listed it (IN or OUT) in strictDoorList.js
+    return normalizedMonitoredKeys.has(key);
+  });
+
+const dedupedMap = new Map();
+validEvents.forEach(evt => {
+  const floor = mapDoorToFloor(evt.Door, evt.Direction);
+  const mapKey = `${evt.PersonGUID || evt.EmployeeID}___${floor}___${evt.Direction}`;
+  const prev   = dedupedMap.get(mapKey);
+  const now    = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+  if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+    dedupedMap.set(mapKey, evt);
+  }
+});
+
+const floorMapIO = {};
+Array.from(dedupedMap.values()).forEach(evt => {
+  const floor = mapDoorToFloor(evt.Door, evt.Direction);
+
+  // never include Out of office
+  if (floor === 'Out of office') return;
+
+  // Initialize if needed
+  floorMapIO[floor] = floorMapIO[floor] || {
+    inSwipes:  0,
+    outSwipes: 0,
+    inSet:     new Set(),
+    outSet:    new Set()
+  };
+
+  // Count exactly those you listed
+  if (evt.Direction === 'InDirection') {
+    floorMapIO[floor].inSwipes++;
+    floorMapIO[floor].inSet.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+  } else { // OutDirection
+    floorMapIO[floor].outSwipes++;
+    floorMapIO[floor].outSet.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+  }
+});
+
+const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+  const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+  return {
+    floor,
+    inSwipes:      stats.inSwipes,
+    outSwipes:     stats.outSwipes,
+    inOnlyCount:   inOnly.length,
+    inOnlyPersons: inOnly
+  };
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
 const validEvents = allEvents
   .filter(e => isTodayInDenver(e.Dateonly))
   .filter(evt => {
