@@ -1,3 +1,132 @@
+const [ertStatus, setErtStatus] = useState({});
+
+
+
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        // … your existing setters …
++       setErtStatus(payload.ertStatus || {});
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+
+
+
+
+        <Route
+          path="/"
+          element={
+            <DashboardHome
+              zoneSummaryData={summaryData}
+              detailsData={detailsData}
+              floorData={floorData}
+              zoneBreakdown={zoneBreakdown}
+              personnelBreakdown={personnelBreakdown}
+              totalVisitedToday={totalVisitedToday}
+              personnelSummary={personnelSummary}
+              visitedToday={visitedToday}
++             ertStatus={ertStatus}
+            />
+          }
+        />
+
+
+
+
+
+
+
+import React from 'react';
+import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
+
+/**
+ * ertStatus is an object:
+ * {
+ *   "Incident Controller": [{ name, email, phone, present }, …],
+ *   "First Aid Team":      [ … ],
+ *   …
+ * }
+ */
+export default function ERTOverview({ ertStatus }) {
+  const roles = Object.entries(ertStatus);
+
+  return (
+    <div className="mt-5">
+      <h3>🛡️ ERT Member Status</h3>
+      <Row className="g-4">
+        {roles.map(([role, members]) => (
+          <Col key={role} md={6} lg={4}>
+            <Card>
+              <Card.Header className="bg-primary text-white">
+                {role}
+              </Card.Header>
+              <ListGroup variant="flush">
+                {members.map(({ name, email, phone, present }) => (
+                  <ListGroup.Item key={name} className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>{name}</strong><br/>
+                      <small>{email}</small><br/>
+                      <small>{phone}</small>
+                    </div>
+                    <Badge bg={present ? 'success' : 'secondary'}>
+                      {present ? 'Present' : 'Absent'}
+                    </Badge>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+import ERTOverview from '../components/ERTOverview';
+
+
+
+
+export default function DashboardHome({
+  personnelSummary,
+  totalVisitedToday,
+  visitedToday,
+  floorData,
+  zoneSummaryData,
+  personnelBreakdown,
++ ertStatus
+}) {
+
+
+
+
+
+
+    <Row className="g-4">
+      {/* ... your 3 chart cols ... */}
+    </Row>
+
++   {/* 4th section: ERT status */}
++   <ERTOverview ertStatus={ertStatus} />
+  </Container>
+);
+
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client\src\App.js
 
 
