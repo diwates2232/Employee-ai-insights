@@ -1,3 +1,128 @@
+// src/components/PersonnelDonutChart.jsx
+import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// 7 attractive colors (Western Union + complementary accents)
+const COLORS = [
+  '#FFD100', // WU Yellow
+  '#009E60', // WU Green
+  '#88B04B', // Olive
+  '#FF6F61', // Coral
+  '#58595B', // WU Gray
+  '#FFB800', // Accent Yellow
+  '#6B5B95'  // Indigo
+];
+
+const DarkTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const { name, value } = payload[0];
+  return (
+    <div style={{
+      backgroundColor: '#1a1a1a',
+      color: '#fff',
+      border: '1px solid #444',
+      padding: '0.5rem',
+      borderRadius: 4
+    }}>
+      <div><strong>{name}</strong></div>
+      <div>Count: {value}</div>
+    </div>
+  );
+};
+
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return <Card body className="bg-dark text-white">No personnel data</Card>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#444' }}>
+      <Card.Header
+        className="bg-dark text-warning text-center fw-bold"
+        style={{
+          borderBottom: '3px solid var(--wu-yellow)',  // <-- yellow underline
+        }}
+      >
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body
+        style={{
+          height: 400,           // match other charts
+          padding: '1rem',
+          backgroundColor: '#1a1a1a'
+        }}
+      >
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%"
+              cy="50%"
+              innerRadius={80}
+              outerRadius={120}
+              paddingAngle={2}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan style={{ fill: '#fff', fontSize: 12 }}>
+                  {`${name}: ${(percent * 100).toFixed(0)}%`}
+                </tspan>
+              )}
+              stroke="#fff"
+              strokeWidth={2}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={entry.personnelType}
+                  fill={COLORS[idx % COLORS.length]}
+                />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '1.8rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip content={<DarkTooltip />} />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ paddingTop: 10 }}
+              formatter={(value) => (
+                <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
+                  {value}
+                </span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 Now read this chart now height of this chart u=ins not match as Zone-wise Occupancy , Floor Occupancy Chart ,also 
 Personnel Type Occupancy below this heading there is no yellow line
 
