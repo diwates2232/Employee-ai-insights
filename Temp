@@ -1,83 +1,8 @@
-@@ Card.Body style={{ height: 400, padding: 0 }}>
--        <div style={{
--          height: '100%',
--          border: '1px solid #ccc',
--          borderRadius: 4,
--          backgroundColor: '#fff'
--        }}>
-+        <div style={{
-+          height: '100%',
-+          border: '1px solid var(--wu-yellow)',
-+          borderRadius: 4,
-+          backgroundColor: 'var(--wu-gray-dark)',       // dark container
-+          padding: '0.5rem'
-+        }}>
-           <ResponsiveContainer width="100%" height="100%">
-             <BarChart
-               data={sortedData}
-               margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-               barCategoryGap="5%"
-             >
-               {/* gradient definitions */}
-               <defs>
-@@
--              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
--              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#333' }} />
--              <YAxis tick={{ fontSize: 12, fill: '#333' }} />
-+              <CartesianGrid stroke="#555" strokeDasharray="4 4" />
-+              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
-+              <YAxis tick={{ fontSize: 12, fill: '#fff' }} />
-
-               <Tooltip content={renderTooltip} />
-
-
-
-@@ Card.Body style={{ height: 400, padding: 0 }}>
--        <div
--          style={{
--            height: '100%',
--            border: '1px solid #ccc',
--            borderRadius: '4px',
--            backgroundColor: '#ffffff'
--          }}
--        >
-+        <div
-+          style={{
-+            height: '100%',
-+            border: '1px solid var(--wu-yellow)',
-+            borderRadius: '4px',
-+            backgroundColor: 'var(--wu-gray-dark)',
-+            padding: '0.5rem'
-+          }}
-+        >
-           <ResponsiveContainer width="100%" height="100%">
-             <BarChart
-               data={summary}
-               margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-               barCategoryGap="10%"
-             >
-               {/* Unique gradient defs by zone name */}
-@@
--              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
--              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
--              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
-+              <CartesianGrid stroke="#555" strokeDasharray="4 4" />
-+              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#fff' }} />
-+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#fff' }} />
-
-               <Tooltip content={renderTooltip} />
-
-
-
-
-
-
-
-
-
+Now only this chart is not updated yet
 
 
 // src/components/FloorOccupancyChart.jsx
+
 import React from 'react';
 import {
   BarChart,
@@ -133,12 +58,15 @@ export default function FloorOccupancyChart({ data = [] }) {
     if (!active || !payload?.length) return null;
     const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
     return (
-      <div style={{
-        backgroundColor: '#fff',
-        border: '1px solid #ccc',
-        padding: 8,
-        borderRadius: 4
-      }}>
+
+          <div style={{
+          height: '100%',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          backgroundColor: 'var(--wu-gray-dark)',       // dark container
+          padding: '0.5rem'
+        }}>
+
         <div><strong>Floor: {label}</strong></div>
         <div style={{ fontWeight: 'bold' }}>Total: {total}</div>
         {payload.map((p, idx) => (
@@ -185,9 +113,10 @@ export default function FloorOccupancyChart({ data = [] }) {
                 })}
               </defs>
 
-              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#333' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#333' }} />
+              <CartesianGrid stroke="#555" strokeDasharray="4 4" />
+              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#fff' }} />
+
 
               <Tooltip content={renderTooltip} />
 
@@ -234,176 +163,6 @@ export default function FloorOccupancyChart({ data = [] }) {
                   )}
                 </Bar>
               ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-// src/components/SummaryChart.jsx
-
-import React, { useEffect } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  Cell
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// Zone gradients
-const ZONE_GRADIENTS = {
-  'Red Zone': ['#A80000', '#FFCCCC'],
-  'Yellow Zone': ['#B28000', '#FFF2CC'],
-  'Orange Zone': ['#C75D00', '#FFE0B2'],
-  'Green Zone': ['#006400', '#CCFFCC'],
-  'Reception Area': ['#4B0082', '#E0CCFF'],
-  'Tower B':['#bfd6ff', '#002f6c'],
-};
-
-const ZONE_LABEL_COLORS = {
-  'Red Zone': '#A80000',
-  'Yellow Zone': '#B28000',
-  'Orange Zone': '#C75D00',
-  'Green Zone': '#006400',
-  'Reception Area': '#4B0082',
-};
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-export default function SummaryChart({ summary = [] }) {
-  useEffect(() => {
-    console.log('Summary Chart Data:', summary);
-  }, [summary]);
-
-  if (!summary.length) return <Card body>No zone data available</Card>;
-
-  const renderLabel = ({ x, y, width, value, index }) => {
-    const zone = summary[index].zone;
-    const color = ZONE_LABEL_COLORS[zone] || '#333';
-    return (
-      <text
-        x={x + width / 2}
-        y={y - 6}
-        fill={color}
-        textAnchor="middle"
-        fontSize={12}
-        fontWeight="bold"
-      >
-        {value}
-      </text>
-    );
-  };
-
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const { zone, count } = payload[0].payload;
-    const color = ZONE_LABEL_COLORS[zone] || '#333';
-    return (
-      <div
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          padding: '8px',
-          borderRadius: '4px',
-          color: '#000'
-        }}
-      >
-        <div><strong>{label}</strong></div>
-        <div style={{ color }}>
-          {payload[0].name}: {count}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        <div
-          style={{
-            height: '100%',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            backgroundColor: '#ffffff'
-          }}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={summary}
-              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-              barCategoryGap="10%"
-            >
-              {/* Unique gradient defs by zone name */}
-              <defs>
-                {Object.entries(ZONE_GRADIENTS).map(([zone, [start, end]]) => (
-                  <linearGradient
-                    id={`grad-${zone.replace(/\s+/g, '-')}`}
-                    key={zone}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={start} stopOpacity={1} />
-                    <stop offset="100%" stopColor={end} stopOpacity={1} />
-                  </linearGradient>
-                ))}
-              </defs>
-
-              <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
-              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} />
-
-              <Tooltip content={renderTooltip} />
-
-              <Legend
-                verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: 10 }}
-                formatter={(value) => (
-                  <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
-                    {value}
-                  </span>
-                )}
-              />
-
-              <Bar
-                dataKey="count"
-                name="Zone"
-                radius={[6, 6, 0, 0]}
-                label={renderLabel}
-              >
-                {summary.map((entry, idx) => {
-                  const zone = entry.zone;
-                  const gradientId = `grad-${zone.replace(/\s+/g, '-')}`;
-                  const strokeColor = ZONE_LABEL_COLORS[zone] || '#333';
-                  const gradientExists = ZONE_GRADIENTS.hasOwnProperty(zone);
-
-                  return (
-                    <Cell
-                      key={`cell-${idx}`}
-                      fill={gradientExists ? `url(#${gradientId})` : DEFAULT_GRADIENT[0]}
-                      stroke={strokeColor}
-                      strokeWidth={1}
-                    />
-                  );
-                })}
-              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
