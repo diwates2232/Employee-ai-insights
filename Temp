@@ -1,3 +1,178 @@
+// config/db.js
+
+const sql    = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  connectionTimeout: 30000,    // 30s to establish
+  requestTimeout:    0,        // no timeout on queries
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  },
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  }
+};
+
+let poolPromise = null;
+
+/**
+ * Get (and if needed, establish) the MSSQL connection pool.
+ * Retries up to `attempts` times on failure.
+ */
+async function getPool(attempts = 3) {
+  if (poolPromise) {
+    return poolPromise;
+  }
+
+  poolPromise = (async () => {
+    try {
+      const pool = await sql.connect(config);
+      console.log('✅ MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ MSSQL pool connection failed:', err);
+      poolPromise = null;  // reset for retry
+      if (attempts > 0) {
+        console.log(`⏳ Retrying MSSQL connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getPool(attempts - 1);
+      }
+      throw err;
+    }
+  })();
+
+  // Listen for async errors on the pool
+  sql.on('error', err => {
+    console.error('❌ MSSQL global error:', err);
+  });
+
+  return poolPromise;
+}
+
+// Keep‐alive ping to prevent idle timeouts
+setInterval(async () => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 MSSQL keep‐alive ping');
+  } catch (err) {
+    console.error('⚠️ MSSQL keep‐alive failed, resetting pool:', err);
+    poolPromise = null;  // force reconnect on next use
+  }
+}, 5 * 60 * 1000); // every 5 minutes
+
+module.exports = { sql, getPool };
+
+
+
+
+// config/siteConfig.js
+
+const { sql, getPool } = require('./db');
+
+// Pune site
+const punePoolPromise = getPool(); // uses env‐configured DB_*
+
+// Denver site (different server/database)
+const denverConfig = {
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    idleTimeoutMillis: 30000
+  },
+  connectionTimeout: 30000,
+  requestTimeout:    0
+};
+
+let denverPoolPromise = null;
+async function getDenverPool(attempts = 3) {
+  if (denverPoolPromise) return denverPoolPromise;
+
+  denverPoolPromise = (async () => {
+    const pool = new sql.ConnectionPool(denverConfig);
+    try {
+      await pool.connect();
+      console.log('✅ Denver MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ Denver pool connection failed:', err);
+      denverPoolPromise = null;
+      if (attempts > 0) {
+        await new Promise(res => setTimeout(res, 3000));
+        return getDenverPool(attempts - 1);
+      }
+      throw err;
+    }
+  })();
+
+  pool.on('error', err => {
+    console.error('❌ Denver MSSQL pool error:', err);
+    denverPoolPromise = null; // reset to reconnect
+  });
+
+  return denverPoolPromise;
+}
+
+// Optional keep‐alive for Denver as well
+setInterval(async () => {
+  try {
+    const pool = await getDenverPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 Denver keep‐alive ping');
+  } catch (err) {
+    console.error('⚠️ Denver keep‐alive failed, resetting pool:', err);
+  }
+}, 5 * 60 * 1000);
+
+module.exports = {
+  pune: {
+    name:         'Pune',
+    poolPromise:  punePoolPromise,
+    // ...other Pune config...
+  },
+  denver: {
+    name:         'Denver',
+    poolPromise:  getDenverPool(),
+    // ...other Denver config...
+  }
+};
+
+
+
+
+
+const { sql, getPool } = require('../config/db');
+const pool = await getPool();       // ensures connection
+const req  = pool.request();
+// … query as before …
+
+
+
+const { denver } = require('../config/siteConfig');
+const pool = await denver.poolPromise;
+const req  = pool.request();
+// … your Denver query …
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\config\db.js
 
 
