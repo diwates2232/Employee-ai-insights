@@ -1,3 +1,131 @@
+// src/components/ERTOverview.jsx
+import React from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaMapPin
+} from 'react-icons/fa';
+
+/** Base location per role **/
+const baseLocationByRole = {
+  "Site Head":                  "Podium Floor – Red Zone",
+  "HR":                          "Podium Floor – Red Zone",
+  "Incident Controller":        "Podium Floor – Green Zone",
+  "First Aid Team":             "Podium Floor – Green Zone",
+  "ERT Team Leader":            "Podium Floor – Green Zone",
+  "BCM Team / Site Operations": "Podium Floor – Red Zone"
+};
+
+/** Header border color per role **/
+const headerColorByRole = {
+  "Incident Controller":        "#009E60",
+  "First Aid Team":             "#FFD100",
+  "ERT Team Leader":            "#FFB800",
+  "BCM Team / Site Operations": "#A80000",
+  "Site Head":                  "#58595B",
+  "HR":                          "#FF6F61"
+};
+
+// rotating name colors (just yellow here but can expand)
+const NAME_COLORS = ['#FFD100'];
+
+export default function ERTOverview({ ertStatus }) {
+  return (
+    <div className="mt-0">
+      <Row className="g-2 mt-1">
+        {Object.entries(ertStatus).map(([role, members]) => {
+          const accent = headerColorByRole[role] || '#FFD100';
+          const baseLoc = baseLocationByRole[role] || 'N/A';
+
+          // sort present first
+          const sorted = [...members].sort((a, b) =>
+            (a.present === b.present) ? 0 : a.present ? -1 : 1
+          );
+
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header
+                  className="bg-dark text-white"
+                  style={{
+                    borderTop:    `4px solid ${accent}`,
+                    borderLeft:   `6px solid ${accent}`,
+                    borderRadius: '0 0.25rem 0 0'
+                  }}
+                >
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {sorted.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item key={m.name} className="py-2 bg-dark text-white">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <strong style={{ color: nameColor }}>{m.name}</strong>
+                            <Badge
+                              bg={m.present ? 'success' : 'danger'}
+                              className="ms-2"
+                              pill
+                            >
+                              {m.present ? 'Available' : 'Away'}
+                            </Badge>
+                            <div className="small mt-1 d-flex align-items-center">
+                              <FaEnvelope className="me-1" style={{ color: '#fff' }} />
+                              <span style={{ color: '#fff' }}>{m.email}</span>
+                            </div>
+                            <div className="small d-flex align-items-center">
+                              <FaPhone className="me-1" style={{ color: '#fff' }} />
+                              <span style={{ color: '#fff' }}>{m.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 d-flex flex-wrap gap-3 small">
+                          <div className="d-flex align-items-center">
+                            <FaMapPin className="me-1" style={{ color: '#A80000' }} />
+                            <span style={{ color: '#A80000' }}>
+                              Base: {baseLoc}
+                            </span>
+                          </div>
+                          {m.present && (
+                            <div className="d-flex align-items-center">
+                              <FaMapMarkerAlt className="me-1" style={{ color: '#009E60' }} />
+                              <span style={{ color: '#009E60' }}>
+                                Live: {m.zone || 'N/A'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
 Read below File carefully.for display mail and mobile number there is blue colour.
 Dont use bule coloue use White simple colour for this 
 also to display base location and Live Location 
