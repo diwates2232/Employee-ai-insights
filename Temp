@@ -1,3 +1,119 @@
+// src/components/ERTOverview.jsx
+import React from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaMapPin
+} from 'react-icons/fa';
+
+// base location per role
+const baseLocationByRole = {
+  "Incident Controller":       "Podium Floor – Green Zone",
+  "First Aid Team":            "Podium Floor – Green Zone",
+  "ERT Team Leader":           "Podium Floor – Green Zone",
+  "BCM Team / Site Operations":"Podium Floor – Red Zone",
+  "Site Head":                 "Podium Floor – Red Zone",
+  "HR":                         "Podium Floor – Red Zone"
+};
+
+// rotating highlight colors
+const NAME_COLORS = [
+  '#FFD100', '#0072CE', '#009E60', '#FF6F61',
+  '#58595B', '#C75D00', '#6B5B95'
+];
+
+export default function ERTOverview({ ertStatus }) {
+  const roles = Object.entries(ertStatus);
+
+  return (
+    <div className="mt-5">
+      <h3 className="text-warning">🛡️ ERT Member Status</h3>
+      <Row className="g-4 mt-3">
+        {roles.map(([role, members], roleIdx) => {
+          const baseLoc = baseLocationByRole[role] || "N/A";
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header className="bg-dark text-warning small">
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {members.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item
+                        key={m.name}
+                        className="py-2"
+                      >
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <div>
+                              <strong style={{ color: nameColor }}>
+                                {m.name}
+                              </strong>
+                            </div>
+                            <div className="small text-muted">
+                              <FaEnvelope />{' '}
+                              <a href={`mailto:${m.email}`}>{m.email}</a>
+                            </div>
+                            <div className="small text-muted">
+                              <FaPhone />{' '}
+                              <a href={`tel:${m.phone}`}>{m.phone}</a>
+                            </div>
+                          </div>
+                          <Badge
+                            pill
+                            bg={m.present ? 'success' : 'danger'}
+                            style={{ width: 12, height: 12, padding: 0 }}
+                          />
+                        </div>
+
+                        <div className="mt-2 d-flex flex-wrap gap-2 small">
+                          <Badge bg="info">
+                            <FaMapPin className="me-1" />
+                            Base: {baseLoc}
+                          </Badge>
+                          {m.present && (
+                            <Badge bg="warning" text="dark">
+                              <FaMapMarkerAlt className="me-1" />
+                              Live: {m.zone || 'N/A'}
+                            </Badge>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // client/src/components/ERTOverview.jsx
 import React from 'react';
 import { Card, Row, Col, ListGroup } from 'react-bootstrap';
