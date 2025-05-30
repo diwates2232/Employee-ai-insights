@@ -1,3 +1,75 @@
+/* ZoneDetailsTable.css */
+
+/* make cards dark and text light */
+.zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.zone-card {
+  flex: 1 1 300px;
+  background-color: var(--wu-gray-dark);
+  border: 1px solid var(--wu-yellow);
+  border-radius: 4px;
+  color: #fff;
+  padding: 1rem;
+}
+
+.zone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.zone-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--wu-yellow);
+}
+
+.zone-badge {
+  background-color: var(--wu-yellow);
+  color: #000;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+}
+
+.zone-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.zone-table th,
+.zone-table td {
+  border: 1px solid #444;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.zone-table th {
+  background-color: #333;
+  color: #fff;
+}
+
+.zone-table tbody tr:nth-child(even) {
+  background-color: #2a2a2a;
+}
+
+.zone-table tbody tr:hover {
+  background-color: #3a3a3a;
+}
+
+
+
+
+
+
+
+
+
 Read each file line bu line and carefully then give me updatedfiles  carefully
 
 C:\Users\W0024618\Desktop\swipeData\client\src\components\ERTOverview.jsx
