@@ -1,3 +1,41 @@
+const { denver } = require('../config/siteConfig');
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  // 1) Await the poolPromise instead of .connect()
+  const pool = await denver.poolPromise;
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const events = [];
+
+  const push = async () => {
+    // use pool.request() for queries
+    const fresh = await fetchNewEvents(lastSeen, pool);
+    // …
+  };
+
+  await push();
+  // …
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // config/siteConfig.js
 
 const { sql, getPool } = require('./db');
