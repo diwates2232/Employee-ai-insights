@@ -1,241 +1,60 @@
-// src/App.js
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
+Now lets give me updated jsx file 
 
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import DashboardHome    from './pages/DashboardHome';
+// src/components/PersonnelDonutChart.jsx
+import React from 'react';
+import {
+  PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, Legend, Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
 
-import './App.css';
+// Western Union–style colors
+const COLORS = ['#FFD100', '#009E60', '#58595B', '#FFB800'];
 
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) return <Card body>No personnel data</Card>;
 
-function App() {
-  const [summaryData, setSummaryData]             = useState([]);
-  const [detailsData, setDetailsData]             = useState({});
-  const [floorData, setFloorData]                 = useState([]);
-  const [zoneBreakdown, setZoneBreakdown]         = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus]                 = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-    es.onmessage = e => {
-      try {
-        const p = JSON.parse(e.data);
-        setSummaryData(p.summary           || []);
-        setDetailsData(p.details           || {});
-        setFloorData(p.floorBreakdown      || []);
-        setZoneBreakdown(p.zoneBreakdown   || []);
-        setPersonnelBreakdown(p.personnelBreakdown || []);
-        setTotalVisitedToday(p.totalVisitedToday || 0);
-        setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(p.ertStatus                    || {});
-      } catch {
-        console.error('SSE parse error');
-      }
-    };
-    es.onerror = err => {
-      console.error('SSE error', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
+  const sorted = [...data].sort((a, b) => b.count - a.count);
 
   return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Pune
-          </Navbar.Brand>
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
-              Details
-            </Nav.Link>
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-4">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  zoneSummaryData={summaryData}
-                  detailsData={detailsData}
-                  floorData={floorData}
-                  zoneBreakdown={zoneBreakdown}
-                  personnelBreakdown={personnelBreakdown}
-                  totalVisitedToday={totalVisitedToday}
-                  personnelSummary={personnelSummary}
-                  visitedToday={visitedToday}
-                  ertStatus={ertStatus}
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
+      <Card.Header className="bg-dark text-warning text-center fw-bold">
+        Personnel Type Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: '1rem' }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%" cy="50%"
+              innerRadius={70} outerRadius={110}
+              paddingAngle={4}
+              labelLine={false}
+              label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              stroke="#333" // Added dark border
+              strokeWidth={1.5} // Slightly thicker for clarity
+            >
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={entry.personnelType}
+                  fill={COLORS[idx % COLORS.length]}
                 />
-              }
-            />
-            <Route
-              path="/details"
-              element={<ZoneDetailsPage detailsData={detailsData} />}
-            />
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-This is my current App.js give me updated ja file carefully
-// App.js
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
- import { FaSun } from 'react-icons/fa';
-
-
-import SummaryChart from './components/SummaryChart';
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import FloorOccupancyChart from './components/FloorOccupancyChart';
-import ZoneBreakdownTable from './components/ZoneBreakdownTable';
-import DashboardHome from './pages/DashboardHome';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        {/* <h2>Zone Details</h2> */}
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData] = useState([]);
-  const [detailsData, setDetailsData] = useState({});
-  const [floorData, setFloorData] = useState([]);
-  const [zoneBreakdown, setZoneBreakdown] = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus] = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-    es.onmessage = (e) => {
-      try {
-        const payload = JSON.parse(e.data);
-        setSummaryData(payload.summary || []);
-        setDetailsData(payload.details || {});
-        setFloorData(payload.floorBreakdown || []);
-        setZoneBreakdown(payload.zoneBreakdown || []);
-        setPersonnelBreakdown(payload.personnelBreakdown || []);
-        setTotalVisitedToday(payload.totalVisitedToday || 0);
-        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(payload.ertStatus || {});
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = (err) => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-     <div className="dark-theme">
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
-          Live Occupancy — Western Union Pune
-        </Navbar.Brand>
-        <Nav className="ms-auto">
-          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
-            Details
-          </Nav.Link>
-
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-             <FaSun />
-           </Nav.Link>
-
-        </Nav>
-      </Navbar>
-
-      <Container fluid className="mt-4">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                zoneSummaryData={summaryData}
-                detailsData={detailsData}
-                floorData={floorData}
-                zoneBreakdown={zoneBreakdown}
-                personnelBreakdown={personnelBreakdown}
-                totalVisitedToday={totalVisitedToday}
-                personnelSummary={personnelSummary}
-                visitedToday={visitedToday}   // <-- fix here
-                ertStatus={ertStatus}
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fontSize: '1.5rem', fontWeight: 'bold' }}
               />
-            }
-          />
-         <Route
-  path="/details"
-  element={<ZoneDetailsPage detailsData={detailsData} />}
-/>
-        </Routes>
-      </Container>
-       </div>
-    </BrowserRouter>
+            </Pie>
+            <Tooltip formatter={value => [`${value}`, 'Count']} />
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: 10 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
   );
 }
-
-export default App;
 
