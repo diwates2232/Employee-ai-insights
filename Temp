@@ -1,3 +1,14 @@
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt =>
+    normalizedMonitoredKeys.has(normalizeKey(evt.Door, evt.Direction))
+  );
+
+
+
+
+
+
 Read below file carefully . i have review some bug is this file , Total Count is not match as Actual count , There is no more diffrance but 5 to 10 Employee count is mismatch.
 I thimk this is due incorrect time zone so please check time zone perfectly,
 
