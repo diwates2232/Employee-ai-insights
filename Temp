@@ -1,354 +1,119 @@
-// src/components/FloorOccupancyChart.jsx
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
+This is my current App.js give me updated ja file carefully
+// App.js
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+ import { FaSun } from 'react-icons/fa';
 
-// 12 gradient pairs (light → dark)
-const GRADIENTS = [
-  ['#bfd6ff', '#002f6c'],
-  ['#ffcccc', '#a80000'],
-  ['#d0d8ff', '#3b4cca'],
-  ['#fff2cc', '#b28000'],
-  ['#cffaf3', '#006d5b'],
-  ['#d6e3f0', '#4e5d6c'],
-  ['#e0ccff', '#4b0082'],
-  ['#a0b5d8', '#264653'],
-  ['#ffb3b3', '#9b2226'],
-  ['#caebf2', '#005f73'],
-  ['#fff2cc', '#7f6000'],
-  ['#e5ccf2', '#6a1b9a']
-];
-const DARK_COLORS = GRADIENTS.map(([, dark]) => dark);
 
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
+import SummaryChart from './components/SummaryChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import FloorOccupancyChart from './components/FloorOccupancyChart';
+import ZoneBreakdownTable from './components/ZoneBreakdownTable';
+import DashboardHome from './pages/DashboardHome';
 
-  // Gather all personnel‐type keys
-  const types = Array.from(
-    new Set(
-      data.flatMap(d =>
-        Object.keys(d).filter(k => k !== 'floor' && k !== 'total')
-      )
-    )
-  );
+import './App.css';
 
-  // Sort floors by total descending
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // Custom tooltip container matching dark theme
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
-    return (
-      <div style={{
-        backgroundColor: 'var(--wu-gray-dark)',
-        color: '#fff',
-        border: '1px solid var(--wu-yellow)',
-        borderRadius: 4,
-        padding: '0.5rem'
-      }}>
-        <div><strong>Floor: {label}</strong></div>
-        <div style={{ fontWeight: 'bold' }}>Total: {total}</div>
-        {payload.map((p, idx) => (
-          <div key={p.dataKey} style={{ color: DARK_COLORS[idx % DARK_COLORS.length] }}>
-            {p.name}: {p.value}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        <div style={{
-          height: '100%',
-          backgroundColor: 'var(--wu-gray-dark)',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          padding: '0.5rem'
-        }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={sortedData}
-              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-              barCategoryGap="5%"
-            >
-              {/* Gradient definitions */}
-              <defs>
-                {types.map((_, idx) => {
-                  const [light, dark] = GRADIENTS[idx % GRADIENTS.length];
-                  return (
-                    <linearGradient
-                      id={`grad-${idx}`}
-                      key={idx}
-                      x1="0" y1="0" x2="0" y2="1"
-                    >
-                      <stop offset="0%" stopColor={light} stopOpacity={1} />
-                      <stop offset="100%" stopColor={dark} stopOpacity={1} />
-                    </linearGradient>
-                  );
-                })}
-              </defs>
-
-              <CartesianGrid stroke="#555" strokeDasharray="4 4" />
-              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#fff' }} />
-
-              <Tooltip content={renderTooltip} />
-
-              <Legend
-                verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: 5 }}
-                formatter={(val, entry, idx) => (
-                  <span style={{
-                    color: DARK_COLORS[idx % DARK_COLORS.length],
-                    fontWeight: 'bold'
-                  }}>
-                    {val}
-                  </span>
-                )}
-              />
-
-              {types.map((type, idx) => (
-                <Bar
-                  key={type}
-                  dataKey={type}
-                  stackId="a"
-                  name={type}
-                  radius={[6, 6, 0, 0]}
-                >
-                  {sortedData.map((_, barIdx) => (
-                    <Cell
-                      key={barIdx}
-                      fill={`url(#grad-${idx})`}
-                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
-                      strokeWidth={1}
-                    />
-                  ))}
-                  {idx === 0 && (
-                    <LabelList
-                      dataKey="total"
-                      position="top"
-                      style={{
-                        fill: '#fff',
-                        fontSize: 14,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  )}
-                </Bar>
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card.Body>
-    </Card>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        {/* <h2>Zone Details</h2> */}
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
 }
 
+function App() {
+  const [summaryData, setSummaryData] = useState([]);
+  const [detailsData, setDetailsData] = useState({});
+  const [floorData, setFloorData] = useState([]);
+  const [zoneBreakdown, setZoneBreakdown] = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus] = useState({});
 
-
-
-
-
-
-
-
-
-
-
-
-
-Now only this chart is not updated yet
-
-
-// src/components/FloorOccupancyChart.jsx
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// 12 gradient pairs (light → dark)
-const GRADIENTS = [
-  ['#bfd6ff', '#002f6c'],
-  ['#ffcccc', '#a80000'],
-  ['#d0d8ff', '#3b4cca'],
-  ['#fff2cc', '#b28000'],
-  ['#cffaf3', '#006d5b'],
-  ['#d6e3f0', '#4e5d6c'],
-  ['#e0ccff', '#4b0082'],
-  ['#a0b5d8', '#264653'],
-  ['#ffb3b3', '#9b2226'],
-  ['#caebf2', '#005f73'],
-  ['#fff2cc', '#7f6000'],
-  ['#e5ccf2', '#6a1b9a']
-];
-
-const DARK_COLORS = GRADIENTS.map(([, dark]) => dark);
-
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
-
-  // all personnel‐type keys
-  const types = Array.from(
-    new Set(
-      data.flatMap(d =>
-        Object.keys(d).filter(k => k !== 'floor' && k !== 'total')
-      )
-    )
-  );
-
-  // sort floors by total descending
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // tooltip as before
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
-    return (
-
-          <div style={{
-          height: '100%',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          backgroundColor: 'var(--wu-gray-dark)',       // dark container
-          padding: '0.5rem'
-        }}>
-
-        <div><strong>Floor: {label}</strong></div>
-        <div style={{ fontWeight: 'bold' }}>Total: {total}</div>
-        {payload.map((p, idx) => (
-          <div key={p.dataKey} style={{ color: DARK_COLORS[idx % DARK_COLORS.length] }}>
-            {p.name}: {p.value}
-          </div>
-        ))}
-      </div>
-    );
-  };
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        setSummaryData(payload.summary || []);
+        setDetailsData(payload.details || {});
+        setFloorData(payload.floorBreakdown || []);
+        setZoneBreakdown(payload.zoneBreakdown || []);
+        setPersonnelBreakdown(payload.personnelBreakdown || []);
+        setTotalVisitedToday(payload.totalVisitedToday || 0);
+        setPersonnelSummary(payload.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(payload.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setErtStatus(payload.ertStatus || {});
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+    es.onerror = (err) => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
   return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        <div style={{
-          height: '100%',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          backgroundColor: '#fff'
-        }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={sortedData}
-              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-              barCategoryGap="5%"
-            >
-              {/* gradient definitions */}
-              <defs>
-                {types.map((_, idx) => {
-                  const [light, dark] = GRADIENTS[idx % GRADIENTS.length];
-                  return (
-                    <linearGradient
-                      id={`grad-${idx}`}
-                      key={idx}
-                      x1="0" y1="0" x2="0" y2="1"
-                    >
-                      <stop offset="0%" stopColor={light} stopOpacity={1} />
-                      <stop offset="100%" stopColor={dark} stopOpacity={1} />
-                    </linearGradient>
-                  );
-                })}
-              </defs>
+    <BrowserRouter>
+     <div className="dark-theme">
+      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+        <Navbar.Brand as={Link} to="/" style={{ color: 'var(--wu-yellow)' }}>
+          Live Occupancy — Western Union Pune
+        </Navbar.Brand>
+        <Nav className="ms-auto">
+          <Nav.Link as={Link} to="/" style={{ color: '#fff' }}>
+            Dashboard
+          </Nav.Link>
+          <Nav.Link as={Link} to="/details" style={{ color: '#fff' }}>
+            Details
+          </Nav.Link>
 
-              <CartesianGrid stroke="#555" strokeDasharray="4 4" />
-              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#fff' }} />
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+             <FaSun />
+           </Nav.Link>
 
+        </Nav>
+      </Navbar>
 
-              <Tooltip content={renderTooltip} />
-
-              <Legend
-                verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: 5 }}
-                formatter={(val, entry, idx) => (
-                  <span style={{
-                    color: DARK_COLORS[idx % DARK_COLORS.length],
-                    fontWeight: 'bold'
-                  }}>
-                    {val}
-                  </span>
-                )}
+      <Container fluid className="mt-4">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DashboardHome
+                zoneSummaryData={summaryData}
+                detailsData={detailsData}
+                floorData={floorData}
+                zoneBreakdown={zoneBreakdown}
+                personnelBreakdown={personnelBreakdown}
+                totalVisitedToday={totalVisitedToday}
+                personnelSummary={personnelSummary}
+                visitedToday={visitedToday}   // <-- fix here
+                ertStatus={ertStatus}
               />
-
-              {types.map((type, idx) => (
-                <Bar
-                  key={type}
-                  dataKey={type}
-                  stackId="a"
-                  name={type}
-                  radius={[6, 6, 0, 0]}
-                >
-                  {sortedData.map((_, barIdx) => (
-                    <Cell
-                      key={barIdx}
-                      fill={`url(#grad-${idx})`}
-                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
-                      strokeWidth={1}
-                    />
-                  ))}
-                  {/* only on first series, render the total label */}
-                  {idx === 0 && (
-                    <LabelList
-                      dataKey="total"
-                      position="top"
-                      style={{
-                        fill: '#333',
-                        fontSize: 14,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  )}
-                </Bar>
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card.Body>
-    </Card>
+            }
+          />
+         <Route
+  path="/details"
+  element={<ZoneDetailsPage detailsData={detailsData} />}
+/>
+        </Routes>
+      </Container>
+       </div>
+    </BrowserRouter>
   );
 }
 
-
-
+export default App;
 
