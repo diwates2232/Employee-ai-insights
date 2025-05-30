@@ -16,6 +16,130 @@ import {
 
 /** Base location per role **/
 const baseLocationByRole = {
+  "Incident Controller":        "Podium Floor – Green Zone",
+  "First Aid Team":             "Podium Floor – Green Zone",
+  "ERT Team Leader":            "Podium Floor – Green Zone",
+  "BCM Team / Site Operations": "Podium Floor – Red Zone",
+  "Site Head":                  "Podium Floor – Red Zone",
+  "HR":                          "Podium Floor – Red Zone"
+};
+
+/** Header border color per role **/
+const headerColorByRole = {
+  "Incident Controller":        "#009E60", // green
+  "First Aid Team":             "#FFD100", // yellow
+  "ERT Team Leader":            "#FFB800", // accent yellow
+  "BCM Team / Site Operations": "#A80000", // red
+  "Site Head":                  "#58595B", // gray
+  "HR":                          "#FF6F61"  // coral
+};
+
+// 7 warm/neutral highlight colors
+const NAME_COLORS = [
+  '#FFD100', '#FF6F61', '#009E60',
+  '#58595B', '#C75D00', '#88B04B', '#FFB800'
+];
+
+export default function ERTOverview({ ertStatus }) {
+  const roles = Object.entries(ertStatus);
+
+  return (
+    <div className="mt-5">
+      <h3 className="text-warning">🛡️ ERT Member Status</h3>
+      <Row className="g-4 mt-3">
+        {roles.map(([role, members]) => {
+          const baseLoc = baseLocationByRole[role] || "N/A";
+          const headerBorder = headerColorByRole[role] || '#FFD100';
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header
+                  className="bg-dark text-white"
+                  style={{
+                    borderLeft: `6px solid ${headerBorder}`
+                  }}
+                >
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {members.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item key={m.name} className="py-2">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <strong style={{ color: nameColor }}>
+                              {m.name}
+                            </strong>
+                            <Badge
+                              bg={m.present ? 'success' : 'danger'}
+                              className="ms-2"
+                              pill
+                            >
+                              {m.present ? 'Available' : 'Away'}
+                            </Badge>
+                            <div className="small text-muted mt-1 d-flex align-items-center">
+                              <FaEnvelope className="me-1" style={{ color: '#FFD100' }} />
+                              <a href={`mailto:${m.email}`}>{m.email}</a>
+                            </div>
+                            <div className="small text-muted d-flex align-items-center">
+                              <FaPhone className="me-1" style={{ color: '#FF6F61' }} />
+                              <a href={`tel:${m.phone}`}>{m.phone}</a>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 d-flex flex-wrap gap-2 small">
+                          <Badge bg="info" className="d-flex align-items-center">
+                            <FaMapPin className="me-1" style={{ color: '#009E60' }} />
+                            Base: {baseLoc}
+                          </Badge>
+                          {m.present && (
+                            <Badge bg="warning" text="dark" className="d-flex align-items-center">
+                              <FaMapMarkerAlt className="me-1" style={{ color: '#C75D00' }} />
+                              Live: {m.zone || 'N/A'}
+                            </Badge>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+// src/components/ERTOverview.jsx
+import React from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelope,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaMapPin
+} from 'react-icons/fa';
+
+/** Base location per role **/
+const baseLocationByRole = {
   "Incident Controller":       "Podium Floor – Green Zone",
   "First Aid Team":            "Podium Floor – Green Zone",
   "ERT Team Leader":           "Podium Floor – Green Zone",
