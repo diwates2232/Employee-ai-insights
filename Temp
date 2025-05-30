@@ -1,3 +1,58 @@
+const { denver } = require('../config/siteConfig');
+// …
+async function fetchNewEvents(since) {
+  // await the Denver poolPromise instead of .connect()
+  const pool = await denver.poolPromise;
+  const req  = pool.request();
+  req.input('since', sql.DateTime2, since);
+  // …
+}
+
+
+
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+  // Ensure the Denver pool is ready:
+  await denver.poolPromise;
+  // …
+};
+
+
+
+
+
+
+
+
+const { sql, getPool } = require('../config/db');
+// …
+async function fetchNewEvents(since) {
+  // await the shared pool promise instead of poolConnect
+  const pool = await getPool();
+  const req  = pool.request();
+  req.input('since', sql.DateTime2, since);
+  // …
+}
+
+
+
+
+exports.getLiveOccupancy = async (req, res) => {
+  try {
+    // wait for the shared pool to be ready
+    await getPool();
+    // …
+  }
+
+
+
+
+
+
+
+
+
+
 First read my both controller file and then solve the error carefully dont make unneccessary changes in my file 
 // controllers/denverLiveOccupancyController.js
 
