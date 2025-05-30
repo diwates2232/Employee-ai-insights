@@ -1,3 +1,78 @@
+// ─── 5) Floor In/Out summary (strict doors only) ───────────────
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    // 1) strip any "_HH:MM:SS" suffix
+    const doorNoTime = stripTimeSuffix(evt.Door.trim());
+    // 2) normalize to KEY___IN or KEY___OUT
+    const key = normalizeKey(doorNoTime, evt.Direction.trim());
+    // 3) only keep if it’s exactly in your strict list
+    return normalizedMonitoredKeys.has(key);
+  });
+
+// Dedupe per person+floor+direction
+const deduped = new Map();
+validEvents.forEach(evt => {
+  // Determine floor by regex (not via doorFloorMap, to avoid "Out of office")
+  const rawNoTime = stripTimeSuffix(evt.Door);
+  const m = rawNoTime.match(/HQ\.\s*(\d{1,2})\b/);
+  const floor = m ? `Floor ${m[1]}` : 'Unknown Floor';
+
+  const mapKey = `${evt.PersonGUID || evt.EmployeeID}___${floor}___${evt.Direction}`;
+  const prev   = deduped.get(mapKey);
+  const now    = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+  if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+    deduped.set(mapKey, evt);
+  }
+});
+
+// Aggregate inSwipes/outSwipes per floor
+const floorMapIO = {};
+for (const evt of deduped.values()) {
+  const rawNoTime = stripTimeSuffix(evt.Door);
+  const m = rawNoTime.match(/HQ\.\s*(\d{1,2})\b/);
+  const floor = m ? `Floor ${m[1]}` : 'Unknown Floor';
+
+  if (!floorMapIO[floor]) {
+    floorMapIO[floor] = {
+      inSwipes:  0,
+      outSwipes: 0,
+      inSet:     new Set(),
+      outSet:    new Set()
+    };
+  }
+
+  const id = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+  if (evt.Direction === 'InDirection') {
+    floorMapIO[floor].inSwipes++;
+    floorMapIO[floor].inSet.add(id);
+  } else {
+    floorMapIO[floor].outSwipes++;
+    floorMapIO[floor].outSet.add(id);
+  }
+}
+
+// Build your final summary
+const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+  const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+  return {
+    floor,
+    inSwipes:      stats.inSwipes,
+    outSwipes:     stats.outSwipes,
+    inOnlyCount:   inOnly.length,
+    inOnlyPersons: inOnly
+  };
+});
+
+
+
+
+
+
+
+
+
+
 As per suggestion i hav eupdate snipet for in out summary still out swipe count is not monitored.
 
 // controllers/denverLiveOccupancyController.js
