@@ -1,3 +1,87 @@
+// client/src/components/ERTOverview.jsx
+import React from 'react';
+import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
+
+/**
+ * ertStatus is an object:
+ * {
+ *   "Incident Controller": [{ name, email, phone, present, zone }, …],
+ *   "First Aid Team":      [ … ],
+ *   …
+ * }
+ */
+
+// adjust these to your actual base‐location names per role:
+const baseLocationByRole = {
+  "Incident Controller": "Podium Floor – Green Zone",
+  "First Aid Team":      "2nd Floor – Green Zone",
+  "ERT Team Leader":     "3rd Floor – Green Zone",
+  "BCM Team":            "3rd Floor – Green Zone",
+  "Site Head":           "Podium Floor – Green Zone",
+  "Site Operations":     "Podium Floor – Green Zone",
+  "HR":                   "Podium Floor – Green Zone"
+};
+
+export default function ERTOverview({ ertStatus }) {
+  const roles = Object.entries(ertStatus);
+
+  return (
+    <div className="mt-5">
+      <h3>🛡️  ERT Member Status</h3>
+      <Row className="g-4 mt-3">
+        {roles.map(([role, members]) => {
+          const baseLocation = baseLocationByRole[role] || "N/A";
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100">
+                <Card.Header className="bg-primary text-white">
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {members.map(({ name, email, phone, present, zone }) => (
+                    <ListGroup.Item key={name}>
+                      <div className="d-flex w-100 justify-content-between">
+                        <div>
+                          <strong>{name}</strong><br/>
+                          <small>{email}</small><br/>
+                          <small>{phone}</small>
+                        </div>
+                        <Badge bg={present ? 'success' : 'danger'} pill>
+                          {present ? 'Present' : 'Absent'}
+                        </Badge>
+                      </div>
+                      <div className="mt-2">
+                        <small><strong>Base:</strong> {baseLocation}</small><br/>
+                        {present && (
+                          <small><strong>Live:</strong> {zone || 'N/A'}</small>
+                        )}
+                      </div>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // App.js
 import React, { useEffect, useState } from 'react';
 import { Container, Navbar, Nav } from 'react-bootstrap';
