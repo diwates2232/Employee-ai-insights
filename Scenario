@@ -1,4 +1,17 @@
- C:\Users\W0024618\Desktop\ai-employee-security\src> python train.py
+pip install pandas scikit-learn joblib fastapi uvicorn python‐dotenv pyodbc sqlalchemy
+
+
+
+pip install python-dotenv
+
+
+
+pip install python-dotenv
+
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src> python train.py
 Traceback (most recent call last):
   File "C:\Users\W0024618\Desktop\ai-employee-security\src\train.py", line 188, in <module>
     build_and_save_model()
