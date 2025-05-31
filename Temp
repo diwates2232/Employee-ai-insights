@@ -1,3 +1,18 @@
+ren .\myapp\db-py .\myapp\db.py
+
+
+from .db import get_engine  # ✅ correct
+
+
+
+
+
+python -m myapp.controller
+
+
+
+
+
 from .db import get_engine
 
 python -m myapp.controller
