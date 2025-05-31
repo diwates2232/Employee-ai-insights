@@ -1,972 +1,226 @@
-// src/components/SummaryChart.jsx
-
-import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
-
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone':       ['#A80000', '#FFCCCC'],
-  'Yellow Zone':    ['#B28000', '#FFF2CC'],
-  'Orange Zone':    ['#C75D00', '#FFE0B2'],
-  'Green Zone':     ['#006400', '#CCFFCC'],
-  'Reception Area': ['#4B0082', '#E0CCFF'],
-  'Tower B':        ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-  '#58595B', '#FFB800', '#C75D00'
-];
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-// Keyframes for bulb blinking
-const bulbBlinkStyle = `
-@keyframes bulbBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-`;
-
-export default function SummaryChart({ summary = [] }) {
-  // 1) Build pieData where each slice has value=1 (equal width), but carry actual count.
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => ({
-        name:  z.zone,
-        value: 1,       // equal slice widths
-        count: z.count  // actual numeric count
-      })),
-    [summary]
-  );
-
-  // 2) Build a zoneLegendItems array BEFORE any early return
-  const zoneLegendItems = useMemo(() => {
-    return pieData.map((entry, idx) => {
-      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
-      // Use the darker/second color for the dot if gradient exists, else the solid
-      const dotColor = colors[1] || colors[0];
-      return {
-        name: entry.name,
-        color: dotColor
-      };
-    });
-  }, [pieData]);
-
-  // 3) Early return if there is no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
-  }
-
-  // 4) Custom tooltip to display the actual count on hover
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count } = payload[0].payload;
-    return (
-      <div
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          padding: '8px',
-          color: '#000'
-        }}
-      >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
-      </div>
-    );
-  };
-
-  // 5) Helper: get fill & stroke for a given zone
-  const getColorsForZone = (zoneName, idx) => {
-    const grad = ZONE_GRADIENTS[zoneName];
-    if (grad) {
-      return {
-        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
-        stroke: grad[1]
-      };
-    } else {
-      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
-      return { fill: solid, stroke: solid };
-    }
-  };
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        {/* Inject keyframes for bulb blink */}
-        <style>{bulbBlinkStyle}</style>
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-            display: 'flex',
-            overflow: 'hidden'
-          }}
-        >
-          {/* —— Left: Vertical Legend of Zones —— */}
-          <div
-            style={{
-              width: 160,
-              padding: '1rem 0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
-            }}
-          >
-            {zoneLegendItems.map((item) => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: item.color
-                  }}
-                />
-                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* —— Right: Semi‐donut Chart —— */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Gradient definitions for each slice */}
-                <defs>
-                  {pieData.map((entry) => {
-                    const key = entry.name.replace(/\s+/g, '-');
-                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                    return (
-                      <linearGradient
-                        id={`grad-${key}`}
-                        key={key}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Semi‐donut spanning 360°→0° (bottom half only) */}
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  startAngle={360}
-                  endAngle={0}
-                  innerRadius={80}
-                  outerRadius={170}
-                  paddingAngle={3}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  <LabelList
-                    dataKey="count"
-                    position="inside"
-                    fill="#fff"
-                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
-                  />
-                  {pieData.map((entry, idx) => {
-                    const { fill, stroke } = getColorsForZone(entry.name, idx);
-                    return (
-                      <Cell
-                        key={`slice-${idx}`}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth={1}
-                      />
-                    );
-                  })}
-                </Pie>
-
-                <Tooltip content={renderTooltip} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Blinking bulb, shifted slightly upward */}
-            <FaLightbulb
-              style={{
-                position: 'absolute',
-                top: '45%',   // shifted up from 50%
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '3rem',
-                color: '#FFD100',
-                animation: 'bulbBlink 1.5s infinite'
-              }}
-            />
-
-            {/* “Western Union Pune” text below the bulb */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(45% + 50px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                color: '#FFD100',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Western Union Pune
-            </div>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-// src/components/SummaryChart.jsx
-
-import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
-
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone':       ['#A80000', '#FFCCCC'],
-  'Yellow Zone':    ['#B28000', '#FFF2CC'],
-  'Orange Zone':    ['#C75D00', '#FFE0B2'],
-  'Green Zone':     ['#006400', '#CCFFCC'],
-  'Reception Area': ['#4B0082', '#E0CCFF'],
-  'Tower B':        ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-  '#58595B', '#FFB800', '#C75D00'
-];
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-// Keyframes for bulb blinking
-const bulbBlinkStyle = `
-@keyframes bulbBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-`;
-
-export default function SummaryChart({ summary = [] }) {
-  // 1) Always call useMemo at the top, before any possible `return`
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => ({
-        name:  z.zone,
-        value: 1,       // equal slice widths
-        count: z.count  // actual numeric count
-      })),
-    [summary]
-  );
-
-  // 2) Early return if there is no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
-  }
-
-  // 3) Custom tooltip to display real count
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count } = payload[0].payload;
-    return (
-      <div
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          padding: '8px',
-          color: '#000'
-        }}
-      >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
-      </div>
-    );
-  };
-
-  // 4) Helper: Get fill and stroke colors for each zone
-  const getColorsForZone = (zoneName, idx) => {
-    const grad = ZONE_GRADIENTS[zoneName];
-    if (grad) {
-      return {
-        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
-        stroke: grad[1]
-      };
-    } else {
-      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
-      return { fill: solid, stroke: solid };
-    }
-  };
-
-  // 5) Build an array of zone–color pairs for the left‐hand legend
-  const zoneLegendItems = useMemo(() => {
-    return pieData.map((entry, idx) => {
-      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
-      const dotColor = colors[1] || colors[0];
-      return {
-        name: entry.name,
-        color: dotColor
-      };
-    });
-  }, [pieData]);
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        {/* Inject keyframes for bulb blink */}
-        <style>{bulbBlinkStyle}</style>
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-            display: 'flex',
-            overflow: 'hidden'
-          }}
-        >
-          {/* —— Left: Vertical Legend of Zones —— */}
-          <div
-            style={{
-              width: 160,
-              padding: '1rem 0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
-            }}
-          >
-            {zoneLegendItems.map((item) => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: item.color
-                  }}
-                />
-                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* —— Right: Semi‐donut Chart —— */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Gradient definitions for each slice */}
-                <defs>
-                  {pieData.map((entry) => {
-                    const key = entry.name.replace(/\s+/g, '-');
-                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                    return (
-                      <linearGradient
-                        id={`grad-${key}`}
-                        key={key}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Semi‐donut spanning 360°→0° */}
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  startAngle={360}
-                  endAngle={0}
-                  innerRadius={80}
-                  outerRadius={170}
-                  paddingAngle={3}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  <LabelList
-                    dataKey="count"
-                    position="inside"
-                    fill="#fff"
-                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
-                  />
-                  {pieData.map((entry, idx) => {
-                    const { fill, stroke } = getColorsForZone(entry.name, idx);
-                    return (
-                      <Cell
-                        key={`slice-${idx}`}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth={1}
-                      />
-                    );
-                  })}
-                </Pie>
-
-                <Tooltip content={renderTooltip} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Blinking bulb, shifted slightly upward */}
-            <FaLightbulb
-              style={{
-                position: 'absolute',
-                top: '45%',   // shifted up from 50%
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '3rem',
-                color: '#FFD100',
-                animation: 'bulbBlink 1.5s infinite'
-              }}
-            />
-
-            {/* “Western Union Pune” text below the bulb */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(45% + 50px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                color: '#FFD100',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Western Union Pune
-            </div>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-// src/components/SummaryChart.jsx
-
-import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
-
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone':       ['#A80000', '#FFCCCC'],
-  'Yellow Zone':    ['#B28000', '#FFF2CC'],
-  'Orange Zone':    ['#C75D00', '#FFE0B2'],
-  'Green Zone':     ['#006400', '#CCFFCC'],
-  'Reception Area': ['#4B0082', '#E0CCFF'],
-  'Tower B':        ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-  '#58595B', '#FFB800', '#C75D00'
-];
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-// Keyframes for bulb blinking
-const bulbBlinkStyle = `
-@keyframes bulbBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-`;
-
-export default function SummaryChart({ summary = [] }) {
-  // Build pieData where each slice has value = 1 (equal‐width).
-  // We store actual 'count' separately for labels.
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => ({
-        name:  z.zone,
-        value: 1,       // equal slice widths
-        count: z.count  // actual numeric count
-      })),
-    [summary]
-  );
-
-  // Early return if no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
-  }
-
-  // Custom tooltip to display real count
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count } = payload[0].payload;
-    return (
-      <div
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          padding: '8px',
-          color: '#000'
-        }}
-      >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
-      </div>
-    );
-  };
-
-  // Helper: Get fill and stroke colors for a given zone name
-  const getColorsForZone = (zoneName, idx) => {
-    const grad = ZONE_GRADIENTS[zoneName];
-    if (grad) {
-      return {
-        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
-        stroke: grad[1]
-      };
-    } else {
-      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
-      return { fill: solid, stroke: solid };
-    }
-  };
-
-  // Build an array of zone‐color pairs for the left‐hand legend
-  const zoneLegendItems = useMemo(() => {
-    return pieData.map((entry, idx) => {
-      const key = entry.name.replace(/\s+/g, '-');
-      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
-      // Use the darker/second color for the dot if gradient exists, else the solid
-      const dotColor = colors[1] || colors[0];
-      return {
-        name: entry.name,
-        color: dotColor
-      };
-    });
-  }, [pieData]);
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        {/* Inject keyframes for bulb blink */}
-        <style>{bulbBlinkStyle}</style>
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-            display: 'flex',
-            overflow: 'hidden'
-          }}
-        >
-          {/* —— Left: Vertical Legend of Zones —— */}
-          <div
-            style={{
-              width: 160,
-              padding: '1rem 0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
-            }}
-          >
-            {zoneLegendItems.map((item) => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: item.color
-                  }}
-                />
-                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* —— Right: Semi‐donut Chart —— */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Gradient definitions for each slice */}
-                <defs>
-                  {pieData.map((entry) => {
-                    const key = entry.name.replace(/\s+/g, '-');
-                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                    return (
-                      <linearGradient
-                        id={`grad-${key}`}
-                        key={key}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Semi‐donut spanning 360°→0° (full circle used, but only bottom half is visible) */}
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  startAngle={360}
-                  endAngle={0}
-                  innerRadius={80}
-                  outerRadius={170}
-                  paddingAngle={3}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  <LabelList
-                    dataKey="count"
-                    position="inside"
-                    fill="#fff"
-                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
-                  />
-                  {pieData.map((entry, idx) => {
-                    const { fill, stroke } = getColorsForZone(entry.name, idx);
-                    return (
-                      <Cell
-                        key={`slice-${idx}`}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth={1}
-                      />
-                    );
-                  })}
-                </Pie>
-
-                <Tooltip content={renderTooltip} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Blinking bulb, shifted slightly upward */}
-            <FaLightbulb
-              style={{
-                position: 'absolute',
-                top: '45%',   // shifted up from 50%
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '3rem',
-                color: '#FFD100',
-                animation: 'bulbBlink 1.5s infinite'
-              }}
-            />
-
-            {/* “WU Pune” text below the bulb */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(45% + 50px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                color: '#FFD100',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
-            >
-              Western Union Pune
-            </div>
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-This Look Very good.
-Now Blink bulb using Colours theme and lightly set bulb updirection .
-make only this changes and give me updated js file carefully
-didplay zone Details left side of graph Vertically . Just display like  color dot Zone name.
-
-
-
-// src/components/SummaryChart.jsx
-
-import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
-
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone':       ['#A80000', '#FFCCCC'],
-  'Yellow Zone':    ['#B28000', '#FFF2CC'],
-  'Orange Zone':    ['#C75D00', '#FFE0B2'],
-  'Green Zone':     ['#006400', '#CCFFCC'],
-  'Reception Area': ['#4B0082', '#E0CCFF'],
-  'Tower B':        ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-  '#58595B', '#FFB800', '#C75D00'
-];
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-export default function SummaryChart({ summary = [] }) {
-  /**
-   * Build pieData where each slice has an equal 'value' of 1
-   * (so all slices appear with the same arc width). We carry
-   * the real 'count' so we can display it inside each slice.
-   *
-   * We must call useMemo unconditionally (even if summary is empty),
-   * in order to satisfy React’s hook ordering requirements.
-   */
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => ({
-        name:  z.zone,
-        value: 1,       // forces equal‐width slices
-        count: z.count  // actual numeric count
-      })),
-    [summary]
-  );
-
-  // Early return if there is no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
-  }
-
-  // Custom tooltip: shows the actual count on hover
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count } = payload[0].payload;
-    return (
-      <div
-        style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          padding: '8px',
-          color: '#000'
-        }}
-      >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
-      </div>
-    );
-  };
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Zone-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0 }}>
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-          }}
-        >
-          {/* 1) The Recharts container must fill all available space */}
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              {/* 2) Define gradients for each slice */}
-              <defs>
-                {pieData.map((entry) => {
-                  const key = entry.name.replace(/\s+/g, '-');
-                  const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                  return (
-                    <linearGradient
-                      id={`grad-${key}`}
-                      key={key}
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                      <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
-                    </linearGradient>
-                  );
-                })}
-              </defs>
-
-              {/* 3) Draw semi‐donut from 360° to 0°; make it large */}
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                startAngle={360}
-                endAngle={0}
-                innerRadius={80}   // larger inner radius
-                outerRadius={170}  // larger outer radius
-                paddingAngle={3}
-                labelLine={false}
-                isAnimationActive={false}
-              >
-                {/* 4) Place the actual count label inside each slice */}
-                <LabelList
-                  dataKey="count"
-                  position="inside"
-                  fill="#fff"
-                  style={{ fontSize: '1rem', fontWeight: 'bold' }}
-                />
-                {pieData.map((entry, idx) => {
-                  const key = entry.name.replace(/\s+/g, '-');
-                  const hasGrad = !!ZONE_GRADIENTS[entry.name];
-                  const fillColor = hasGrad
-                    ? `url(#grad-${key})`
-                    : SOLID_COLORS[idx % SOLID_COLORS.length];
-                  const strokeColor = hasGrad
-                    ? ZONE_GRADIENTS[entry.name][1]
-                    : SOLID_COLORS[idx % SOLID_COLORS.length];
-                  return (
-                    <Cell
-                      key={`slice-${idx}`}
-                      fill={fillColor}
-                      stroke={strokeColor}
-                      strokeWidth={1}
-                    />
-                  );
-                })}
-              </Pie>
-
-              {/* 5) Tooltip for hover */}
-              <Tooltip content={renderTooltip} />
-            </PieChart>
-          </ResponsiveContainer>
-
-          {/* 6) Overlay the bulb icon in the center of the semi‐donut */}
-          <FaLightbulb
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              fontSize: '3rem',
-              color: '#FFD100'
-            }}
-          />
-
-          {/* 7) Overlay the “Western Union Pune” text below the bulb */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 'calc(50% + 50px)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              color: '#FFD100',
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
-          >
-            WU Pune
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
+Backend
+
+C:\Users\W0024618\Desktop\ai-employee-security\data
+      C:\Users\W0024618\Desktop\ai-employee-security\data\access_logs.csv
+       C:\Users\W0024618\Desktop\ai-employee-security\data\logs.pkl
+C:\Users\W0024618\Desktop\ai-employee-security\models
+C:\Users\W0024618\Desktop\ai-employee-security\notebooks
+
+C:\Users\W0024618\Desktop\ai-employee-security\src
+ C:\Users\W0024618\Desktop\ai-employee-security\src\__pycache__
+  C:\Users\W0024618\Desktop\ai-employee-security\src\api.py
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\extract.py
+import pandas as pd
+import os
+import re
+
+# Project paths
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
+CSV_NAME     = "access_logs.csv"
+PICKLE_NAME  = "logs.pkl"
+
+def detect_timestamp_column(path: str) -> str:
+    """
+    Inspect the CSV header columns and pick the first one containing 'time'.
+    Strips any stray quotes or whitespace.
+    """
+    df_head = pd.read_csv(path, nrows=0)
+    for col in df_head.columns:
+        clean = col.strip().strip('"').strip("'")
+        if re.search(r"time", clean, re.IGNORECASE):
+            return clean
+    # fallback to first column
+    return df_head.columns[0].strip().strip('"').strip("'")
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # Detect and clean timestamp column name
+    raw_ts_col = detect_timestamp_column(csv_path)
+    ts_col = raw_ts_col.strip().strip('"').strip("'")
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # Load CSV without parse_dates
+    df = pd.read_csv(csv_path)
+
+    # Rename timestamp column
+    df = df.rename(columns={raw_ts_col: "LocaleMessageTime"})
+
+    # Force datetime conversion
+    df["LocaleMessageTime"] = pd.to_datetime(
+        df["LocaleMessageTime"], errors="coerce"
+    )
+
+    # Drop rows where datetime failed to parse
+    df = df.dropna(subset=["LocaleMessageTime"])
+
+    # Extract date and time
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+
+def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
+    path = os.path.join(DATA_DIR, filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    df = load_csv()
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+    save_pickle(df)
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\features.py
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\labelers.py
+
+# src/labelers.py
+
+import pandas as pd
+from datetime import timedelta
+
+def label_anomaly(df: pd.DataFrame, window_minutes: int = 10, max_swipes: int = 5) -> pd.DataFrame:
+    """
+    Label 'anomaly' if an employee has more than `max_swipes` within `window_minutes`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    # Count swipes in rolling window per employee
+    df["swipe_count_rolling"] = (
+        df.groupby("EmployeeID")["LocaleMessageTime"]
+          .rolling(f"{window_minutes}min")
+          .count()
+          .reset_index(0, drop=True)
+    )
+    df["anomaly"] = df["swipe_count_rolling"] > max_swipes
+    return df
+
+def label_card_share(df: pd.DataFrame, window: timedelta = timedelta(minutes=5)) -> pd.DataFrame:
+    """
+    Label 'card_share' when two different EmployeeIDs use the same CardNumber within `window`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    df["prev_employee"] = df.groupby("CardNumber")["EmployeeID"].shift(1)
+    df["prev_time"]     = df.groupby("CardNumber")["LocaleMessageTime"].shift(1)
+    df["card_share"] = (
+        (df["EmployeeID"] != df["prev_employee"]) &
+        (df["LocaleMessageTime"] - df["prev_time"] <= window)
+    )
+    return df
+
+def label_duration(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute duration per day and label 'short_stay' (<1h) and 'long_stay' (>10h).
+    """
+    # Aggregate per EmployeeID & Dateonly
+    agg = (
+        df.groupby(["EmployeeID", "Dateonly"])["LocaleMessageTime"]
+          .agg(["min", "max", "count"])
+          .rename(columns={"min": "first_swipe", "max": "last_swipe", "count": "swipe_count"})
+          .reset_index()
+    )
+    agg["duration_hours"] = (agg["last_swipe"] - agg["first_swipe"]).dt.total_seconds() / 3600
+    agg["short_stay"] = agg["duration_hours"] < 1
+    agg["long_stay"]  = agg["duration_hours"] > 10
+    return agg
+
+def label_low_swipe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'one_swipe' or 'two_swipe' if total swipes per day ≤ 2.
+    """
+    counts = (
+        df.groupby(["EmployeeID", "Dateonly"])
+          .size()
+          .reset_index(name="swipe_count")
+    )
+    counts["one_swipe"] = counts["swipe_count"] == 1
+    counts["two_swipe"] = counts["swipe_count"] == 2
+    return counts
+
+def label_exit_first(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'exit_first' if the first swipe of the day is OutDirection.
+    """
+    first = (
+        df.sort_values("LocaleMessageTime")
+          .groupby(["EmployeeID", "Dateonly"])
+          .first()
+          .reset_index()
+    )
+    first["exit_first"] = first["Direction"] == "OutDirection"
+    return first
+
+def label_simultaneous(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'simultaneous' when two different EmployeeIDs swipe same Door at same time.
+    """
+    dup = (
+        df.groupby(["Door", "LocaleMessageTime"])["EmployeeID"]
+          .nunique()
+          .reset_index(name="user_count")
+    )
+    dup["simultaneous"] = dup["user_count"] > 1
+    # Merge back
+    return df.merge(dup[["Door", "LocaleMessageTime", "simultaneous"]], 
+                    on=["Door", "LocaleMessageTime"], how="left")
+
+# TODO: Implement the remaining label functions:
+# 7. label_rejection_trend()
+# 8. label_unauthorized_access()
+# 9. label_after_hours()
+# 10. label_rapid_hop()
+# 11. label_loiter_after_hours()
+# 12. label_weekend_access()
+# 13. label_holiday_access()
+# 14. label_no_exit()
+# 15. label_rapid_in_out()
+# 16. label_zone_pingpong()
+# 17. label_new_door()
+# 18. label_high_volume()
+# 19. label_time_window_violation()
+# 20. label_failed_access_trend()
+
+
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\test_labelers.py
+
+import pandas as pd
+from extract import load_csv
+from labelers import label_anomaly, label_card_share, label_tailgating
+
+
+# Step 1: Load cleaned access logs
+df = load_csv()
+
+# Step 2: Apply labelers
+df_anomaly     = label_anomaly(df)
+df_card_share  = label_card_sharing(df_anomaly)
+df_tailgating  = label_tailgating(df_card_share)
+
+# Step 3: Print some results
+print("\n[Sample with Anomaly Labels]")
+print(df_anomaly[["EmployeeID", "LocaleMessageTime", "anomaly"]].head())
+
+print("\n[Sample with Card Sharing Labels]")
+print(df_card_share[["EmployeeID", "LocaleMessageTime", "card_share"]].head())
+
+print("\n[Sample with Tailgating Labels]")
+print(df_tailgating[["EmployeeID", "LocaleMessageTime", "tailgating"]].head())
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\train.py
+
+
+
+
+This is our Previoue Backebd Details .
+
+Now I will share you 
