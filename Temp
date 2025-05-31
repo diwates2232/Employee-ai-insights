@@ -1,3 +1,7 @@
+uvicorn main:app --reload
+
+
+
 # myapp/data_controller.py
 
 from fastapi import APIRouter, HTTPException
