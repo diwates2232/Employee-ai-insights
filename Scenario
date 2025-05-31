@@ -1,76 +1,3 @@
-import pandas as pd
-
-def load_csv(path: str = "../data/access_logs.csv") -> pd.DataFrame:
-    """
-    Load raw access logs from CSV, parse timestamps,
-    and extract Dateonly and Swipe_Time columns.
-    """
-    df = pd.read_csv(path, parse_dates=["LocaleMessageTime"])
-    # Derive separate date and time columns
-    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
-    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
-    return df
-
-def save_pickle(df: pd.DataFrame, path: str = "../data/logs.pkl"):
-    """Save DataFrame to a pickle for faster reloads."""
-    df.to_pickle(path)
-    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
-
-if __name__ == "__main__":
-    # 1) Load raw CSV
-    df = load_csv()
-
-    # 2) Quick sanity check
-    print("✅ Rows loaded:", len(df))
-    print(df.head())
-
-    # 3) Save to pickle
-    save_pickle(df)
-
-
-
-
-
-
-
-
-
-python -m venv venv
-.\venv\Scripts\Activate.ps1   # in PowerShell
-# or .\venv\Scripts\activate.bat  # in CMD
-
-
-
-
-
-
-
-
-# Inside src/
-cd src
-ni extract.py
-ni labelers.py
-ni features.py
-ni train.py
-ni api.py
-cd ..
-
-# At project root
-ni requirements.txt
-
-
-
-
-cd $HOME\Desktop
-mkdir ai-employee-security
-cd ai-employee-security
-
-# Create subfolders
-mkdir data notebooks src models
-
-
-
-
 yes i want exact thsi type of  mopdel
 
 
@@ -133,3 +60,218 @@ Step 6: Integrate AI with Backend
 Step 7: Monitor and Retrain
 	•	Regularly re-train the model as new data flows in.
 	•	Track model performance over time.
+
+
+
+Steps i have done
+
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\api.py
+
+# src/api.py
+
+from fastapi import FastAPI
+from myapp.data_controller import router as data_router
+
+app = FastAPI(
+    title="AI Employee Security Backend",
+    description="Endpoints to fetch historical access-log data for AI training",
+    version="1.0.0"
+)
+
+# Include the /raw-data endpoint
+app.include_router(data_router, prefix="/api")
+
+
+# Optionally, you can add a simple root health-check
+@app.get("/")
+async def root():
+    return {"message": "AI Employee Security Backend is running"}
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\extract.py
+
+import pandas as pd
+import os
+import re
+
+# Project paths
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
+CSV_NAME     = "access_logs.csv"
+PICKLE_NAME  = "logs.pkl"
+
+def detect_timestamp_column(path: str) -> str:
+    """
+    Inspect the CSV header columns and pick the first one containing 'time'.
+    Strips any stray quotes or whitespace.
+    """
+    df_head = pd.read_csv(path, nrows=0)
+    for col in df_head.columns:
+        clean = col.strip().strip('"').strip("'")
+        if re.search(r"time", clean, re.IGNORECASE):
+            return clean
+    # fallback to first column
+    return df_head.columns[0].strip().strip('"').strip("'")
+def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
+    csv_path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No such file: {csv_path}")
+
+    # Detect and clean timestamp column name
+    raw_ts_col = detect_timestamp_column(csv_path)
+    ts_col = raw_ts_col.strip().strip('"').strip("'")
+    print(f"⏱️  Detected timestamp column: '{ts_col}'")
+
+    # Load CSV without parse_dates
+    df = pd.read_csv(csv_path)
+
+    # Rename timestamp column
+    df = df.rename(columns={raw_ts_col: "LocaleMessageTime"})
+
+    # Force datetime conversion
+    df["LocaleMessageTime"] = pd.to_datetime(
+        df["LocaleMessageTime"], errors="coerce"
+    )
+
+    # Drop rows where datetime failed to parse
+    df = df.dropna(subset=["LocaleMessageTime"])
+
+    # Extract date and time
+    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
+    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
+
+    return df
+
+
+def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
+    path = os.path.join(DATA_DIR, filename)
+    df.to_pickle(path)
+    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
+
+if __name__ == "__main__":
+    df = load_csv()
+    print("✅ Rows loaded:", len(df))
+    print(df.head())
+    save_pickle(df)
+
+
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\src\labelers.py
+
+# src/labelers.py
+
+import pandas as pd
+from datetime import timedelta
+
+def label_anomaly(df: pd.DataFrame, window_minutes: int = 10, max_swipes: int = 5) -> pd.DataFrame:
+    """
+    Label 'anomaly' if an employee has more than `max_swipes` within `window_minutes`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    # Count swipes in rolling window per employee
+    df["swipe_count_rolling"] = (
+        df.groupby("EmployeeID")["LocaleMessageTime"]
+          .rolling(f"{window_minutes}min")
+          .count()
+          .reset_index(0, drop=True)
+    )
+    df["anomaly"] = df["swipe_count_rolling"] > max_swipes
+    return df
+
+def label_card_share(df: pd.DataFrame, window: timedelta = timedelta(minutes=5)) -> pd.DataFrame:
+    """
+    Label 'card_share' when two different EmployeeIDs use the same CardNumber within `window`.
+    """
+    df = df.sort_values("LocaleMessageTime").copy()
+    df["prev_employee"] = df.groupby("CardNumber")["EmployeeID"].shift(1)
+    df["prev_time"]     = df.groupby("CardNumber")["LocaleMessageTime"].shift(1)
+    df["card_share"] = (
+        (df["EmployeeID"] != df["prev_employee"]) &
+        (df["LocaleMessageTime"] - df["prev_time"] <= window)
+    )
+    return df
+
+def label_duration(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute duration per day and label 'short_stay' (<1h) and 'long_stay' (>10h).
+    """
+    # Aggregate per EmployeeID & Dateonly
+    agg = (
+        df.groupby(["EmployeeID", "Dateonly"])["LocaleMessageTime"]
+          .agg(["min", "max", "count"])
+          .rename(columns={"min": "first_swipe", "max": "last_swipe", "count": "swipe_count"})
+          .reset_index()
+    )
+    agg["duration_hours"] = (agg["last_swipe"] - agg["first_swipe"]).dt.total_seconds() / 3600
+    agg["short_stay"] = agg["duration_hours"] < 1
+    agg["long_stay"]  = agg["duration_hours"] > 10
+    return agg
+
+def label_low_swipe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'one_swipe' or 'two_swipe' if total swipes per day ≤ 2.
+    """
+    counts = (
+        df.groupby(["EmployeeID", "Dateonly"])
+          .size()
+          .reset_index(name="swipe_count")
+    )
+    counts["one_swipe"] = counts["swipe_count"] == 1
+    counts["two_swipe"] = counts["swipe_count"] == 2
+    return counts
+
+def label_exit_first(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'exit_first' if the first swipe of the day is OutDirection.
+    """
+    first = (
+        df.sort_values("LocaleMessageTime")
+          .groupby(["EmployeeID", "Dateonly"])
+          .first()
+          .reset_index()
+    )
+    first["exit_first"] = first["Direction"] == "OutDirection"
+    return first
+
+def label_simultaneous(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'simultaneous' when two different EmployeeIDs swipe same Door at same time.
+    """
+    dup = (
+        df.groupby(["Door", "LocaleMessageTime"])["EmployeeID"]
+          .nunique()
+          .reset_index(name="user_count")
+    )
+    dup["simultaneous"] = dup["user_count"] > 1
+    # Merge back
+    return df.merge(dup[["Door", "LocaleMessageTime", "simultaneous"]], 
+                    on=["Door", "LocaleMessageTime"], how="left")
+
+# TODO: Implement the remaining label functions:
+# 7. label_rejection_trend()
+# 8. label_unauthorized_access()
+# 9. label_after_hours()
+# 10. label_rapid_hop()
+# 11. label_loiter_after_hours()
+# 12. label_weekend_access()
+# 13. label_holiday_access()
+# 14. label_no_exit()
+# 15. label_rapid_in_out()
+# 16. label_zone_pingpong()
+# 17. label_new_door()
+# 18. label_high_volume()
+# 19. label_time_window_violation()
+# 20. label_failed_access_trend()
+
+
+
+
+
+Now Help to next
+
+
