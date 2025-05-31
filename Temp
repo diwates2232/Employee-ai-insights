@@ -1,3 +1,24 @@
+pip install fastapi uvicorn sqlalchemy pyodbc python-dotenv
+
+
+
+from fastapi import FastAPI
+from myapp.data_controller import router as data_router
+
+app = FastAPI()
+
+# Mount the “/api” path to our data_controller
+app.include_router(data_router, prefix="/api")
+
+
+
+uvicorn main:app --reload
+
+
+
+
+
+
 # myapp/data_controller.py
 
 from fastapi import APIRouter, HTTPException
