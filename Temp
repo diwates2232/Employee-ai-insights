@@ -1,3 +1,51 @@
+C:\Users\W0024618\Desktop\ai-employee-security\myapp\__init__.py
+
+
+
+C:\Users\W0024618\Desktop\ai-employee-security\main.py
+
+
+
+
+# main.py
+
+from fastapi import FastAPI
+from myapp.data_controller import router as data_router
+
+app = FastAPI(
+    title="AI Employee Security API",
+    description="Endpoints for fetching raw access logs for model training.",
+    version="1.0"
+)
+
+# Prefix all routes in data_controller under /api
+app.include_router(data_router, prefix="/api")
+
+
+# (Optional) A simple root health check:
+@app.get("/", tags=["Root"])
+def read_root():
+    return {"message": "AI Employee Security API is running."}
+
+
+
+
+
+cd C:\Users\W0024618\Desktop\ai-employee-security
+venv\Scripts\activate     # or however you activate your venv
+pip install fastapi uvicorn sqlalchemy pyodbc python-dotenv
+
+
+
+
+
+
+
+
+
+
+
+
 pip install fastapi uvicorn sqlalchemy pyodbc python-dotenv
 
 
