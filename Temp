@@ -1,3 +1,189 @@
+// src/components/SummaryChart.jsx
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList,
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Gradients or solid colors per zone (you can swap these for solid fills if desired)
+const ZONE_GRADIENTS = {
+  'Red Zone':       ['#A80000', '#FFCCCC'],
+  'Yellow Zone':    ['#B28000', '#FFF2CC'],
+  'Orange Zone':    ['#C75D00', '#FFE0B2'],
+  'Green Zone':     ['#006400', '#CCFFCC'],
+  'Reception Area': ['#4B0082', '#E0CCFF'],
+  'Tower B':        ['#bfd6ff', '#002f6c'],
+};
+
+// If you prefer a solid color per slice (instead of gradient), list them here in order:
+const SOLID_COLORS = [
+  '#FFD100', // fallback / accent if a zone isn’t in ZONE_GRADIENTS
+  '#009E60',
+  '#FF6F61',
+  '#58595B',
+  '#FFB800',
+  '#C75D00',
+];
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+export default function SummaryChart({ summary = [] }) {
+  // summary is an array of objects: [ { zone: 'Red Zone', count: 10 }, ... ]
+  // We want each slice to have equal angle in the half circle, but still carry the true count.
+
+  // If there’s no data, show a placeholder card:
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // Build a new data array where each slice has a fixed 'value' of 1, so angles are equal.
+  // We attach the real count in a separate field.
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name: z.zone,
+        value: 1,
+        count: z.count,
+      })),
+    [summary]
+  );
+
+  // Custom tooltip to show real count when hovering
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#000',
+        }}
+      >
+        <div>
+          <strong>Zone:</strong> {name}
+        </div>
+        <div style={{ marginTop: 4 }}>
+          <strong>Count:</strong> {count}
+        </div>
+      </div>
+    );
+  };
+
+  // We’ll draw the Pie with a “startAngle” at 180° and “endAngle” at 0°,
+  // so it spans a half-circle (a “semi-donut”). Each slice is therefore equal in width.
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <div
+          style={{
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            padding: '0.5rem',
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              {/* Define gradients for each zone (by mapping index → gradient ID) */}
+              <defs>
+                {pieData.map((entry, idx) => {
+                  // pick the gradient for this zone, fallback if missing:
+                  const gradientKey = entry.name.replace(/\s+/g, '-');
+                  const gradientColors =
+                    ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                  return (
+                    <linearGradient
+                      id={`grad-${gradientKey}`}
+                      key={gradientKey}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
+                      <stop
+                        offset="100%"
+                        stopColor={gradientColors[1]}
+                        stopOpacity={1}
+                      />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              <Pie
+                data={pieData}
+                dataKey="value"        // all slices equal
+                nameKey="name"
+                startAngle={180}      // leftmost is 180°, end at 0° for a half circle
+                endAngle={0}
+                innerRadius={60}      // thickness of arc
+                outerRadius={140}
+                paddingAngle={2}      // small gap between slices
+                labelLine={false}
+                isAnimationActive={false}
+              >
+                {/* Place a LabelList that prints the real count (entry.count) at centroid of each slice */}
+                <LabelList
+                  dataKey="count"
+                  position="inside"
+                  fill="#fff"
+                  style={{ fontSize: '1rem', fontWeight: 'bold' }}
+                />
+                {pieData.map((entry, idx) => {
+                  const gradientKey = entry.name.replace(/\s+/g, '-');
+                  const hasGradient = Boolean(ZONE_GRADIENTS[entry.name]);
+                  // Fallback to a solid color if no gradient is defined
+                  const fillColor = hasGradient
+                    ? `url(#grad-${gradientKey})`
+                    : SOLID_COLORS[idx % SOLID_COLORS.length];
+                  // Stroke color can be the darker shade of that gradient, or fallback
+                  const strokeColor = hasGradient
+                    ? ZONE_GRADIENTS[entry.name][1]
+                    : SOLID_COLORS[idx % SOLID_COLORS.length];
+                  return (
+                    <Cell
+                      key={`slice-${idx}`}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeWidth={1}
+                    />
+                  );
+                })}
+              </Pie>
+
+              <Tooltip content={renderTooltip} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
 I want to Reoresent this chart data into above image format
 
 // src/components/SummaryChart.jsx
