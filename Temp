@@ -1,6 +1,8 @@
 This Look Very good.
 Now Blink bulb using Colours theme and lightly set bulb updirection .
 make only this changes and give me updated js file carefully
+didplay zone Details left side of graph Vertically . Just display like  color dot Zone name.
+
 
 
 // src/components/SummaryChart.jsx
