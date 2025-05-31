@@ -1,3 +1,20 @@
+import pyodbc
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=SRVWUDEN0890V;"
+    "DATABASE=ACVSUJournal_00010020;"
+    "UID=GSOC_Test;"
+    "PWD=your_actual_password_here;"
+    "TrustServerCertificate=yes;"
+)
+print("✅ Connection successful")
+
+
+
+
+
+
+
 {
   "detail": "(pyodbc.InterfaceError) ('28000', \"[28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Login failed for user 'GSOC_Test'. (18456) (SQLDriverConnect); [28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Login failed for user 'GSOC_Test'. (18456)\")\n(Background on this error at: https://sqlalche.me/e/20/rvf5)"
 }
