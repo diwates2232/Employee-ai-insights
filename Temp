@@ -39,6 +39,263 @@ const bulbBlinkStyle = `
 `;
 
 export default function SummaryChart({ summary = [] }) {
+  // 1) Always call useMemo at the top, before any possible `return`
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name:  z.zone,
+        value: 1,       // equal slice widths
+        count: z.count  // actual numeric count
+      })),
+    [summary]
+  );
+
+  // 2) Early return if there is no data
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // 3) Custom tooltip to display real count
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#000'
+        }}
+      >
+        <div><strong>Zone:</strong> {name}</div>
+        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
+      </div>
+    );
+  };
+
+  // 4) Helper: Get fill and stroke colors for each zone
+  const getColorsForZone = (zoneName, idx) => {
+    const grad = ZONE_GRADIENTS[zoneName];
+    if (grad) {
+      return {
+        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
+        stroke: grad[1]
+      };
+    } else {
+      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
+      return { fill: solid, stroke: solid };
+    }
+  };
+
+  // 5) Build an array of zone–color pairs for the left‐hand legend
+  const zoneLegendItems = useMemo(() => {
+    return pieData.map((entry, idx) => {
+      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
+      const dotColor = colors[1] || colors[0];
+      return {
+        name: entry.name,
+        color: dotColor
+      };
+    });
+  }, [pieData]);
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        {/* Inject keyframes for bulb blink */}
+        <style>{bulbBlinkStyle}</style>
+
+        <div
+          style={{
+            position: 'relative',
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            display: 'flex',
+            overflow: 'hidden'
+          }}
+        >
+          {/* —— Left: Vertical Legend of Zones —— */}
+          <div
+            style={{
+              width: 160,
+              padding: '1rem 0.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12
+            }}
+          >
+            {zoneLegendItems.map((item) => (
+              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: item.color
+                  }}
+                />
+                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* —— Right: Semi‐donut Chart —— */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                {/* Gradient definitions for each slice */}
+                <defs>
+                  {pieData.map((entry) => {
+                    const key = entry.name.replace(/\s+/g, '-');
+                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                    return (
+                      <linearGradient
+                        id={`grad-${key}`}
+                        key={key}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
+                        <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
+                      </linearGradient>
+                    );
+                  })}
+                </defs>
+
+                {/* Semi‐donut spanning 360°→0° */}
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  startAngle={360}
+                  endAngle={0}
+                  innerRadius={80}
+                  outerRadius={170}
+                  paddingAngle={3}
+                  labelLine={false}
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="inside"
+                    fill="#fff"
+                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
+                  />
+                  {pieData.map((entry, idx) => {
+                    const { fill, stroke } = getColorsForZone(entry.name, idx);
+                    return (
+                      <Cell
+                        key={`slice-${idx}`}
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={1}
+                      />
+                    );
+                  })}
+                </Pie>
+
+                <Tooltip content={renderTooltip} />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Blinking bulb, shifted slightly upward */}
+            <FaLightbulb
+              style={{
+                position: 'absolute',
+                top: '45%',   // shifted up from 50%
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '3rem',
+                color: '#FFD100',
+                animation: 'bulbBlink 1.5s infinite'
+              }}
+            />
+
+            {/* “Western Union Pune” text below the bulb */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(45% + 50px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: '#FFD100',
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              Western Union Pune
+            </div>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/SummaryChart.jsx
+
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import { FaLightbulb } from 'react-icons/fa'; // bulb icon
+
+// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
+const ZONE_GRADIENTS = {
+  'Red Zone':       ['#A80000', '#FFCCCC'],
+  'Yellow Zone':    ['#B28000', '#FFF2CC'],
+  'Orange Zone':    ['#C75D00', '#FFE0B2'],
+  'Green Zone':     ['#006400', '#CCFFCC'],
+  'Reception Area': ['#4B0082', '#E0CCFF'],
+  'Tower B':        ['#bfd6ff', '#002f6c']
+};
+
+// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
+const SOLID_COLORS = [
+  '#FFD100', '#009E60', '#FF6F61',
+  '#58595B', '#FFB800', '#C75D00'
+];
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+// Keyframes for bulb blinking
+const bulbBlinkStyle = `
+@keyframes bulbBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+`;
+
+export default function SummaryChart({ summary = [] }) {
   // Build pieData where each slice has value = 1 (equal‐width).
   // We store actual 'count' separately for labels.
   const pieData = useMemo(
