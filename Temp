@@ -1,3 +1,11 @@
+pip install sqlalchemy pyodbc python-dotenv pandas
+
+
+
+python controller.py
+
+
+
 DB_DRIVER=ODBC Driver 17 for SQL Server
 DB_SERVER=SRVWUDEN0890V
 DB_USER=GSOC_Test
