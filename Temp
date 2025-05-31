@@ -1,91 +1,5 @@
-ren .\myapp\db-py .\myapp\db.py
-
-
-from .db import get_engine  # ✅ correct
-
-
-
-
-
-python -m myapp.controller
-
-
-
-
-
-from .db import get_engine
-
-python -m myapp.controller
-
-
-
-
-
-pip install sqlalchemy pyodbc python-dotenv pandas
-
-
-
-python controller.py
-
-
-
-DB_DRIVER=ODBC Driver 17 for SQL Server
-DB_SERVER=SRVWUDEN0890V
-DB_USER=GSOC_Test
-DB_PASSWORD=your_actual_password
-DB_DATABASE=ACVSUJournal_00010020
-
-
-
-
-
-
-
-# src/db.py
-
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from urllib.parse import quote_plus
-from dotenv import load_dotenv
-
-# Load .env from project root
-load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, ".env")))
-
-DB_DRIVER   = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
-DB_SERVER   = os.getenv("DB_SERVER", "")
-DB_DATABASE = os.getenv("DB_DATABASE", "")
-DB_USER     = os.getenv("DB_USER", "")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-
-def get_engine() -> Engine:
-    """
-    Return a SQLAlchemy Engine connected to the SQL Server using pyodbc.
-    """
-    # Build the connection string. Using quote_plus for URL‐encoding credentials.
-    odbc_str = (
-        "DRIVER={driver};"
-        "SERVER={server};"
-        "DATABASE={database};"
-        "UID={user};"
-        "PWD={password};"
-        "TrustServerCertificate=yes;"
-    ).format(
-        driver=DB_DRIVER,
-        server=DB_SERVER,
-        database=DB_DATABASE,
-        user=DB_USER,
-        password=DB_PASSWORD,
-    )
-    # SQLAlchemy URL for MSSQL + pyodbc
-    connection_url = f"mssql+pyodbc:///?odbc_connect={quote_plus(odbc_str)}"
-
-    engine = create_engine(connection_url, fast_executemany=True)
-    return engine
-
-
-
-
+Give me Updated py files carefully
+C:\Users\W0024618\Desktop\ai-employee-security\myapp
 
 # src/data_controller.py
 
@@ -93,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 from sqlalchemy.engine import Result
 from typing import List, Dict
-from .db import get_engine
+from .db import get_engine  # ✅ correct
 
 router = APIRouter()
 
@@ -201,359 +115,46 @@ async def fetch_raw_access_logs():
 
 
 
+C:\Users\W0024618\Desktop\ai-employee-security\myapp\db.py
+# src/db.py
 
-
-
-# src/api.py
-
-from fastapi import FastAPI
-from .data_controller import router as data_router
-
-app = FastAPI(
-    title="AI Employee Security Backend",
-    description="Endpoints to fetch historical access-log data for AI training",
-    version="1.0.0"
-)
-
-# Include the /raw-data endpoint
-app.include_router(data_router, prefix="/api")
-
-# Optionally, you can add a simple root health-check
-@app.get("/")
-async def root():
-    return {"message": "AI Employee Security Backend is running"}
-
-
-
-
-
-
-
-
-
-
-
-Backend
-
-C:\Users\W0024618\Desktop\ai-employee-security\data
-      C:\Users\W0024618\Desktop\ai-employee-security\data\access_logs.csv
-       C:\Users\W0024618\Desktop\ai-employee-security\data\logs.pkl
-C:\Users\W0024618\Desktop\ai-employee-security\models
-C:\Users\W0024618\Desktop\ai-employee-security\notebooks
-
-C:\Users\W0024618\Desktop\ai-employee-security\src
- C:\Users\W0024618\Desktop\ai-employee-security\src\__pycache__
-  C:\Users\W0024618\Desktop\ai-employee-security\src\api.py
-
-C:\Users\W0024618\Desktop\ai-employee-security\src\extract.py
-import pandas as pd
 import os
-import re
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from urllib.parse import quote_plus
+from dotenv import load_dotenv
 
-# Project paths
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-DATA_DIR     = os.path.join(PROJECT_ROOT, "data")
-CSV_NAME     = "access_logs.csv"
-PICKLE_NAME  = "logs.pkl"
+# Load .env from project root
+load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, ".env")))
 
-def detect_timestamp_column(path: str) -> str:
+DB_DRIVER   = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+DB_SERVER   = os.getenv("DB_SERVER", "")
+DB_DATABASE = os.getenv("DB_DATABASE", "")
+DB_USER     = os.getenv("DB_USER", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+
+def get_engine() -> Engine:
     """
-    Inspect the CSV header columns and pick the first one containing 'time'.
-    Strips any stray quotes or whitespace.
+    Return a SQLAlchemy Engine connected to the SQL Server using pyodbc.
     """
-    df_head = pd.read_csv(path, nrows=0)
-    for col in df_head.columns:
-        clean = col.strip().strip('"').strip("'")
-        if re.search(r"time", clean, re.IGNORECASE):
-            return clean
-    # fallback to first column
-    return df_head.columns[0].strip().strip('"').strip("'")
-def load_csv(filename: str = CSV_NAME) -> pd.DataFrame:
-    csv_path = os.path.join(DATA_DIR, filename)
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"No such file: {csv_path}")
-
-    # Detect and clean timestamp column name
-    raw_ts_col = detect_timestamp_column(csv_path)
-    ts_col = raw_ts_col.strip().strip('"').strip("'")
-    print(f"⏱️  Detected timestamp column: '{ts_col}'")
-
-    # Load CSV without parse_dates
-    df = pd.read_csv(csv_path)
-
-    # Rename timestamp column
-    df = df.rename(columns={raw_ts_col: "LocaleMessageTime"})
-
-    # Force datetime conversion
-    df["LocaleMessageTime"] = pd.to_datetime(
-        df["LocaleMessageTime"], errors="coerce"
+    # Build the connection string. Using quote_plus for URL‐encoding credentials.
+    odbc_str = (
+        "DRIVER={driver};"
+        "SERVER={server};"
+        "DATABASE={database};"
+        "UID={user};"
+        "PWD={password};"
+        "TrustServerCertificate=yes;"
+    ).format(
+        driver=DB_DRIVER,
+        server=DB_SERVER,
+        database=DB_DATABASE,
+        user=DB_USER,
+        password=DB_PASSWORD,
     )
+    # SQLAlchemy URL for MSSQL + pyodbc
+    connection_url = f"mssql+pyodbc:///?odbc_connect={quote_plus(odbc_str)}"
 
-    # Drop rows where datetime failed to parse
-    df = df.dropna(subset=["LocaleMessageTime"])
-
-    # Extract date and time
-    df["Dateonly"]   = df["LocaleMessageTime"].dt.date
-    df["Swipe_Time"] = df["LocaleMessageTime"].dt.time
-
-    return df
-
-
-def save_pickle(df: pd.DataFrame, filename: str = PICKLE_NAME):
-    path = os.path.join(DATA_DIR, filename)
-    df.to_pickle(path)
-    print(f"✅ Saved DataFrame with {len(df)} rows to {path}")
-
-if __name__ == "__main__":
-    df = load_csv()
-    print("✅ Rows loaded:", len(df))
-    print(df.head())
-    save_pickle(df)
-
-
-
-C:\Users\W0024618\Desktop\ai-employee-security\src\features.py
-
-C:\Users\W0024618\Desktop\ai-employee-security\src\labelers.py
-
-# src/labelers.py
-
-import pandas as pd
-from datetime import timedelta
-
-def label_anomaly(df: pd.DataFrame, window_minutes: int = 10, max_swipes: int = 5) -> pd.DataFrame:
-    """
-    Label 'anomaly' if an employee has more than `max_swipes` within `window_minutes`.
-    """
-    df = df.sort_values("LocaleMessageTime").copy()
-    # Count swipes in rolling window per employee
-    df["swipe_count_rolling"] = (
-        df.groupby("EmployeeID")["LocaleMessageTime"]
-          .rolling(f"{window_minutes}min")
-          .count()
-          .reset_index(0, drop=True)
-    )
-    df["anomaly"] = df["swipe_count_rolling"] > max_swipes
-    return df
-
-def label_card_share(df: pd.DataFrame, window: timedelta = timedelta(minutes=5)) -> pd.DataFrame:
-    """
-    Label 'card_share' when two different EmployeeIDs use the same CardNumber within `window`.
-    """
-    df = df.sort_values("LocaleMessageTime").copy()
-    df["prev_employee"] = df.groupby("CardNumber")["EmployeeID"].shift(1)
-    df["prev_time"]     = df.groupby("CardNumber")["LocaleMessageTime"].shift(1)
-    df["card_share"] = (
-        (df["EmployeeID"] != df["prev_employee"]) &
-        (df["LocaleMessageTime"] - df["prev_time"] <= window)
-    )
-    return df
-
-def label_duration(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute duration per day and label 'short_stay' (<1h) and 'long_stay' (>10h).
-    """
-    # Aggregate per EmployeeID & Dateonly
-    agg = (
-        df.groupby(["EmployeeID", "Dateonly"])["LocaleMessageTime"]
-          .agg(["min", "max", "count"])
-          .rename(columns={"min": "first_swipe", "max": "last_swipe", "count": "swipe_count"})
-          .reset_index()
-    )
-    agg["duration_hours"] = (agg["last_swipe"] - agg["first_swipe"]).dt.total_seconds() / 3600
-    agg["short_stay"] = agg["duration_hours"] < 1
-    agg["long_stay"]  = agg["duration_hours"] > 10
-    return agg
-
-def label_low_swipe(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Label 'one_swipe' or 'two_swipe' if total swipes per day ≤ 2.
-    """
-    counts = (
-        df.groupby(["EmployeeID", "Dateonly"])
-          .size()
-          .reset_index(name="swipe_count")
-    )
-    counts["one_swipe"] = counts["swipe_count"] == 1
-    counts["two_swipe"] = counts["swipe_count"] == 2
-    return counts
-
-def label_exit_first(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Label 'exit_first' if the first swipe of the day is OutDirection.
-    """
-    first = (
-        df.sort_values("LocaleMessageTime")
-          .groupby(["EmployeeID", "Dateonly"])
-          .first()
-          .reset_index()
-    )
-    first["exit_first"] = first["Direction"] == "OutDirection"
-    return first
-
-def label_simultaneous(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Label 'simultaneous' when two different EmployeeIDs swipe same Door at same time.
-    """
-    dup = (
-        df.groupby(["Door", "LocaleMessageTime"])["EmployeeID"]
-          .nunique()
-          .reset_index(name="user_count")
-    )
-    dup["simultaneous"] = dup["user_count"] > 1
-    # Merge back
-    return df.merge(dup[["Door", "LocaleMessageTime", "simultaneous"]], 
-                    on=["Door", "LocaleMessageTime"], how="left")
-
-# TODO: Implement the remaining label functions:
-# 7. label_rejection_trend()
-# 8. label_unauthorized_access()
-# 9. label_after_hours()
-# 10. label_rapid_hop()
-# 11. label_loiter_after_hours()
-# 12. label_weekend_access()
-# 13. label_holiday_access()
-# 14. label_no_exit()
-# 15. label_rapid_in_out()
-# 16. label_zone_pingpong()
-# 17. label_new_door()
-# 18. label_high_volume()
-# 19. label_time_window_violation()
-# 20. label_failed_access_trend()
-
-
-
-
-
-C:\Users\W0024618\Desktop\ai-employee-security\src\test_labelers.py
-
-import pandas as pd
-from extract import load_csv
-from labelers import label_anomaly, label_card_share, label_tailgating
-
-
-# Step 1: Load cleaned access logs
-df = load_csv()
-
-# Step 2: Apply labelers
-df_anomaly     = label_anomaly(df)
-df_card_share  = label_card_sharing(df_anomaly)
-df_tailgating  = label_tailgating(df_card_share)
-
-# Step 3: Print some results
-print("\n[Sample with Anomaly Labels]")
-print(df_anomaly[["EmployeeID", "LocaleMessageTime", "anomaly"]].head())
-
-print("\n[Sample with Card Sharing Labels]")
-print(df_card_share[["EmployeeID", "LocaleMessageTime", "card_share"]].head())
-
-print("\n[Sample with Tailgating Labels]")
-print(df_tailgating[["EmployeeID", "LocaleMessageTime", "tailgating"]].head())
-
-
-C:\Users\W0024618\Desktop\ai-employee-security\src\train.py
-
-
-
-
-This is our Previoue Backebd Details .
-
-Now I will share you read this deatisl and create new 
-controller file and 
-
-db file and env file 
-
-DB_SERVER=SRVWUDEN0890V
-DB_USER=GSOC_Test
-DB_PASSWORD=your_actual_password
-DB_DATABASE=ACVSUJournal_00010020
-
-
-
-this is my sql query current .
-so find main db name foe add env. file
-alos update remaining file as per query.
-
-
-WITH CombinedQuery AS(
-		SELECT 
-	    DATEADD(MINUTE, -1 * t1.[MessageLocaleOffset], t1.[MessageUTC]) AS LocaleMessageTime,
-    t1.ObjectName1,
-	t1.PartitionName2 As location,
-	t5_card.CardNumber,
-t5_admit.value AS AdmitCode,
-t5_dir.value AS Direction,
-    t1.ObjectName2,
-	t5_rej.value AS Rejection_Type,
-	CASE 
-        WHEN t3.Name IN ('Contractor', 'Terminated Contractor') THEN t2.Text12
-        ELSE CAST(t2.Int1 AS NVARCHAR)
-    END AS "EmployeeID",
-    t3.Name AS PersonnelType,
-    t1.MessageType,t1.XmlGUID
-	FROM
-    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLog] AS t1
-LEFT JOIN
-    [ACVSCore].[Access].[Personnel] AS t2
-    ON t1.ObjectIdentity1 = t2.GUID
-LEFT JOIN
-    [ACVSCore].[Access].[PersonnelType] AS t3
-    ON t2.[PersonnelTypeId] = t3.[ObjectID]
-LEFT JOIN
-    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_admit
-    ON t1.XmlGUID = t5_admit.GUID
-    AND t5_admit.Name = 'AdmitCode'
-LEFT JOIN
-    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_dir
-    ON t1.XmlGUID = t5_dir.GUID
-    AND t5_dir.Value IN ('InDirection', 'OutDirection')
-    LEFT JOIN [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxml] AS t_xml
-        ON t1.XmlGUID = t_xml.GUID
-    -- Pre-pull shredded “Card” row
-    LEFT JOIN (
-    SELECT GUID, [value]
-    FROM [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred]
-    WHERE [Name] IN ('Card', 'CHUID')
-    ) AS SCard
-    ON t1.XmlGUID = SCard.GUID
-    /* NEW: three-stage CardNumber resolution */
-    OUTER APPLY (
-    SELECT COALESCE(
-        -- 1) <LogMessage><CHUID><Card>…</Card></CHUID>
-        TRY_CAST(t_xml.XmlMessage AS XML)
-        .value('(/LogMessage/CHUID/Card)[1]', 'varchar(50)'),
-        -- 2) <LogMessage><CHUID>…</CHUID> (no nested <Card>)
-        TRY_CAST(t_xml.XmlMessage AS XML)
-        .value('(/LogMessage/CHUID)[1]', 'varchar(50)'),
-        -- 3) shredded fallback
-        SCard.[value]
-    ) AS CardNumber
-    ) AS t5_card
- 
-LEFT JOIN
-    [ACVSUJournal_00010020].[dbo].[ACVSUJournalLogxmlShred] AS t5_Rej
-    ON t1.XmlGUID = t5_Rej.GUID
-    AND t5_Rej.Name = 'RejectCode'
- 
-   
-   --include both admits and rejects
-   WHERE t1.MessageType IN ('CardAdmitted', 'CardRejected')
-   AND t1.PartitionName2 = 'APAC.Default'
-   AND CONVERT(date, DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC)) >= '2025-01-01')
- 
-SELECT 
-	LocaleMessageTime,
-	Dateonly = Convert(date, LocaleMessageTime), 
-	Swipe_Time = CONVERT(time(0), LocaleMessageTime),
-	EmployeeID,
-	ObjectName1,
-	PersonnelType,
-	CardNumber,
-	AdmitCode,
-	Direction,
-	ObjectName2 As Door,
-	Rejection_Type
-	FROM CombinedQuery
-	Order BY LocaleMessageTime DESC;
-
+    engine = create_engine(connection_url, fast_executemany=True)
+    return engine
 
