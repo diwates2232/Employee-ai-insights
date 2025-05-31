@@ -1,730 +1,178 @@
-// src/components/FloorOccupancyChart.jsx
+I want to Reoresent this chart data into above image format
 
-import React from 'react';
+// src/components/SummaryChart.jsx
+
+import React, { useEffect } from 'react';
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   CartesianGrid,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// A palette of 12 “WU-friendly” gradient pairs (dark → light)
-const FLOOR_COLOR_PALETTE = [
-  ['#FFD100', '#FFF2CC'],  // Yellow → Pale Yellow
-  ['#009E60', '#CFFAF3'],  // Green → Mint
-  ['#A80000', '#FFCCCC'],  // Red → Pale Red
-  ['#58595B', '#D6E3F0'],  // Dark Gray → Lavender Gray
-  ['#FF6F61', '#FFD1CD'],  // Coral → Blush
-  ['#FFB800', '#FFF8CC'],  // Accent Yellow → Pale Accent
-  ['#006400', '#CCFFCC'],  // Dark Green → Pale Green
-  ['#4B0082', '#E0CCFF'],  // Indigo → Lavender
-  ['#C75D00', '#FFE0B2'],  // Orange → Peach
-  ['#264653', '#A0B5D8'],  // Deep Teal → Light Blue
-  ['#9B2226', '#FFB3B3'],  // Burgundy → Pale Pink
-  ['#005F73', '#CAEBF2']   // Deep Cyan → Pale Cyan
-];
-
-export default function FloorOccupancyChart({ data = [] }) {
-  // If there’s no data, show a fallback card
-  if (!data.length) {
-    return (
-      <Card body className="bg-dark text-white">
-        No floor data available
-      </Card>
-    );
-  }
-
-  // 1) Sort floors by “total” descending
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // 2) Custom tooltip: shows floor name + total + breakdown by type
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const floorObj = payload[0].payload;
-    const totalCount = floorObj.total;
-
-    // Gather all keys except "floor" and "total" (e.g. “employees”, “contractors”, etc.)
-    const breakdownEntries = Object.entries(floorObj).filter(
-      ([key]) => key !== 'floor' && key !== 'total'
-    );
-
-    return (
-      <div
-        style={{
-          backgroundColor: 'var(--wu-gray-dark)',
-          color: '#fff',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          padding: '0.75rem',
-          minWidth: 180
-        }}
-      >
-        <div style={{ marginBottom: 4 }}>
-          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
-        </div>
-        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
-          Total: {totalCount}
-        </div>
-        {breakdownEntries.map(([type, value]) => (
-          <div
-            key={type}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 2,
-              color: '#fff'
-            }}
-          >
-            <span style={{ opacity: 0.8 }}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </span>
-            <span style={{ fontWeight: 'bold' }}>{value}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <Card
-      className="mb-4 shadow-sm border"
-      style={{ borderColor: 'var(--wu-yellow)' }}
-    >
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0, backgroundColor: 'var(--wu-gray-dark)' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={sortedData}
-            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
-            barCategoryGap="20%"   /* fewer gaps, to let bars expand */
-          >
-            {/* 3) Define one linearGradient per floor (up to 12) */}
-            <defs>
-              {sortedData.map((_, idx) => {
-                const [darkColor, lightColor] =
-                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
-                return (
-                  <linearGradient
-                    id={`floor-grad-${idx}`}
-                    key={`floor-grad-${idx}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
-                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
-                  </linearGradient>
-                );
-              })}
-            </defs>
-
-            {/* 4) Grid + Axes styling */}
-            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="floor"
-              tick={{ fontSize: 12, fill: '#fff' }}
-              angle={0}               /* horizontal labels */
-              textAnchor="middle"
-              interval={0}
-              height={40}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: '#fff' }}
-              allowDecimals={false}
-            />
-
-            {/* 5) Custom Tooltip */}
-            <Tooltip content={renderTooltip} />
-
-            {/* 6) No Legend (only one series => not needed) */}
-
-            {/* 7) Single “total” bar per floor, with curved top and no fixed width */}
-            <Bar
-              dataKey="total"
-              name="Total Occupancy"
-              radius={[20, 20, 0, 0]}  /* more curvature on top corners */
-            >
-              {sortedData.map((_, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={`url(#floor-grad-${idx})`}
-                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
-                  strokeWidth={1}
-                />
-              ))}
-              {/* 7a) Show a label of “total” above each bar */}
-              <LabelList
-                dataKey="total"
-                position="top"
-                style={{
-                  fill: '#fff',
-                  fontSize: 14,
-                  fontWeight: 'bold'
-                }}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-// src/components/FloorOccupancyChart.jsx
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
   ResponsiveContainer,
-  CartesianGrid,
   Legend,
   Cell
 } from 'recharts';
 import { Card } from 'react-bootstrap';
 
-// A palette of 12 “WU-friendly” gradient pairs (dark → light)
-const FLOOR_COLOR_PALETTE = [
-  ['#FFD100', '#FFF2CC'],  // Yellow → Pale Yellow
-  ['#009E60', '#CFFAF3'],  // Green → Mint
-  ['#A80000', '#FFCCCC'],  // Red → Pale Red
-  ['#58595B', '#D6E3F0'],  // Dark Gray → Lavender Gray
-  ['#FF6F61', '#FFD1CD'],  // Coral → Blush
-  ['#FFB800', '#FFF8CC'],  // Accent Yellow → Pale Accent
-  ['#006400', '#CCFFCC'],  // Dark Green → Pale Green
-  ['#4B0082', '#E0CCFF'],  // Indigo → Lavender
-  ['#C75D00', '#FFE0B2'],  // Orange → Peach
-  ['#264653', '#A0B5D8'],  // Deep Teal → Light Blue
-  ['#9B2226', '#FFB3B3'],  // Burgundy → Pale Pink
-  ['#005F73', '#CAEBF2']   // Deep Cyan → Pale Cyan
-];
+// Zone gradients
+const ZONE_GRADIENTS = {
+  'Red Zone': ['#A80000', '#FFCCCC'],
+  'Yellow Zone': ['#B28000', '#FFF2CC'],
+  'Orange Zone': ['#C75D00', '#FFE0B2'],
+  'Green Zone': ['#006400', '#CCFFCC'],
+  'Reception Area': ['#4B0082', '#E0CCFF'],
+  'Tower B':['#bfd6ff', '#002f6c'],
+};
 
-export default function FloorOccupancyChart({ data = [] }) {
-  // If there’s no data, show a fallback card
-  if (!data.length) {
+const ZONE_LABEL_COLORS = {
+  'Red Zone': '#A80000',
+  'Yellow Zone': '#B28000',
+  'Orange Zone': '#C75D00',
+  'Green Zone': '#006400',
+  'Reception Area': '#4B0082',
+};
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+export default function SummaryChart({ summary = [] }) {
+  useEffect(() => {
+    console.log('Summary Chart Data:', summary);
+  }, [summary]);
+
+  if (!summary.length) return <Card body>No zone data available</Card>;
+
+  const renderLabel = ({ x, y, width, value, index }) => {
+    const zone = summary[index].zone;
+    const color = ZONE_LABEL_COLORS[zone] || '#333';
     return (
-      <Card body className="bg-dark text-white">
-        No floor data available
-      </Card>
+      <text
+        x={x + width / 2}
+        y={y - 6}
+        fill={color}
+        textAnchor="middle"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {value}
+      </text>
     );
-  }
+  };
 
-  // 1) Sort floors descending by total occupancy
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // 2) Custom Tooltip: shows floor name + total + breakdown by type
   const renderTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
-    const floorObj = payload[0].payload;
-    const totalCount = floorObj.total;
-
-    // Grab all keys except "floor" and "total"
-    const breakdownEntries = Object.entries(floorObj).filter(
-      ([key]) => key !== 'floor' && key !== 'total'
-    );
-
+    const { zone, count } = payload[0].payload;
+    const color = ZONE_LABEL_COLORS[zone] || '#333';
     return (
       <div
         style={{
-          backgroundColor: 'var(--wu-gray-dark)',
-          color: '#fff',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          padding: '0.75rem',
-          minWidth: 180
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          padding: '8px',
+          borderRadius: '4px',
+          color: '#000'
         }}
       >
-        <div style={{ marginBottom: 4 }}>
-          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
+        <div><strong>{label}</strong></div>
+        <div style={{ color }}>
+          {payload[0].name}: {count}
         </div>
-        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
-          Total: {totalCount}
-        </div>
-        {breakdownEntries.map(([type, value]) => (
-          <div
-            key={type}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 2,
-              color: '#fff'
-            }}
-          >
-            <span style={{ opacity: 0.8 }}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </span>
-            <span style={{ fontWeight: 'bold' }}>{value}</span>
-          </div>
-        ))}
       </div>
     );
   };
 
   return (
-    <Card
-      className="mb-4 shadow-sm border"
-      style={{ borderColor: 'var(--wu-yellow)' }}
-    >
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: '#e0e0e0' }}>
       <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0, backgroundColor: 'var(--wu-gray-dark)' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={sortedData}
-            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
-            barCategoryGap="10%"      // less gap → wider bars
-          >
-            {/* 3) Define one linearGradient per floor (up to 12) */}
-            <defs>
-              {sortedData.map((_, idx) => {
-                const [lightColor, darkColor] =
-                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
-                return (
-                  <linearGradient
-                    id={`floor-grad-${idx}`}
-                    key={`floor-grad-${idx}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
-                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
-                  </linearGradient>
-                );
-              })}
-            </defs>
-
-            {/* 4) Grid and axes styling */}
-            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="floor"
-              tick={{ fontSize: 12, fill: '#fff' }}
-              interval={0}
-              angle={-30}
-              textAnchor="end"
-              height={40}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: '#fff' }}
-              allowDecimals={false}
-            />
-
-            {/* 5) Tooltip */}
-            <Tooltip content={renderTooltip} />
-
-            {/* 6) Legend (only shows “Total Occupancy”) */}
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ paddingTop: 6 }}
-              formatter={() => (
-                <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
-                  Total Occupancy
-                </span>
-              )}
-            />
-
-            {/* 7) Single “total” bar per floor, with thicker bars & curved top */}
-            <Bar
-              dataKey="total"
-              name="Total Occupancy"
-              radius={[20, 20, 0, 0]}  // more curve on top corners
-              barSize={60}              // wide bars
-            >
-              {sortedData.map((_, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={`url(#floor-grad-${idx})`}
-                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
-                  strokeWidth={1}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-// src/components/FloorOccupancyChart.jsx
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Cell
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// Preset “Western Union”–friendly gradient pairs (dark → light)
-const FLOOR_COLOR_PALETTE = [
-  ['#FFD100', '#FFF2CC'],  // Yellow
-  ['#009E60', '#CFFAF3'],  // Green
-  ['#A80000', '#FFCCCC'],  // Red
-  ['#58595B', '#D6E3F0'],  // Gray
-  ['#FF6F61', '#FFD1CD'],  // Coral
-  ['#FFB800', '#FFF8CC'],  // Accent Yellow
-  ['#006400', '#CCFFCC'],  // Dark Green → Light Green
-  ['#4B0082', '#E0CCFF'],  // Indigo → Lavender
-  ['#C75D00', '#FFE0B2'],  // Orange → Light Orange
-  ['#264653', '#A0B5D8'],  // Deep Teal → Light Blue
-  ['#9B2226', '#FFB3B3'],  // Burgundy → Pale Pink
-  ['#005F73', '#CAEBF2']   // Deep Cyan → Pale Cyan
-];
-
-export default function FloorOccupancyChart({ data = [] }) {
-  // If no data, show fallback
-  if (!data.length) {
-    return <Card body className="bg-dark text-white">No floor data available</Card>;
-  }
-
-  // 1) Sort floors by total descending
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // 2) Build a custom tooltip that shows total + breakdown by personnel type
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-
-    // payload[0] corresponds to the single Bar’s “total” value, but the full object
-    // also contains all other keys (employee, contractor, etc.) in .payload
-    const floorObj = payload[0].payload;
-    const totalCount = floorObj.total;
-
-    // Extract all keys except “floor” and “total”
-    const breakdownEntries = Object.entries(floorObj)
-      .filter(([key]) => key !== 'floor' && key !== 'total');
-
-    return (
-      <div
-        style={{
-          backgroundColor: 'var(--wu-gray-dark)',
-          color: '#fff',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          padding: '0.75rem',
-          minWidth: 160
-        }}
-      >
-        <div style={{ marginBottom: 4 }}>
-          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
-        </div>
-        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
-          Total: {totalCount}
-        </div>
-        {breakdownEntries.map(([type, value], idx) => (
-          <div
-            key={type}
-            style={{
-              color: '#fff',
-              marginBottom: 2,
-              display: 'flex',
-              justifyContent: 'space-between'
-            }}
-          >
-            <span style={{ opacity: 0.8 }}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
-            <span style={{ fontWeight: 'bold' }}>{value}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <Card
-      className="mb-4 shadow-sm border"
-      style={{ borderColor: 'var(--wu-yellow)' }}
-    >
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
-      </Card.Header>
-      <Card.Body style={{ height: 400, padding: 0, backgroundColor: 'var(--wu-gray-dark)' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={sortedData}
-            margin={{ top: 16, right: 24, left: 0, bottom: 24 }}
-            barCategoryGap="20%"
-          >
-            {/* 3) Define one gradient per floor (up to palette length) */}
-            <defs>
-              {sortedData.map((_, idx) => {
-                const [lightColor, darkColor] =
-                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
-                return (
-                  <linearGradient
-                    id={`floor-grad-${idx}`}
-                    key={`floor-grad-${idx}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
-                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
-                  </linearGradient>
-                );
-              })}
-            </defs>
-
-            {/* 4) Grid + Axes */}
-            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="floor"
-              tick={{ fontSize: 12, fill: '#fff' }}
-              interval={0}
-              angle={-30}
-              textAnchor="end"
-              height={40}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: '#fff' }}
-              allowDecimals={false}
-            />
-
-            {/* 5) Tooltip */}
-            <Tooltip content={renderTooltip} />
-
-            {/* 6) Legend (show “Total” only) */}
-            {/* Since we have one bar keyed to “total,” we label it “Total Occupancy.” */}
-            <Legend
-              verticalAlign="bottom"
-              wrapperStyle={{ paddingTop: 6 }}
-              formatter={() => (
-                <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
-                  Total Occupancy
-                </span>
-              )}
-            />
-
-            {/* 7) Single Bar (per floor) */}
-            <Bar
-              dataKey="total"
-              name="Total Occupancy"
-              radius={[6, 6, 0, 0]}
-              barSize={40}
-            >
-              {sortedData.map((_, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={`url(#floor-grad-${idx})`}
-                  // dark border around each bar
-                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
-                  strokeWidth={1}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-// src/components/FloorOccupancyChart.jsx
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-  Cell,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-
-// 12 gradient pairs (light → dark)
-const GRADIENTS = [
-  ['#bfd6ff', '#002f6c'],
-  ['#ffcccc', '#a80000'],
-  ['#d0d8ff', '#3b4cca'],
-  ['#fff2cc', '#b28000'],
-  ['#cffaf3', '#006d5b'],
-  ['#d6e3f0', '#4e5d6c'],
-  ['#e0ccff', '#4b0082'],
-  ['#a0b5d8', '#264653'],
-  ['#ffb3b3', '#9b2226'],
-  ['#caebf2', '#005f73'],
-  ['#fff2cc', '#7f6000'],
-  ['#e5ccf2', '#6a1b9a']
-];
-const DARK_COLORS = GRADIENTS.map(([, dark]) => dark);
-
-export default function FloorOccupancyChart({ data = [] }) {
-  if (!data.length) {
-    return <Card body>No floor data available</Card>;
-  }
-
-  // Gather all personnel‐type keys
-  const types = Array.from(
-    new Set(
-      data.flatMap(d =>
-        Object.keys(d).filter(k => k !== 'floor' && k !== 'total')
-      )
-    )
-  );
-
-  // Sort floors by total descending
-  const sortedData = [...data].sort((a, b) => b.total - a.total);
-
-  // Custom tooltip container matching dark theme
-  const renderTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
-    return (
-      <div style={{
-        backgroundColor: 'var(--wu-gray-dark)',
-        color: '#fff',
-        border: '1px solid var(--wu-yellow)',
-        borderRadius: 4,
-        padding: '0.5rem'
-      }}>
-        <div><strong>Floor: {label}</strong></div>
-        <div style={{ fontWeight: 'bold' }}>Total: {total}</div>
-        {payload.map((p, idx) => (
-          <div key={p.dataKey} style={{ color: DARK_COLORS[idx % DARK_COLORS.length] }}>
-            {p.name}: {p.value}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Floor-wise Occupancy
+        Zone-wise Occupancy
       </Card.Header>
       <Card.Body style={{ height: 400, padding: 0 }}>
-        <div style={{
-          height: '100%',
-          backgroundColor: 'var(--wu-gray-dark)',
-          border: '1px solid var(--wu-yellow)',
-          borderRadius: 4,
-          padding: '0.5rem'
-        }}>
+        {/* <div
+          style={{
+            height: '100%',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#ffffff'
+          }}
+        > */}
+
+        <div
+          style={{
+            height: '100%',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: '4px',
+            backgroundColor: 'var(--wu-gray-dark)',
+            padding: '0.5rem'
+          }}
+        >
+
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={sortedData}
+              data={summary}
               margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-              barCategoryGap="5%"
+              barCategoryGap="10%"
             >
-              {/* Gradient definitions */}
+              {/* Unique gradient defs by zone name */}
               <defs>
-                {types.map((_, idx) => {
-                  const [light, dark] = GRADIENTS[idx % GRADIENTS.length];
-                  return (
-                    <linearGradient
-                      id={`grad-${idx}`}
-                      key={idx}
-                      x1="0" y1="0" x2="0" y2="1"
-                    >
-                      <stop offset="0%" stopColor={light} stopOpacity={1} />
-                      <stop offset="100%" stopColor={dark} stopOpacity={1} />
-                    </linearGradient>
-                  );
-                })}
+                {Object.entries(ZONE_GRADIENTS).map(([zone, [start, end]]) => (
+                  <linearGradient
+                    id={`grad-${zone.replace(/\s+/g, '-')}`}
+                    key={zone}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={start} stopOpacity={1} />
+                    <stop offset="100%" stopColor={end} stopOpacity={1} />
+                  </linearGradient>
+                ))}
               </defs>
 
+              {/* <CartesianGrid stroke="#d0d0d0" strokeDasharray="4 4" />
+              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#333' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#333' }} /> */}
+
               <CartesianGrid stroke="#555" strokeDasharray="4 4" />
-              <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#fff' }} />
+              <XAxis dataKey="zone" tick={{ fontSize: 12, fill: '#fff' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#fff' }} />
+
 
               <Tooltip content={renderTooltip} />
 
               <Legend
                 verticalAlign="bottom"
-                wrapperStyle={{ paddingTop: 5 }}
-                formatter={(val, entry, idx) => (
-                  <span style={{
-                    color: DARK_COLORS[idx % DARK_COLORS.length],
-                    fontWeight: 'bold'
-                  }}>
-                    {val}
+                wrapperStyle={{ paddingTop: 10 }}
+                formatter={(value) => (
+                  <span style={{ color: '#FFD100', fontWeight: 'bold' }}>
+                    {value}
                   </span>
                 )}
               />
 
-              {types.map((type, idx) => (
-                <Bar
-                  key={type}
-                  dataKey={type}
-                  stackId="a"
-                  name={type}
-                  radius={[6, 6, 0, 0]}
-                >
-                  {sortedData.map((_, barIdx) => (
+              <Bar
+                dataKey="count"
+                name="Zone"
+                radius={[6, 6, 0, 0]}
+                label={renderLabel}
+              >
+                {summary.map((entry, idx) => {
+                  const zone = entry.zone;
+                  const gradientId = `grad-${zone.replace(/\s+/g, '-')}`;
+                  const strokeColor = ZONE_LABEL_COLORS[zone] || '#333';
+                  const gradientExists = ZONE_GRADIENTS.hasOwnProperty(zone);
+
+                  return (
                     <Cell
-                      key={barIdx}
-                      fill={`url(#grad-${idx})`}
-                      stroke={DARK_COLORS[idx % DARK_COLORS.length]}
+                      key={`cell-${idx}`}
+                      fill={gradientExists ? `url(#${gradientId})` : DEFAULT_GRADIENT[0]}
+                      stroke={strokeColor}
                       strokeWidth={1}
                     />
-                  ))}
-                  {idx === 0 && (
-                    <LabelList
-                      dataKey="total"
-                      position="top"
-                      style={{
-                        fill: '#fff',
-                        fontSize: 14,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  )}
-                </Bar>
-              ))}
+                  );
+                })}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -732,3 +180,4 @@ export default function FloorOccupancyChart({ data = [] }) {
     </Card>
   );
 }
+
