@@ -1,3 +1,177 @@
+# src/train.py
+
+import pandas as pd
+import joblib
+from extract import load_csv, save_pickle
+from labelers import (
+    label_anomaly,
+    label_card_share,
+    label_duration,
+    label_low_swipe,
+    label_exit_first,
+    label_simultaneous,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+
+# --------------------------------------------------------------------------------
+# 1. Apply all labelers in sequence to produce a “labeled” DataFrame
+# --------------------------------------------------------------------------------
+def apply_all_labelers(df: pd.DataFrame) -> pd.DataFrame:
+    # 1) Anomaly labeling
+    df = label_anomaly(df, window_minutes=10, max_swipes=5)
+
+    # 2) Card‐share labeling
+    df = label_card_share(df, window=pd.Timedelta(minutes=5))
+
+    # 3) Duration labeling: returns a separate DataFrame (one row per EmployeeID+Date)
+    df_duration = label_duration(df)
+
+    # 4) Low‐swipe labeling (one & two swipes): also returns separate DataFrame
+    df_low_swipe = label_low_swipe(df)
+
+    # 5) Exit‐first labeling
+    df_exit_first = label_exit_first(df)
+
+    # 6) Simultaneous‐swipe labeling
+    df = label_simultaneous(df)
+
+    # We’ll now merge all “per‐day” labels (duration, low_swipe, exit_first) back onto the main swipe‐level df.
+    # Merge duration info:
+    df = df.merge(
+        df_duration[["EmployeeID", "Dateonly", "duration_hours", "short_stay", "long_stay"]],
+        on=["EmployeeID", "Dateonly"],
+        how="left",
+    )
+    # Merge low‐swipe info:
+    df = df.merge(
+        df_low_swipe[["EmployeeID", "Dateonly", "swipe_count", "one_swipe", "two_swipe"]],
+        on=["EmployeeID", "Dateonly"],
+        how="left",
+    )
+    # Merge exit‐first info:
+    df = df.merge(
+        df_exit_first[["EmployeeID", "Dateonly", "exit_first"]],
+        on=["EmployeeID", "Dateonly"],
+        how="left",
+    )
+
+    return df
+
+
+# --------------------------------------------------------------------------------
+# 2. Engineer “features” from the labeled DataFrame
+# --------------------------------------------------------------------------------
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    # ====================================================
+    # If “zone” isn’t present at all, create a default column
+    # ====================================================
+    if "zone" not in df.columns:
+        df["zone"] = "Unknown"
+    else:
+        df["zone"] = df["zone"].fillna("Unknown")
+
+    # Example of filling other columns that might have NaNs:
+    df["EmployeeID"] = df["EmployeeID"].fillna("UnknownID")
+    df["PersonnelType"] = df["PersonnelType"].fillna("UnknownType")
+    df["Door"] = df["Door"].fillna("UnknownDoor")
+
+    # Convert any categorical columns to category dtype (optional, improves memory)
+    df["PersonnelType"] = df["PersonnelType"].astype("category")
+    df["zone"] = df["zone"].astype("category")
+    df["Door"] = df["Door"].astype("category")
+
+    # Extract hour of swipe as a numeric feature
+    df["hour"] = df["LocaleMessageTime"].dt.hour
+
+    # Encode “InDirection” vs “OutDirection”
+    df["is_in"] = (df["Direction"] == "InDirection").astype(int)
+
+    # Label columns like 'anomaly', 'card_share', 'simultaneous', 'one_swipe', 'two_swipe', 'exit_first'
+    # already exist if you ran apply_all_labelers. If any are still missing, fill with False.
+    for col in ["anomaly", "card_share", "simultaneous", "one_swipe", "two_swipe", "exit_first", "short_stay", "long_stay"]:
+        if col not in df.columns:
+            df[col] = False
+        else:
+            df[col] = df[col].fillna(False)
+
+    # For simplicity, let's treat PersonType and zone by one‐hot encoding
+    df = pd.get_dummies(df, columns=["PersonnelType", "zone", "Door"], drop_first=True)
+
+    # Example: we’ll build a binary target “is_anomaly” from the anomaly column (just for demo)
+    df["is_anomaly"] = df["anomaly"].astype(int)
+
+    # Select a small set of numeric features and the target
+    # (you can expand this list as desired)
+    feature_cols = [
+        "hour",
+        "is_in",
+        "duration_hours",
+        "swipe_count",
+        "one_swipe",
+        "two_swipe",
+        "exit_first",
+        "simultaneous",
+        "card_share",
+        "short_stay",
+        "long_stay",
+    ]
+    # Add all generated dummy columns
+    dummy_cols = [c for c in df.columns if c.startswith("PersonnelType_") or c.startswith("zone_") or c.startswith("Door_")]
+    feature_cols.extend(dummy_cols)
+
+    # Drop rows where our chosen features contain NaN (just to be safe)
+    df_features = df[feature_cols + ["is_anomaly"]].dropna()
+
+    return df_features
+
+
+# --------------------------------------------------------------------------------
+# 3. Train a simple RandomForest model (for demonstration)
+# --------------------------------------------------------------------------------
+def build_and_save_model():
+    # a) Load the CSV‐derived DataFrame (or pickle if you prefer)
+    df = load_csv()  # assumes extract.py has already created data/logs.pkl
+    df_labeled = apply_all_labelers(df)
+
+    # b) Engineer features (this step no longer crashes on missing “zone”)
+    df_feat = engineer_features(df_labeled)
+
+    # c) Split into train/test
+    X = df_feat.drop(columns=["is_anomaly"])
+    y = df_feat["is_anomaly"]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # d) Train a RandomForest (example)
+    clf = RandomForestClassifier(n_estimators=50, random_state=42)
+    clf.fit(X_train, y_train)
+
+    # e) Evaluate on test set
+    preds = clf.predict(X_test)
+    print("\n=== Classification Report ===")
+    print(classification_report(y_test, preds, zero_division=0))
+
+    # f) Save the trained model to disk
+    joblib.dump(clf, "models/rf_anomaly_model.joblib")
+    print("✅ Model saved to models/rf_anomaly_model.joblib")
+
+
+if __name__ == "__main__":
+    build_and_save_model()
+
+
+
+
+
+
+
+
+
+
+
 # src/labelers.py
 
 import pandas as pd
