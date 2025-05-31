@@ -1,4 +1,267 @@
 // src/components/SummaryChart.jsx
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Gradients per zone (fallback to DEFAULT_GRADIENT if missing)
+const ZONE_GRADIENTS = {
+  'Red Zone':       ['#A80000', '#FFCCCC'],
+  'Yellow Zone':    ['#B28000', '#FFF2CC'],
+  'Orange Zone':    ['#C75D00', '#FFE0B2'],
+  'Green Zone':     ['#006400', '#CCFFCC'],
+  'Reception Area': ['#4B0082', '#E0CCFF'],
+  'Tower B':        ['#bfd6ff', '#002f6c']
+};
+
+// Solid-color fallbacks (if a zone isn’t listed above)
+const SOLID_COLORS = [
+  '#FFD100', '#009E60', '#FF6F61',
+  '#58595B', '#FFB800', '#C75D00'
+];
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+export default function SummaryChart({ summary = [] }) {
+  // If there’s no data, show a “no data available” card
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  /**
+   * Build a “pieData” array so that each slice has value=1
+   * (making all angles equal). We keep the real “count” in
+   * `entry.count` so we can show it inside each segment.
+   */
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name:  z.zone,
+        value: 1,       // For equal slice width
+        count: z.count  // Actual occupancy count
+      })),
+    [summary]
+  );
+
+  // Custom tooltip: show zone name + actual count
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#000'
+        }}
+      >
+        <div><strong>Zone:</strong> {name}</div>
+        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+      <Card.Body style={{ height: 400, padding: 0 }}>
+        <div
+          style={{
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            padding: '0.5rem'
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              {/**
+               * 1) Define a <linearGradient> for each zone (if present in ZONE_GRADIENTS),
+               *    otherwise fallback to DEFAULT_GRADIENT.
+               */}
+              <defs>
+                {pieData.map((entry) => {
+                  const key = entry.name.replace(/\s+/g, '-');
+                  const colors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                  return (
+                    <linearGradient
+                      id={`grad-${key}`}
+                      key={key}
+                      x1="0" y1="0" x2="0" y2="1"
+                    >
+                      <stop offset="0%"  stopColor={colors[0]} stopOpacity={1} />
+                      <stop offset="100%" stopColor={colors[1]} stopOpacity={1} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              {/**
+               * 2) Overlay an inline SVG “bulb” at the center of the chart.
+               *    - x="50%" / y="50%" places its top-left corner at chart center.
+               *    - transform="translate(-X, -Y)" shifts it back by half the svg’s width/height.
+               *    - We then add a <text> just below the bulb that reads “Western Union Pune”.
+               */}
+              <svg
+                x="50%" 
+                y="50%" 
+                width={100} 
+                height={140}
+                viewBox="0 0 64 90"
+                transform="translate(-50, -75)"
+                /* 
+                   The numbers above:
+                   - width=100, height=140 gives us enough room for bulb + text.
+                   - viewBox="0 0 64 90" means our coordinate system runs 0→64 horizontally, 0→90 vertically.
+                   - translate(-50, -75) recenters the svg. 
+                     (We shift left by half of width=100 → 50, and up by about 75 to center the bulb portion.)
+                   You can adjust -50, -75 to fine-tune exact placement.
+                */
+              >
+                {/**
+                 * Bulb “glass” (a yellow circle)
+                 */}
+                <circle
+                  cx="32" cy="28" r=" twenty
+30"
+                  fill="#FFD100"
+                  stroke="#FFC72C"
+                  strokeWidth="2"
+                />
+                {/**
+                 * Filament lines (stylized)
+                 */}
+                <line
+                  x1="24" y1="28" 
+                  x2="40" y2="28"
+                  stroke="#333"
+                  strokeWidth="2"
+                />
+                <line
+                  x1="28" y1="20"
+                  x2="28" y2="28"
+                  stroke="#333"
+                  strokeWidth="2"
+                />
+                <line
+                  x1="36" y1="20"
+                  x2="36" y2="28"
+                  stroke="#333"
+                  strokeWidth="2"
+                />
+                {/**
+                 * Bulb base (dark gray rectangle + accent band)
+                 */}
+                <rect
+                  x="20" y=" thirty
+50" 
+                  width="24" 
+                  height=" twelve
+12" 
+                  fill="#58595B"
+                />
+                <rect
+                  x="20" y=" sixty
+62"
+                  width="24"
+                  height="6"
+                  fill="#FF6F61" 
+                />
+                {/**
+                 * “Western Union Pune” text below bulb
+                 */}
+                <text
+                  x="32" 
+                  y="88" 
+                  textAnchor="middle"
+                  fill="#FFD100"
+                  fontSize=" twelve
+12"
+                  fontWeight="bold"
+                >
+                  Western Union Pune
+                </text>
+              </svg>
+
+              {/**
+               * 3) Draw a half-circle Pie, startAngle=180 to endAngle=0,
+               *    so it spans the top half only.
+               */}
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                startAngle={180}
+                endAngle={0}
+                innerRadius={60}
+                outerRadius={140}
+                paddingAngle={2}
+                labelLine={false}
+                isAnimationActive={false}
+              >
+                {/**
+                 * 4) Show “count” inside each slice:
+                 */}
+                <LabelList
+                  dataKey="count"
+                  position="inside"
+                  fill="#fff"
+                  style={{ fontSize: '1rem', fontWeight: 'bold' }}
+                />
+                {pieData.map((entry, idx) => {
+                  const key = entry.name.replace(/\s+/g, '-');
+                  const hasGrad = Boolean(ZONE_GRADIENTS[entry.name]);
+                  const fillColor = hasGrad
+                    ? `url(#grad-${key})`
+                    : SOLID_COLORS[idx % SOLID_COLORS.length];
+                  const strokeColor = hasGrad
+                    ? (ZONE_GRADIENTS[entry.name][1])
+                    : SOLID_COLORS[idx % SOLID_COLORS.length];
+                  return (
+                    <Cell
+                      key={`slice-${idx}`}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeWidth={1}
+                    />
+                  );
+                })}
+              </Pie>
+
+              {/**
+               * 5) Finally, attach our custom tooltip:
+               */}
+              <Tooltip content={renderTooltip} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+// src/components/SummaryChart.jsx
 
 import React, { useMemo } from 'react';
 import {
