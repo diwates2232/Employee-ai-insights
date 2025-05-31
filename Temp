@@ -1,4 +1,12 @@
-    # Ensure every label column exists and is BooleanDtype
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
+
+
+
+
+# Ensure every label column exists and is BooleanDtype
     label_columns = [
         "anomaly",
         "card_share",
