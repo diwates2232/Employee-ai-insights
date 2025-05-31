@@ -1,3 +1,15 @@
+
+try:
+    with engine.connect() as conn:
+        result: Result = conn.execute(text(sql_query))
+        rows = [dict(row._mapping) for row in result.fetchall()]
+    return rows
+
+
+
+
+
+
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
