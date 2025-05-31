@@ -1,10 +1,35 @@
+>>> print(" Connection successful")
+ Connection successful
+>>> import pyodbc
+>>> conn = pyodbc.connect(
+...     "DRIVER={ODBC Driver 17 for SQL Server};"
+...         "SERVER=SRVWUDEN0890V;"
+...             "DATABASE=ACVSUJournal_00010027;"
+...                 "UID=GSOC_Test;"
+...                     "PWD=- Westerngsoc@2025;"
+...                         "TrustServerCertificate=yes;"
+...                         )
+Traceback (most recent call last):
+  File "<python-input-4>", line 1, in <module>
+    conn = pyodbc.connect(
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+    ...<4 lines>...
+                            "TrustServerCertificate=yes;"
+                            )
+pyodbc.InterfaceError: ('28000', "[28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Login failed for user 'GSOC_Test'. (18456) (SQLDriverConnect); [28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Login failed for user 'GSOC_Test'. (18456)")
+>>> print(" Connection successful")
+ Connection successful
+>>> 
+
+
+
 import pyodbc
 conn = pyodbc.connect(
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=SRVWUDEN0890V;"
-    "DATABASE=ACVSUJournal_00010020;"
+    "DATABASE=ACVSUJournal_00010027;"
     "UID=GSOC_Test;"
-    "PWD=your_actual_password_here;"
+    "PWD=- Westerngsoc@2025;"
     "TrustServerCertificate=yes;"
 )
 print("✅ Connection successful")
