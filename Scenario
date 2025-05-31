@@ -1,3 +1,169 @@
+# src/labelers.py
+
+import pandas as pd
+from datetime import timedelta
+
+def label_anomaly(df: pd.DataFrame, window_minutes: int = 10, max_swipes: int = 5) -> pd.DataFrame:
+    """
+    Label 'anomaly' if an employee has more than `max_swipes` within `window_minutes`.
+    This version avoids duplicate‐label reindexing by computing each employee's rolling counts
+    and assigning them back to the original DataFrame row by row.
+    """
+    # Work on a copy so we don’t mutate the caller’s DataFrame
+    df = df.copy()
+
+    # Ensure LocaleMessageTime is datetime and drop rows with invalid timestamps
+    df["LocaleMessageTime"] = pd.to_datetime(df["LocaleMessageTime"], errors="coerce")
+    df = df.dropna(subset=["LocaleMessageTime"])
+
+    # Sort by EmployeeID then timestamp
+    df = df.sort_values(["EmployeeID", "LocaleMessageTime"])
+
+    # Create a new column to hold the rolling‐window counts (initialized to zero)
+    df["swipe_count_rolling"] = 0
+
+    # For each distinct EmployeeID, compute the rolling count of swipes in the given time window
+    # and write those counts back into df["swipe_count_rolling"] at the correct row indices.
+    for emp_id, index_list in df.groupby("EmployeeID").groups.items():
+        # Extract this employee’s rows (preserving original index labels)
+        sub = df.loc[index_list].copy()
+        sub["orig_index"] = sub.index
+
+        # Temporarily set the timestamp column as the index so we can call .rolling("Xmin")
+        sub2 = sub.set_index("LocaleMessageTime")
+
+        # Now perform a time‐based rolling count (count how many rows fall in each window)
+        rolling_counts = sub2["EmployeeID"].rolling(f"{window_minutes}min").count()
+
+        # rolling_counts.values is an array aligned in the same order as sub2’s rows—
+        # we also kept sub2["orig_index"] so we can map each count back to df’s row index.
+        counts_array = rolling_counts.values
+        orig_indices = sub2["orig_index"].values
+
+        # Assign each rolling count back to the correct row in the original df
+        for orig_idx, count_val in zip(orig_indices, counts_array):
+            df.at[orig_idx, "swipe_count_rolling"] = int(count_val)
+
+    # Mark anomaly if swipe_count_rolling > max_swipes
+    df["anomaly"] = df["swipe_count_rolling"] > max_swipes
+
+    return df
+
+
+def label_card_share(df: pd.DataFrame, window: timedelta = timedelta(minutes=5)) -> pd.DataFrame:
+    """
+    Label 'card_share' when two different EmployeeIDs use the same CardNumber within `window`.
+    """
+    df = df.copy()
+    df["LocaleMessageTime"] = pd.to_datetime(df["LocaleMessageTime"], errors="coerce")
+    df = df.sort_values("LocaleMessageTime")
+
+    # For each CardNumber, examine the previous swipe’s EmployeeID and timestamp
+    df["prev_employee"] = df.groupby("CardNumber")["EmployeeID"].shift(1)
+    df["prev_time"]     = df.groupby("CardNumber")["LocaleMessageTime"].shift(1)
+
+    # Mark card_share = True if (1) EmployeeID changed and (2) time difference ≤ window
+    df["card_share"] = (
+        (df["EmployeeID"] != df["prev_employee"]) &
+        (df["LocaleMessageTime"] - df["prev_time"] <= window)
+    ).fillna(False)
+
+    return df
+
+
+def label_duration(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute duration per day and label 'short_stay' (<1h) and 'long_stay' (>10h).
+    Returns a DataFrame grouped by (EmployeeID, Dateonly) with:
+      first_swipe, last_swipe, swipe_count, duration_hours, short_stay, long_stay
+    """
+    df = df.copy()
+    df["LocaleMessageTime"] = pd.to_datetime(df["LocaleMessageTime"], errors="coerce")
+
+    # Aggregate per EmployeeID & Dateonly
+    agg = (
+        df.groupby(["EmployeeID", "Dateonly"])["LocaleMessageTime"]
+          .agg(["min", "max", "count"])
+          .rename(columns={"min": "first_swipe", "max": "last_swipe", "count": "swipe_count"})
+          .reset_index()
+    )
+
+    # Compute duration in hours, then label as short_stay or long_stay
+    agg["duration_hours"] = (agg["last_swipe"] - agg["first_swipe"]).dt.total_seconds() / 3600
+    agg["short_stay"] = agg["duration_hours"] < 1
+    agg["long_stay"]  = agg["duration_hours"] > 10
+
+    return agg
+
+
+def label_low_swipe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'one_swipe' or 'two_swipe' if total swipes per day ≤ 2.
+    Returns a DataFrame with (EmployeeID, Dateonly, swipe_count, one_swipe, two_swipe).
+    """
+    df = df.copy()
+    counts = (
+        df.groupby(["EmployeeID", "Dateonly"])
+          .size()
+          .reset_index(name="swipe_count")
+    )
+    counts["one_swipe"] = counts["swipe_count"] == 1
+    counts["two_swipe"] = counts["swipe_count"] == 2
+
+    return counts
+
+
+def label_exit_first(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'exit_first' if the first swipe of the day is OutDirection.
+    Returns a DataFrame with (EmployeeID, Dateonly, exit_first).
+    """
+    df = df.copy()
+    df["LocaleMessageTime"] = pd.to_datetime(df["LocaleMessageTime"], errors="coerce")
+
+    first = (
+        df.sort_values("LocaleMessageTime")
+          .groupby(["EmployeeID", "Dateonly"])
+          .first()
+          .reset_index()
+    )
+    first["exit_first"] = first["Direction"] == "OutDirection"
+
+    return first[["EmployeeID", "Dateonly", "exit_first"]]
+
+
+def label_simultaneous(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Label 'simultaneous' when two different EmployeeIDs swipe the same Door at exactly the same time.
+    Returns the original DataFrame merged with a new 'simultaneous' column (True/False).
+    """
+    df = df.copy()
+    df["LocaleMessageTime"] = pd.to_datetime(df["LocaleMessageTime"], errors="coerce")
+
+    dup = (
+        df.groupby(["Door", "LocaleMessageTime"])["EmployeeID"]
+          .nunique()
+          .reset_index(name="user_count")
+    )
+    dup["simultaneous"] = dup["user_count"] > 1
+
+    df = df.merge(
+        dup[["Door", "LocaleMessageTime", "simultaneous"]],
+        on=["Door", "LocaleMessageTime"],
+        how="left"
+    )
+    df["simultaneous"] = df["simultaneous"].fillna(False)
+
+    return df
+
+
+
+
+
+
+
+
+
 PS C:\Users\W0024618\Desktop\ai-employee-security\src> python train.py
 Traceback (most recent call last):
   File "C:\Users\W0024618\Desktop\ai-employee-security\src\train.py", line 188, in <module>
