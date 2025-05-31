@@ -1,3 +1,37 @@
+# myapp/db.py
+
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from urllib.parse import quote_plus
+
+def get_engine() -> Engine:
+    """
+    Return a SQLAlchemy Engine connected to the SQL Server using pyodbc.
+    """
+    # Hardcoding values (until .env works properly)
+    odbc_str = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=SRVWUDEN0890V;"
+        "DATABASE=ACVSUJournal_00010027;"
+        "UID=GSOC_Test;"
+        "PWD=-Westerngsoc@2025;"
+        "TrustServerCertificate=yes;"
+    )
+
+    connection_url = f"mssql+pyodbc:///?odbc_connect={quote_plus(odbc_str)}"
+    engine = create_engine(connection_url, fast_executemany=True)
+    return engine
+
+
+
+
+
+
+
+
+
+
 >>> print(" Connection successful")
  Connection successful
 >>> import pyodbc
