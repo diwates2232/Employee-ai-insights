@@ -1,3 +1,21 @@
+    if col not in df_merged.columns:
+        # Create a new BooleanDtype column filled with pd.NA
+        df_merged[col] = pd.Series(pd.NA, index=df_merged.index, dtype="boolean")
+    else:
+        # First cast whatever’s there to BooleanDtype, then fill missing with False
+        df_merged[col] = df_merged[col].astype("boolean")
+    df_merged[col] = df_merged[col].fillna(False)
+
+
+
+
+
+
+
+
+
+
+
 PS C:\Users\W0024618\Desktop\ai-employee-security\src> python train.py
 ⏱️  Detected timestamp column: 'LocaleMessageTime'
 C:\Users\W0024618\Desktop\ai-employee-security\src\extract.py:40: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
