@@ -12,6 +12,278 @@ import {
 import { Card } from 'react-bootstrap';
 import { FaLightbulb } from 'react-icons/fa';
 
+// A small palette of Western Union–style accent colors for the bulb
+const BULB_COLORS = [
+  '#FFD100',
+  '#FFB800',
+  '#FF6F61',
+  '#C75D00',
+  '#009E60',
+  '#006400',
+  '#58595B',
+];
+
+// Gradients for each zone (light → dark)
+const ZONE_GRADIENTS = {
+  'Red Zone':       ['#A80000', '#FFCCCC'],
+  'Yellow Zone':    ['#B28000', '#FFF2CC'],
+  'Orange Zone':    ['#C75D00', '#FFE0B2'],
+  'Green Zone':     ['#006400', '#CCFFCC'],
+  'Reception Area': ['#4B0082', '#E0CCFF'],
+  'Tower B':        ['#bfd6ff', '#002f6c'],
+};
+
+// Fallback solid colors if a zone isn’t in ZONE_GRADIENTS
+const SOLID_COLORS = [
+  '#FFD100',
+  '#009E60',
+  '#FF6F61',
+  '#58595B',
+  '#FFB800',
+  '#C75D00',
+];
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+export default function SummaryChart({ summary = [] }) {
+  // Build “semi-donut” data: each slice = value:1, real count stored separately
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name: z.zone,
+        value: 1,
+        count: z.count,
+      })),
+    [summary]
+  );
+
+  // If no data, show placeholder
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // Pick a random accent color for the bulb each render
+  const bulbColor =
+    BULB_COLORS[Math.floor(Math.random() * BULB_COLORS.length)];
+
+  // Tooltip: show real zone & count
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#000',
+        }}
+      >
+        <div>
+          <strong>Zone:</strong> {name}
+        </div>
+        <div style={{ marginTop: 4 }}>
+          <strong>Count:</strong> {count}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      {/* KEEP ORIGINAL HEADER TEXT */}
+      <Card.Header className="bg-dark text-warning text-center">
+        Zone-wise Occupancy
+      </Card.Header>
+
+      <Card.Body style={{ height: 480, padding: 0, position: 'relative' }}>
+        {/* 
+          Container holds both the bulb icon (absolutely positioned) 
+          and the chart (scrollable if needed).
+        */}
+        <div
+          style={{
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            padding: '0.5rem',
+            position: 'relative', // so we can absolutely position the bulb inside
+            overflowY: 'auto',
+          }}
+        >
+          {/*  
+            Lightbulb icon “nestled” into the top center of the donut curve.
+            We offset it a bit upward so it sits between the two arcs.
+          */}
+          <FaLightbulb
+            style={{
+              position: 'absolute',
+              top: '-1.25rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '3rem',
+              color: bulbColor,
+              zIndex: 10,
+            }}
+          />
+
+          {/* 
+            The half-donut sits underneath the bulb. By giving it extra top margin, 
+            the bulb appears to “sit” in the curve.
+          */}
+          <div style={{ marginTop: '2rem', height: 'calc(100% - 2rem)' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <defs>
+                  {pieData.map((entry) => {
+                    const gradientKey = entry.name.replace(/\s+/g, '-');
+                    const gradientColors =
+                      ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                    return (
+                      <linearGradient
+                        id={`grad-${gradientKey}`}
+                        key={`grad-${gradientKey}`}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
+                        <stop
+                          offset="100%"
+                          stopColor={gradientColors[1]}
+                          stopOpacity={1}
+                        />
+                      </linearGradient>
+                    );
+                  })}
+                </defs>
+
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  startAngle={180}
+                  endAngle={0}
+                  innerRadius={80}
+                  outerRadius={180}
+                  paddingAngle={2}
+                  labelLine={false}
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="inside"
+                    fill="#fff"
+                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
+                  />
+                  {pieData.map((entry, idx) => {
+                    const gradientKey = entry.name.replace(/\s+/g, '-');
+                    const hasGradient = Boolean(ZONE_GRADIENTS[entry.name]);
+                    const fillColor = hasGradient
+                      ? `url(#grad-${gradientKey})`
+                      : SOLID_COLORS[idx % SOLID_COLORS.length];
+                    const strokeColor = hasGradient
+                      ? ZONE_GRADIENTS[entry.name][1]
+                      : SOLID_COLORS[idx % SOLID_COLORS.length];
+                    return (
+                      <Cell
+                        key={`slice-${idx}`}
+                        fill={fillColor}
+                        stroke={strokeColor}
+                        strokeWidth={1}
+                      />
+                    );
+                  })}
+                </Pie>
+
+                <Tooltip content={renderTooltip} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Custom legend at the very bottom */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '1.5rem',
+            backgroundColor: 'var(--wu-gray-dark)',
+          }}
+        >
+          {summary.map((entry, idx) => {
+            const gradientColors = ZONE_GRADIENTS[entry.zone];
+            const squareColor = gradientColors
+              ? gradientColors[1]
+              : SOLID_COLORS[idx % SOLID_COLORS.length];
+            return (
+              <div
+                key={`legend-${idx}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                {/* small square “plate” */}
+                <div
+                  style={{
+                    width: '0.9rem',
+                    height: '0.9rem',
+                    backgroundColor: squareColor,
+                    borderRadius: '2px',
+                  }}
+                />
+                <span
+                  style={{
+                    color: squareColor,
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  {entry.zone}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/SummaryChart.jsx
+
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList,
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import { FaLightbulb } from 'react-icons/fa';
+
 // Define a small rainbow gradient for the bulb
 const BULB_COLORS = [
   '#FFD100',
