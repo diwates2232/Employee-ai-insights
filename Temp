@@ -2,6 +2,32 @@
 const express = require('express');
 const router = express.Router();
 const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
+const { getDenverInOutInconsistency } = require('../controllers/denverInOutInconsistencyController');
+
+// Denver live occupancy
+router.get('/live-occupancy-denver', getDenverLiveOccupancy);
+
+// Denver in/out inconsistency trends
+router.get('/inout-inconsistency-denver', getDenverInOutInconsistency);
+
+module.exports = router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+// routes/occupancyDenverRoutes.js
+const express = require('express');
+const router = express.Router();
+const { getDenverLiveOccupancy } = require('../controllers/denverLiveOccupancyController');
 
 // Denver live occupancy
 router.get('/live-occupancy-denver', getDenverLiveOccupancy);
