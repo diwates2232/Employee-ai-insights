@@ -1,677 +1,150 @@
-// controllers/denverInOutInconsistencyController.js
+Compiled with warnings.
 
-const { DateTime }       = require('luxon');
-const { denver }         = require('../config/siteConfig');
-const sql                = require('mssql');
-const normalizeKey       = require('../data/normalizeKey');
-const doorFloorMap       = require('../data/denverDoorFloorMap');
-const { monitoredDoors } = require('../data/strictDoorList');
+[eslint]
+src\App.js
+  Line 228:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-const warnedKeys = new Set();
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
 
-// Build a Set of normalized door___direction keys (strict doors only)
-const normalizedMonitoredKeys = new Set(
-  Object.entries(monitoredDoors).map(
-    ([door, dir]) => normalizeKey(door, dir)
-  )
-);
+WARNING in [eslint]
+src\App.js
+  Line 228:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-/** Strip any trailing “_HH:MM:SS” from a door name **/
-function stripTimeSuffix(doorRaw) {
-  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '').trim();
-}
+webpack compiled with 1 warning
+Compiling...
+Compiled with warnings.
 
-/**
- * Determine floor label by regex.
- * Falls back to doorFloorMap if necessary.
- */
-function extractFloor(rawDoor) {
-  const noTime = stripTimeSuffix(rawDoor);
-  const m = noTime.match(/HQ\.\s*(\d{1,2})\b/);
-  if (m) {
-    return `Floor ${m[1]}`;
-  }
-  // fallback: attempt to map via doorFloorMap
-  const keyIn  = normalizeKey(noTime, 'InDirection');
-  const keyOut = normalizeKey(noTime, 'OutDirection');
-  if (doorFloorMap[keyIn])  return doorFloorMap[keyIn];
-  if (doorFloorMap[keyOut]) return doorFloorMap[keyOut];
-  if (!warnedKeys.has(noTime)) {
-    console.warn(`⛔ Unmapped door for floor extraction: "${noTime}"`);
-    warnedKeys.add(noTime);
-  }
-  return 'Unknown Floor';
-}
+[eslint]
+src\App.js
+  Line 228:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-/**
- * Fetch all swipe events from Jan 1, 2025 up to now.
- * Returns an array of records with fields:
- *   LocaleMessageTime (Date),
- *   Dateonly (YYYY-MM-DD string),
- *   Swipe_Time (HH:mm:ss string),
- *   EmployeeID (string),
- *   PersonGUID (string),
- *   ObjectName1 (employee name),
- *   PersonnelType (string),
- *   CardNumber (string),
- *   AdmitCode (string),
- *   Direction ('InDirection' or 'OutDirection'),
- *   Door (string).
- */
-async function fetchHistoricalEvents() {
-  const pool = await denver.poolPromise;
-  const req  = pool.request();
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
 
-  // Start from January 1, 2025 at midnight (America/Denver)
-  const since = DateTime.fromObject(
-    { year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0 },
-    { zone: 'America/Denver' }
-  ).toJSDate();
+WARNING in [eslint]
+src\App.js
+  Line 228:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-  req.input('since', sql.DateTime2, since);
+webpack compiled with 1 warning
+Compiling...
+Compiled with warnings.
 
-  const { recordset } = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT
-        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]' ,'varchar(50)'),
-          sc.value
-        ) AS CardNumber,
-        t5a.value AS AdmitCode,
-        t5d.value AS Direction,
-        t1.ObjectName2 AS Door
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
-      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId  = t3.ObjectID
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
-        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
-        ON t1.XmlGUID = t5d.GUID AND t5d.Name = 'Direction'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, value
-        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
-        WHERE Name IN ('Card','CHUID')
-      ) sc ON t1.XmlGUID = sc.GUID
-      WHERE
-        t1.MessageType   = 'CardAdmitted'
-        AND t1.ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID, PersonGUID, ObjectName1, PersonnelType,
-      CardNumber, AdmitCode, Direction, Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
+[eslint]
+src\App.js
+  Line 327:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-  return recordset;
-}
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
 
-/**
- * Compute in/out inconsistency metrics, adding:
- *   - dailyFloorStats: [
- *       {
- *         date,
- *         month,
- *         floor,
- *         inCount,
- *         outCount,
- *         totalPersons,
- *         inconsistentCount,
- *         inconsistencyPercentage,
- *         instances: [
- *           { employeeId, name, personnelType }
- *         ]
- *       }
- *     ]
- *   - floorInconsistency: [
- *       { floor, totalPersonDays, inconsistentPersonDays, inconsistencyPercentage }
- *     ]
- *   - employeeInconsistency: [
- *       { employeeId, totalDays, inconsistentDays, inconsistencyPercentage }
- *     ]
- *
- * Only strict‐door events (per monitoredDoors) are considered.
- */
-function computeInOutInconsistency(events) {
-  // STEP A: Build per‐person‐day‐floor buckets
-  // Key: `${personId}__${date}__${floor}`
-  const bucketMap = new Map();
+WARNING in [eslint]
+src\App.js
+  Line 327:10:  'summaryData' is assigned a value but never used  no-unused-vars
 
-  events.forEach(evt => {
-    const dateOnly   = evt.Dateonly;           // 'YYYY-MM-DD'
-    const direction  = evt.Direction.trim();    // 'InDirection' or 'OutDirection'
-    const rawDoor    = evt.Door.trim();
-    const doorNoTime = stripTimeSuffix(rawDoor);
-    const normKey    = normalizeKey(doorNoTime, direction);
+webpack compiled with 1 warning
 
-    if (!normalizedMonitoredKeys.has(normKey)) return;
 
-    const personId = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-    if (!personId) return;
 
-    const name          = evt.ObjectName1 || null;
-    const personnelType = evt.PersonnelType || null;
-    const floor         = extractFloor(doorNoTime);
-    const groupKey      = `${personId}__${dateOnly}__${floor}`;
 
-    if (!bucketMap.has(groupKey)) {
-      bucketMap.set(groupKey, {
-        personId,
-        name,
-        personnelType,
-        dateOnly,
-        floor,
-        firstInTime: null,
-        lastOutTime: null
-      });
-    }
 
-    const bucket    = bucketMap.get(groupKey);
-    const swipeTime = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
 
-    if (direction === 'InDirection') {
-      if (!bucket.firstInTime || swipeTime < bucket.firstInTime) {
-        bucket.firstInTime = swipeTime;
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import DashboardHome    from './pages/DashboardHome';
+import FloorDetailsPage from './pages/FloorDetailsPage';
+
+import './App.css';
+
+export default function App() {
+  // live data states
+  const [summaryData, setSummaryData]               = useState([]);
+  const [floorData, setFloorData]                   = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [floorInOutSummary, setFloorInOutSummary]   = useState([]); // ← NEW
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy-denver');
+    es.onmessage = e => {
+      try {
+        const p = JSON.parse(e.data);
+        setSummaryData(p.summary || []);
+        setFloorData(p.floorBreakdown || []);
+        setPersonnelBreakdown(p.personnelBreakdown || []);
+        setTotalVisitedToday(p.totalVisitedToday || 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setFloorInOutSummary(p.floorInOutSummary || []); // ← NEW
+      } catch (err) {
+        console.error('SSE parse error:', err);
       }
-    } else if (direction === 'OutDirection') {
-      if (!bucket.lastOutTime || swipeTime > bucket.lastOutTime) {
-        bucket.lastOutTime = swipeTime;
-      }
-    }
-  });
+    };
+    es.onerror = err => {
+      console.error('SSE error:', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
-  // STEP B: Aggregate per date‐floor for dailyFloorStats
-  // Key: `${dateOnly}__${floor}`
-  const dateFloorMap = new Map();
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4 navbar-infographic">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Denver
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
+              Floor Details
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun color="#FFC72C" />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
 
-  bucketMap.forEach(bucket => {
-    const { personId, name, personnelType, dateOnly, floor, firstInTime, lastOutTime } = bucket;
-    const dfKey = `${dateOnly}__${floor}`;
-
-    if (!dateFloorMap.has(dfKey)) {
-      dateFloorMap.set(dfKey, {
-        date: dateOnly,
-        month: DateTime.fromISO(dateOnly).toFormat('LLLL'),
-        floor,
-        totalPersons: 0,
-        inCount: 0,
-        outCount: 0,
-        inconsistentCount: 0,
-        instances: []
-      });
-    }
-
-    const stats = dateFloorMap.get(dfKey);
-    stats.totalPersons += 1;
-
-    const hasIn  = Boolean(firstInTime);
-    const hasOut = Boolean(lastOutTime);
-    if (hasIn)  stats.inCount += 1;
-    if (hasOut) stats.outCount += 1;
-
-    if (!(hasIn && hasOut)) {
-      stats.inconsistentCount += 1;
-      stats.instances.push({
-        employeeId: personId,
-        name,
-        personnelType
-      });
-    }
-  });
-
-  // After populating, compute inconsistencyPercentage for each date‐floor
-  const dailyFloorStats = [];
-  dateFloorMap.forEach(stats => {
-    const { totalPersons, inconsistentCount } = stats;
-    const pct = totalPersons > 0 ? (inconsistentCount / totalPersons) * 100 : 0;
-    dailyFloorStats.push({
-      date: stats.date,
-      month: stats.month,
-      floor: stats.floor,
-      inCount: stats.inCount,
-      outCount: stats.outCount,
-      totalPersons: stats.totalPersons,
-      inconsistentCount: stats.inconsistentCount,
-      inconsistencyPercentage: parseFloat(pct.toFixed(2)),
-      instances: stats.instances
-    });
-  });
-
-  // STEP C: Floor‐level aggregated over entire period
-  const floorAgg = new Map();
-  bucketMap.forEach(bucket => {
-    const { dateOnly, floor, firstInTime, lastOutTime } = bucket;
-    const isInconsistent = !(firstInTime && lastOutTime);
-
-    if (!floorAgg.has(floor)) {
-      floorAgg.set(floor, {
-        totalPersonDays: 0,
-        inconsistentPersonDays: 0
-      });
-    }
-    const fAgg = floorAgg.get(floor);
-    fAgg.totalPersonDays += 1;
-    if (isInconsistent) {
-      fAgg.inconsistentPersonDays += 1;
-    }
-  });
-
-  const floorInconsistency = [];
-  floorAgg.forEach((vals, floor) => {
-    const { totalPersonDays, inconsistentPersonDays } = vals;
-    const pct =
-      totalPersonDays > 0
-        ? (inconsistentPersonDays / totalPersonDays) * 100
-        : 0;
-    floorInconsistency.push({
-      floor,
-      totalPersonDays,
-      inconsistentPersonDays,
-      inconsistencyPercentage: parseFloat(pct.toFixed(2))
-    });
-  });
-
-  // STEP D: Employee‐level aggregated over entire period
-  const empAgg = new Map();
-  bucketMap.forEach(bucket => {
-    const { personId, dateOnly, firstInTime, lastOutTime } = bucket;
-    const isInconsistent = !(firstInTime && lastOutTime);
-
-    if (!empAgg.has(personId)) {
-      empAgg.set(personId, {
-        totalDaysSet: new Set(),
-        inconsistentDaysSet: new Set()
-      });
-    }
-    const eAgg = empAgg.get(personId);
-    eAgg.totalDaysSet.add(dateOnly);
-    if (isInconsistent) {
-      eAgg.inconsistentDaysSet.add(dateOnly);
-    }
-  });
-
-  const employeeInconsistency = [];
-  empAgg.forEach((vals, personId) => {
-    const totalDays = vals.totalDaysSet.size;
-    const inconsistentDays = vals.inconsistentDaysSet.size;
-    const pct =
-      totalDays > 0 ? (inconsistentDays / totalDays) * 100 : 0;
-    employeeInconsistency.push({
-      employeeId: personId,
-      totalDays,
-      inconsistentDays,
-      inconsistencyPercentage: parseFloat(pct.toFixed(2))
-    });
-  });
-
-  return {
-    asOf: new Date().toISOString(),
-    dailyFloorStats,
-    floorInconsistency,
-    employeeInconsistency
-  };
+        <Container fluid className="mt-4">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  personnelSummary={personnelSummary}
+                  totalVisitedToday={totalVisitedToday}
+                  visitedToday={visitedToday}
+                  floorData={floorData}
+                  personnelBreakdown={personnelBreakdown}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+            <Route
+              path="/floor-details"
+              element={
+                <FloorDetailsPage
+                  floorData={floorData}
+                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
+                />
+              }
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
 }
 
-/**
- * Controller endpoint: GET /api/denver/inout-inconsistency
- *
- * Fetches all strict-door swipe events from Jan 1, 2025 to now,
- * computes:
- *   1. dailyFloorStats (by date + floor)
- *   2. floorInconsistency (overall per floor)
- *   3. employeeInconsistency (overall per employee)
- * and returns a JSON payload.
- */
-exports.getDenverInOutInconsistency = async (req, res) => {
-  try {
-    await denver.poolPromise;
-    const events = await fetchHistoricalEvents();
-    const result = computeInOutInconsistency(events);
-    res.status(200).json(result);
-  } catch (err) {
-    console.error('Error computing in/out inconsistency:', err);
-    res.status(500).json({
-      error: 'Failed to compute in/out inconsistency'
-    });
-  }
-};
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-This is my current file Give me Updated js file carefully
-
-// controllers/denverInOutInconsistencyController.js
-
-const { DateTime }       = require('luxon');
-const { denver }         = require('../config/siteConfig');
-const sql                = require('mssql');
-const normalizeKey       = require('../data/normalizeKey');
-const doorFloorMap       = require('../data/denverDoorFloorMap');
-const { monitoredDoors } = require('../data/strictDoorList');
-
-const warnedKeys = new Set();
-
-// Build a Set of normalized door___direction keys (strict doors only)
-const normalizedMonitoredKeys = new Set(
-  Object.entries(monitoredDoors).map(
-    ([door, dir]) => normalizeKey(door, dir)
-  )
-);
-
-/** Strip any trailing “_HH:MM:SS” from a door name **/
-function stripTimeSuffix(doorRaw) {
-  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '').trim();
-}
-
-/**
- * Determine floor label by regex.
- * Falls back to mapDoorToFloor if necessary.
- */
-function extractFloor(rawDoor) {
-  const noTime = stripTimeSuffix(rawDoor);
-  const m = noTime.match(/HQ\.\s*(\d{1,2})\b/);
-  if (m) {
-    return `Floor ${m[1]}`;
-  }
-  // fallback: attempt to map via doorFloorMap
-  const keyIn  = normalizeKey(noTime, 'InDirection');
-  const keyOut = normalizeKey(noTime, 'OutDirection');
-  if (doorFloorMap[keyIn])  return doorFloorMap[keyIn];
-  if (doorFloorMap[keyOut]) return doorFloorMap[keyOut];
-  if (!warnedKeys.has(noTime)) {
-    console.warn(`⛔ Unmapped door for floor extraction: "${noTime}"`);
-    warnedKeys.add(noTime);
-  }
-  return 'Unknown Floor';
-}
-
-/**
- * Fetch all swipe events from Jan 1, 2025 up to now.
- * Returns an array of records with fields:
- *   LocaleMessageTime (Date),
- *   Dateonly (YYYY-MM-DD string),
- *   Swipe_Time (HH:mm:ss string),
- *   EmployeeID (string),
- *   PersonGUID (string),
- *   PersonnelType (string),
- *   CardNumber (string),
- *   AdmitCode (string),
- *   Direction ('InDirection' or 'OutDirection'),
- *   Door (string).
- */
-async function fetchHistoricalEvents() {
-  const pool = await denver.poolPromise;
-  const req  = pool.request();
-
-  // Start from January 1, 2025 at midnight (America/Denver)
-  const since = DateTime.fromObject(
-    { year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0 },
-    { zone: 'America/Denver' }
-  ).toJSDate();
-
-  req.input('since', sql.DateTime2, since);
-
-  const { recordset } = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT
-        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]' ,'varchar(50)'),
-          sc.value
-        ) AS CardNumber,
-        t5a.value AS AdmitCode,
-        t5d.value AS Direction,
-        t1.ObjectName2 AS Door
-      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
-      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId  = t3.ObjectID
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
-        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
-        ON t1.XmlGUID = t5d.GUID AND t5d.Name = 'Direction'
-      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, value
-        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
-        WHERE Name IN ('Card','CHUID')
-      ) sc ON t1.XmlGUID = sc.GUID
-      WHERE
-        t1.MessageType   = 'CardAdmitted'
-        AND t1.ObjectName2 LIKE '%HQ%'
-        AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID, PersonGUID, ObjectName1, PersonnelType,
-      CardNumber, AdmitCode, Direction, Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return recordset;
-}
-
-/**
- * Compute in/out inconsistency metrics:
- *   - Floor-wise: total person-days, inconsistent person-days, percentage
- *   - Employee-wise: total days with any event, inconsistent days, percentage
- *
- * A “person-day” is defined as a unique combination of:
- *   { personId, date, floor }.
- * For each person-day:
- *   - We look for the earliest InDirection swipe and the latest OutDirection swipe.
- *   - If either is missing, we mark that person-day as “inconsistent.”
- *
- * Only events whose (normalized) door + direction key appears in the strictDoorList are used.
- *
- * @param {Array} events – array of swipe-event objects from fetchHistoricalEvents()
- * @returns {Object} {
- *   floorInconsistency: [
- *     { floor, totalPersonDays, inconsistentPersonDays, inconsistencyPercentage }
- *   ],
- *   employeeInconsistency: [
- *     { employeeId, totalDays, inconsistentDays, inconsistencyPercentage }
- *   ]
- * }
- */
-function computeInOutInconsistency(events) {
-  // Data structures for grouping
-  // Key for person-day-floor: `${personId}__${date}__${floor}`
-  const groupMap = new Map();
-
-  // For employee-level grouping: key `${personId}__${date}` → { isInconsistent: boolean }
-  const empDayMap = new Map();
-
-  // FIRST PASS: Filter & bucket events
-  events.forEach(evt => {
-    const dateOnly = evt.Dateonly;           // 'YYYY-MM-DD'
-    const direction = evt.Direction.trim();   // 'InDirection' or 'OutDirection'
-    const rawDoor = evt.Door.trim();
-    // 1) strip time suffix
-    const doorNoTime = stripTimeSuffix(rawDoor);
-    // 2) build normalized key to check if this door+direction is “strict”
-    const normKey = normalizeKey(doorNoTime, direction);
-    if (!normalizedMonitoredKeys.has(normKey)) return;
-
-    // Determine personId (prefer GUID, fallback to EmployeeID, then CardNumber)
-    const personId = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
-    if (!personId) return; // skip if no identifier
-
-    // Determine floor
-    const floor = extractFloor(doorNoTime);
-
-    // Build group key
-    const groupKey = `${personId}__${dateOnly}__${floor}`;
-
-    // If not seen yet, initialize:
-    if (!groupMap.has(groupKey)) {
-      groupMap.set(groupKey, {
-        personId,
-        dateOnly,
-        floor,
-        firstInTime: null,   // earliest InDirection (HH:mm:ss)
-        lastOutTime: null    // latest OutDirection (HH:mm:ss)
-      });
-    }
-
-    const bucket = groupMap.get(groupKey);
-    const swipeTime = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
-
-    if (direction === 'InDirection') {
-      if (
-        !bucket.firstInTime ||
-        swipeTime < bucket.firstInTime
-      ) {
-        bucket.firstInTime = swipeTime;
-      }
-    } else if (direction === 'OutDirection') {
-      if (
-        !bucket.lastOutTime ||
-        swipeTime > bucket.lastOutTime
-      ) {
-        bucket.lastOutTime = swipeTime;
-      }
-    }
-  });
-
-  // SECOND PASS: Determine inconsistency per group, and accumulate for floor & employee-day
-  // Data structures for aggregation:
-  // floor → { totalPersonDays: Number, inconsistentPersonDays: Number }
-  const floorAgg = new Map();
-  // employeeId → { totalDays: Set<date>, inconsistentDays: Set<date> }
-  const empAgg = new Map();
-
-  groupMap.forEach(bucket => {
-    const { personId, dateOnly, floor, firstInTime, lastOutTime } = bucket;
-    const isInconsistent = !(firstInTime && lastOutTime);
-
-    // 1) Floor-level aggregation
-    if (!floorAgg.has(floor)) {
-      floorAgg.set(floor, {
-        totalPersonDays: 0,
-        inconsistentPersonDays: 0
-      });
-    }
-    const fAgg = floorAgg.get(floor);
-    fAgg.totalPersonDays += 1;
-    if (isInconsistent) {
-      fAgg.inconsistentPersonDays += 1;
-    }
-
-    // 2) Employee-level aggregation
-    // Employee “day” key:
-    const empDayKey = `${personId}__${dateOnly}`;
-    if (!empAgg.has(personId)) {
-      empAgg.set(personId, {
-        totalDaysSet: new Set(),
-        inconsistentDaysSet: new Set()
-      });
-    }
-    const eAgg = empAgg.get(personId);
-    eAgg.totalDaysSet.add(dateOnly);
-    if (isInconsistent) {
-      eAgg.inconsistentDaysSet.add(dateOnly);
-    }
-  });
-
-  // BUILD RESULT ARRAYS
-  const floorInconsistency = [];
-  floorAgg.forEach((vals, floor) => {
-    const { totalPersonDays, inconsistentPersonDays } = vals;
-    const pct =
-      totalPersonDays > 0
-        ? (inconsistentPersonDays / totalPersonDays) * 100
-        : 0;
-    floorInconsistency.push({
-      floor,
-      totalPersonDays,
-      inconsistentPersonDays,
-      inconsistencyPercentage: parseFloat(pct.toFixed(2))
-    });
-  });
-
-  const employeeInconsistency = [];
-  empAgg.forEach((vals, personId) => {
-    const totalDays = vals.totalDaysSet.size;
-    const inconsistentDays = vals.inconsistentDaysSet.size;
-    const pct =
-      totalDays > 0 ? (inconsistentDays / totalDays) * 100 : 0;
-    employeeInconsistency.push({
-      employeeId: personId,
-      totalDays,
-      inconsistentDays,
-      inconsistencyPercentage: parseFloat(pct.toFixed(2))
-    });
-  });
-
-  return {
-    asOf: new Date().toISOString(),
-    floorInconsistency,
-    employeeInconsistency
-  };
-}
-
-/**
- * Controller endpoint: GET /api/denver/inout-inconsistency
- *
- * Fetches all strict-door swipe events from Jan 1, 2025 to now,
- * computes floor-wise and employee-wise in/out inconsistency trends,
- * and returns a JSON payload.
- */
-exports.getDenverInOutInconsistency = async (req, res) => {
-  try {
-    // Ensure the pool is ready
-    await denver.poolPromise;
-
-    // 1) Fetch historical events
-    const events = await fetchHistoricalEvents();
-
-    // 2) Compute inconsistency metrics
-    const result = computeInOutInconsistency(events);
-
-    // 3) Return JSON response
-    res.status(200).json(result);
-  } catch (err) {
-    console.error('Error computing in/out inconsistency:', err);
-    res.status(500).json({
-      error: 'Failed to compute in/out inconsistency'
-    });
-  }
-};
 
