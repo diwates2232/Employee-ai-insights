@@ -1,3 +1,6 @@
+app.use('/api', occupancyDenverRoutes);    // /api/live-occupancy-denver and /api/inout-inconsistency-denver
+
+
 This is my Previous Server.js file then Give me Updaed Server.js File carefully ,
 Dont make Unneccesarry changres inn  this file
 
