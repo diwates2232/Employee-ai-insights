@@ -1,3 +1,110 @@
+
+// src/pages/ErtPage.jsx
+
+import React from 'react';
+import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import ERTOverview from '../components/ERTOverview';
+
+/**
+ * A standalone page that only renders the ERTOverview component,
+ * with a "← Back to Dashboard" link at the top.
+ */
+export default function ErtPage({ ertStatus }) {
+  return (
+    <Container fluid className="py-4">
+      {/* Back‐to‐Dashboard link */}
+      <div className="mb-3">
+        <Button as={Link} to="/" variant="secondary">
+          ← Back to Dashboard
+        </Button>
+      </div>
+
+      {/* ERTOverview (re‐use existing component) */}
+      <Row className="g-2">
+        <Col>
+          <ERTOverview ertStatus={ertStatus} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+--- a/src/App.js
++++ b/src/App.js
+@@ -1,6 +1,7 @@
+ import React, { useEffect, useState } from 'react';
+ import { Container, Navbar, Nav } from 'react-bootstrap';
+ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
++import ErtPage from './pages/ErtPage';
+
+ import ZoneDetailsTable from './components/ZoneDetailsTable';
+ import DashboardHome    from './pages/DashboardHome';
+
+@@ -30,13 +31,17 @@ function App() {
+           <Navbar.Brand as={Link} to="/" className="wu-brand">
+             Live Occupancy — Western Union Pune
+           </Navbar.Brand>
++          {/* Add ERT nav link */}
+           <Nav className="ms-auto align-items-center">
+             <Nav.Link as={Link} to="/" className="nav-item-infographic">
+               Dashboard
+             </Nav.Link>
+             <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+               Details
+             </Nav.Link>
++            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
++              ERT Status
++            </Nav.Link>
+             <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+               <FaSun />
+             </Nav.Link>
+           </Nav>
+         </Navbar>
+
+         <Container fluid className="mt-2">
+           <Routes>
+             <Route
+@@ -56,6 +61,13 @@ function App() {
+                 personnelBreakdown={personnelBreakdown}
+                 totalVisitedToday={totalVisitedToday}
+                 personnelSummary={personnelSummary}
+                 visitedToday={visitedToday}
+                 ertStatus={ertStatus}
+               />
+             }
+           />
+             <Route
+               path="/details"
+               element={<ZoneDetailsPage detailsData={detailsData} />}
+             />
++            {/* ERT STATUS ROUTE */}
++            <Route
++              path="/ert"
++              element={<ErtPage ertStatus={ertStatus} />}
++            />
+           </Routes>
+         </Container>
+       </div>
+     </BrowserRouter>
+   );
+ }
+
+ export default App;
+
+
+
+
+
+
+
+
+
 C:\Users\W0024618\Desktop\swipeData\client\src\pages\DashboardHome.jsx
 
 import React from 'react';
