@@ -1,4 +1,220 @@
 /* -------------------------------------------------------------------
+   src/App.css – Animated WU-Style Background “live-theme”
+   ------------------------------------------------------------------- */
+
+html, body, #root, .live-theme {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #f0f0f0; /* off-white text */
+}
+
+/* 1. animated gradient keyframes
+   • Cycles between deep charcoal and WU yellow accents */
+/* Feel free to tweak timing (e.g. 20s) or color stops */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 50% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
+    background-position: 50% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 2. Apply to the container div in App.js */
+.live-theme {
+  /* A linear gradient that cycles:
+     – Very dark charcoal (#0b0b0b)
+     – Deep gray (#1a1a1a)
+     – WU Yellow (#FFC72C) as a bright highlight
+     – Back to dark */
+  background: linear-gradient(
+    270deg,
+    #0b0b0b 0%,
+    #1a1a1a 25%,
+    #FFC72C 50%,
+    #1a1a1a 75%,
+    #0b0b0b 100%
+  );
+  background-size: 600% 600%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* 3. Navbar styling (black + yellow accent) */
+.navbar {
+  background-color: #000 !important;
+  border-bottom: 2px solid #FFC72C; /* thin WU yellow border */
+}
+
+.navbar .navbar-brand.wu-brand {
+  /* clip text with a subtle black→yellow→black gradient */
+  background: linear-gradient(90deg, #000, #FFC72C, #000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.navbar .nav-link {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus,
+.navbar .nav-link.active {
+  color: #FFC72C !important;
+}
+
+/* 4. Container (page content) padding */
+.container-fluid.mt-2 {
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+/* 5. Buttons (Back buttons, etc.) */
+.btn-secondary {
+  background-color: #2b2b2b;
+  border-color: #444;
+  color: #FFC72C;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background-color: #3a3a3a;
+  border-color: #666;
+  color: #fff;
+}
+
+/* 6. Cards (ERTOverview, SummaryCards, etc.) */
+.card {
+  background-color: #1b1b1b;
+  border: 1px solid #2f2f2f;
+  color: #e0e0e0;
+}
+
+.card-header.bg-dark {
+  background-color: #111 !important;
+  color: #FFC72C !important;
+  border-bottom: 1px solid #333;
+}
+
+.list-group-item.bg-dark {
+  background-color: #1b1b1b !important;
+  color: #e0e0e0;
+  border-bottom: 1px solid #2f2f2f;
+}
+
+/* 7. Chart containers (FloorOccupancyChart, SummaryChart, etc.) */
+.floor-occupancy-chart,
+.summary-chart,
+.personnel-donut-chart,
+.summary-cards-wrapper {
+  background: rgba(17, 17, 17, 0.85);
+  border: 1px solid #2f2f2f;
+  border-radius: 6px;
+  padding: 1rem;
+  color: #f0f0f0;
+}
+
+/* 8. Tables (ZoneDetailsTable) */
+.table {
+  background-color: #1f1f1f;
+  color: #e0e0e0;
+}
+
+.table thead th {
+  background-color: #111;
+  color: #FFC72C;
+  border-bottom: 2px solid #333;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #2f2f2f;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(255, 199, 44, 0.08);
+}
+
+/* 9. ERTOverview specific tweaks */
+.ert-overview .card {
+  background-color: #1e1e1e;
+  border: 1px solid #2e2e2e;
+}
+
+.ert-overview .card .list-group-item {
+  background-color: #1e1e1e !important;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+/* Badge colors */
+.badge-success {
+  background-color: #009e60 !important; /* green “available” */
+}
+
+.badge-danger {
+  background-color: #a80000 !important; /* red “away” */
+}
+
+/* 10. Links (global override) */
+a {
+  color: #FFC72C;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* 11. Scrollbar styling (Chrome/Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  background-color: #111;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 199, 44, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 199, 44, 0.6);
+}
+
+/* 12. Responsive tweaks */
+@media (max-width: 768px) {
+  .navbar .nav-link {
+    font-size: 0.9rem;
+  }
+  .card {
+    margin-bottom: 1rem;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+/* -------------------------------------------------------------------
    Western Union–Inspired “Hybrid Dark” Theme
    • Base colors: Black (#000000) + WU Yellow (#FFC72C)
    • Accents: gray, light‐black, and translucent overlays
