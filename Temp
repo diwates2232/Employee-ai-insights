@@ -1,3 +1,199 @@
+/* -------------------------------------------------------------------
+   Western Union–Inspired “Hybrid Dark” Theme
+   • Base colors: Black (#000000) + WU Yellow (#FFC72C)
+   • Accents: gray, light‐black, and translucent overlays
+   • Applies to Navbar, background, cards, text, links, etc.
+   ------------------------------------------------------------------- */
+
+/* 1. Root background: a very dark charcoal with subtle gradient */
+body,
+html,
+.dark-theme {
+  background: linear-gradient(
+    to bottom,
+    #0b0b0b 0%,
+    #1a1a1a 70%,
+    #111 100%
+  );
+  color: #f0f0f0; /* off‐white text */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans‐serif;
+}
+
+/* 2. Navbar customization */
+.navbar {
+  background: #000; /* pure black */
+  border-bottom: 2px solid #FFC72C; /* WU yellow stripe */
+}
+
+.navbar .navbar-brand.wu-brand {
+  color: #FFC72C !important; /* WU yellow */
+  font-weight: bold;
+  background: linear-gradient(90deg, #000 0%, #FFC72C 50%, #000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.navbar .nav-link {
+  color: rgba(255, 255, 255, 0.80) !important;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus,
+.navbar .nav-link.active {
+  color: #FFC72C !important;
+}
+
+/* 3. Container (page content) */
+.container-fluid.mt-2 {
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+/* 4. Buttons (e.g. “← Back to Dashboard”) */
+.btn-secondary {
+  background-color: #333;
+  border-color: #555;
+  color: #FFC72C;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background-color: #444;
+  border-color: #666;
+  color: #fff;
+}
+
+/* 5. Cards (used in ERTOverview, SummaryCards, etc.) */
+.card {
+  background-color: #1b1b1b;
+  border: 1px solid #2f2f2f;
+  color: #e0e0e0;
+}
+
+.card-header.bg-dark {
+  background-color: #111 !important;
+  color: #FFC72C !important;
+  border-bottom: 1px solid #333;
+}
+
+.list-group-item.bg-dark {
+  background-color: #1b1b1b !important;
+  color: #e0e0e0;
+  border-bottom: 1px solid #2f2f2f;
+}
+
+/* 6. Summary cards / charts containers */
+.summary‐cards‐wrapper,
+.floor‐occupancy‐chart,
+.summary‐chart,
+.personnel‐donut‐chart {
+  background: rgba(17, 17, 17, 0.8);
+  border: 1px solid #2f2f2f;
+  border-radius: 6px;
+  padding: 1rem;
+  color: #f0f0f0;
+}
+
+/* 7. Table styling (ZoneDetailsTable, ZoneDetailsPage) */
+.table {
+  background-color: #1f1f1f;
+  color: #e0e0e0;
+}
+
+.table thead th {
+  background-color: #111;
+  color: #FFC72C;
+  border-bottom: 2px solid #333;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #2f2f2f;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(255, 199, 44, 0.08);
+}
+
+/* 8. ERTOverview adjustments */
+.ert‐overview .card {
+  /* Slightly tinted dark, to stand out */
+  background-color: #1d1d1d;
+  border: 1px solid #2e2e2e;
+}
+
+.ert‐overview .card .list-group-item {
+  background-color: #1d1d1d !important;
+  border: none;
+}
+
+/* Badge accent colors */
+.badge-success {
+  background-color: #009e60; /* green-ish “available” */
+}
+
+.badge-danger {
+  background-color: #a80000; /* deep red for “away” */
+}
+
+/* 9. Links / text overrides */
+a {
+  color: #FFC72C;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* 10. Scrollbars (Chrome/Edge) – subtle dark */
+::-webkit-scrollbar {
+  width: 8px;
+  background-color: #111;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 199, 44, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 199, 44, 0.6);
+}
+
+/* 11. Responsive padding tweaks */
+@media (max-width: 768px) {
+  .navbar .nav-link {
+    font-size: 0.9rem;
+  }
+  .card {
+    margin-bottom: 1rem;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read below file carefully , now We are display theme is dark only cam you make Reflected back theme like 
 use Western union theme colour and mix all colours to make theme mix up colours like bcak dark to faint like mix all  WU colours dark to faint and amke attractive theme .make this theme is live.theme 
 
