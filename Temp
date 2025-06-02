@@ -1,3 +1,136 @@
+// controllers/liveOccupancyController.js
+
+  /**
+   * Map a swipe’s door+direction → zone.
+   * 1) explicit doorZoneMap lookup
+   * 2) if APAC_IN_PUN_* extract parenthesized or split zone
+   * 3) if OutDirection & not "Out of office" → mark as "… - Outer Area"
+   * 4) warn & return "Unknown Zone"
+   */
+  function mapDoorToZone(rawDoor, rawDir) {
+    const key = normalizeZoneKey(rawDoor, rawDir);
+    let zone = doorZoneMap[key];
+
+    // auto-extract for Pune doors
+    if (!zone && String(rawDoor||'').toUpperCase().startsWith('APAC_IN_PUN_')) {
+      const rest = rawDoor.toUpperCase().slice('APAC_IN_PUN_'.length);
+      const paren = rest.match(/\(([^)]+)\)/);
+      if (paren) {
+-       zone = paren[1].toUpperCase() === paren[1]
+-         ? `${paren[1]} ZONE`
+-         : `${paren[1][0].toUpperCase()}${paren[1].slice(1).toLowerCase()} Zone`;
++       // Always title-case the parenthesized word, then add " Zone"
++       const color = paren[1].toLowerCase();
++       const title = color.charAt(0).toUpperCase() + color.slice(1);
++       zone = `${title} Zone`;
+      } else {
+        const parts = rest.split(/[\s_]+/).filter(Boolean);
+        const maybe = parts[1]||parts[0];
+        if (/RECEPTION/.test(maybe)) {
+          zone = 'Reception Area';
+        } else {
+          const z = `${maybe[0].toUpperCase()}${maybe.slice(1).toLowerCase()}`;
+          zone = z.includes('Zone') ? z : `${z} Zone`;
+        }
+      }
+    }
+
+    if (!zone) {
+      if (!warnedKeys.has(key)) {
+        console.warn('⛔ Unmapped door-zone key:', key);
+        warnedKeys.add(key);
+      }
+      return 'Unknown Zone';
+    }
+
+    // any OutDirection that isn’t the real “Out of office” → outer‐area
+    if (rawDir === 'OutDirection' && zone !== 'Out of office') {
+      const base = zone.replace(/\s+Zone$/i,'');
+      return `${base}`;
+    }
+
+    return zone;
+  }
+
+
+  async function fetchNewEvents(since) {
+    // await the shared pool promise instead of poolConnect
+    const pool = await getPool();
+    const req  = pool.request();
+    req.input('since', sql.DateTime2, since);
+
+-   const { recordset } = await req.query(`
+-    WITH CombinedQuery AS (
+-      SELECT
+-        DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
++   const { recordset } = await req.query(`
++    WITH CombinedQuery AS (
++      SELECT
++        -- subtract MessageLocaleOffset to arrive at local IST time
++        DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
+         t1.ObjectName1,
+         CASE
+           WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+           ELSE CAST(t2.Int1 AS NVARCHAR)
+         END AS EmployeeID,
+         t1.ObjectIdentity1 AS PersonGUID,
+         t3.Name AS PersonnelType,
+         COALESCE(
+           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
+           TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
+           sc.value
+         ) AS CardNumber,
+         t5a.value AS AdmitCode,
+         t5d.value AS Direction,
+-        t1.ObjectName2 AS Door
++        t1.ObjectName2 AS Door
+       FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
+       LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
+       LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
+       LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5a
+         ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+       LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5d
+         ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
+       LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
+         ON t1.XmlGUID = t_xml.GUID
+       LEFT JOIN (
+         SELECT GUID, value
+         FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
+         WHERE Name IN ('Card','CHUID')
+       ) sc ON t1.XmlGUID = sc.GUID
+       WHERE
+         t1.MessageType     = 'CardAdmitted'
+         AND t1.PartitionName2 = 'APAC.Default'
+         AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+     )
+     SELECT
+       LocaleMessageTime,
+       CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+       CONVERT(VARCHAR(8) , LocaleMessageTime, 108) AS Swipe_Time,
+       EmployeeID,
+       PersonGUID,
+       ObjectName1,
+       PersonnelType,
+       CardNumber,
+       AdmitCode,
+       Direction,
+       Door
+     FROM CombinedQuery
+     ORDER BY LocaleMessageTime ASC;
+   `);
+
+    return recordset;
+  }
+
+
+
+
+
+
+
+
+
+
 Read this Controller File Carefully.
 i have Review some Issue in this file .
 First issue is 
