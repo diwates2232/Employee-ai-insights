@@ -1,476 +1,233 @@
-// src/App.js
+Read below file carefully and Silve the issue ,
+also we are getting many time same issue , i want never disconnect this pool.
 
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
 
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import DashboardHome    from './pages/DashboardHome';
-import ErtPage          from './pages/ErtPage';
+Server running at http://localhost:5000
+✅ MSSQL pool connected
+✅ Denver MSSQL pool connected
+❌ Denver MSSQL pool error: ConnectionError: Failed to connect to SRVWUDEN0891V:1433 in 3000ms
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\connection-pool.js:85:17
+    at Connection.onConnect (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:849:9)
+    at Object.onceWrapper (node:events:633:26)
+    at Connection.emit (node:events:518:28)
+    at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+    at Connection.connectTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1222:10)
+    at Timeout._onTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1167:12)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7) {
+  code: 'ETIMEOUT',
+  originalError: ConnectionError: Failed to connect to SRVWUDEN0891V:1433 in 3000ms
+      at Connection.connectTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1222:26)
+      at Timeout._onTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1167:12)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    code: 'ETIMEOUT'
+  }
+}
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
 
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
+ConnectionError: Failed to connect to SRVWUDEN0891V:1433 in 3000ms
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\mssql\lib\tedious\connection-pool.js:85:17
+    at Connection.onConnect (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:849:9)
+    at Object.onceWrapper (node:events:633:26)
+    at Connection.emit (node:events:518:28)
+    at Connection.emit (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:970:18)
+    at Connection.connectTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1222:10)
+    at Timeout._onTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1167:12)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7) {
+  code: 'ETIMEOUT',
+  originalError: ConnectionError: Failed to connect to SRVWUDEN0891V:1433 in 3000ms
+      at Connection.connectTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1222:26)
+      at Timeout._onTimeout (C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tedious\lib\connection.js:1167:12)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    code: 'ETIMEOUT'
+  }
 }
 
-function App() {
-  const [summaryData, setSummaryData]             = useState([]);
-  const [detailsData, setDetailsData]             = useState({});
-  const [floorData, setFloorData]                 = useState([]);
-  const [zoneBreakdown, setZoneBreakdown]         = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus]                 = useState({});
+Node.js v22.15.0
+PS C:\Users\W0024618\Desktop\swi
 
-  useEffect(() => {
-    const es = new EventSource('http://10.199.22.57:5000/api/live-occupancy');
-    es.onmessage = e => {
-      try {
-        const p = JSON.parse(e.data);
-        setSummaryData(p.summary           || []);
-        setDetailsData(p.details           || {});
-        setFloorData(p.floorBreakdown      || []);
-        setZoneBreakdown(p.zoneBreakdown   || []);
-        setPersonnelBreakdown(p.personnelBreakdown || []);
-        setTotalVisitedToday(p.totalVisitedToday || 0);
-        setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(p.ertStatus                    || {});
-      } catch {
-        console.error('SSE parse error');
+
+
+
+// config/db.js
+
+const sql    = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  connectionTimeout: 30000,    // 30s to establish
+  requestTimeout:    0,        // no timeout on queries
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  },
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  }
+};
+
+let poolPromise = null;
+
+/**
+ * Get (and if needed, establish) the MSSQL connection pool.
+ * Retries up to `attempts` times on failure.
+ */
+async function getPool(attempts = 3) {
+  if (poolPromise) {
+    return poolPromise;
+  }
+
+  poolPromise = (async () => {
+    try {
+      const pool = await sql.connect(config);
+      console.log('✅ MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ MSSQL pool connection failed:', err);
+      poolPromise = null;  // reset for retry
+      if (attempts > 0) {
+        console.log(`⏳ Retrying MSSQL connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getPool(attempts - 1);
       }
-    };
-    es.onerror = err => {
-      console.error('SSE error', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
+      throw err;
+    }
+  })();
 
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Pune
-          </Navbar.Brand>
+  // Listen for async errors on the pool
+  sql.on('error', err => {
+    console.error('❌ MSSQL global error:', err);
+  });
 
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-
-            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
-              Details
-            </Nav.Link>
-
-            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
-              ERT Status
-            </Nav.Link>
-
-            {/* ← NEW: Link out to Denver Dashboard (opens in new tab) */}
-            <Nav.Link href="http://localhost:3001" target="_blank" rel="noopener" className="nav-item-infographic">
-              Denver Dashboard
-            </Nav.Link>
-
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-2">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  zoneSummaryData={summaryData}
-                  detailsData={detailsData}
-                  floorData={floorData}
-                  zoneBreakdown={zoneBreakdown}
-                  personnelBreakdown={personnelBreakdown}
-                  totalVisitedToday={totalVisitedToday}
-                  personnelSummary={personnelSummary}
-                  visitedToday={visitedToday}
-                  ertStatus={ertStatus}
-                />
-              }
-            />
-            <Route
-              path="/details"
-              element={<ZoneDetailsPage detailsData={detailsData} />}
-            />
-            <Route
-              path="/ert"
-              element={<ErtPage ertStatus={ertStatus} />}
-            />
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
+  return poolPromise;
 }
 
-export default App;
+// Keep‐alive ping to prevent idle timeouts
+setInterval(async () => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 MSSQL keep‐alive ping');
+  } catch (err) {
+    console.error('⚠️ MSSQL keep‐alive failed, resetting pool:', err);
+    poolPromise = null;  // force reconnect on next use
+  }
+}, 5 * 60 * 1000); // every 5 minutes
+
+module.exports = { sql, getPool };
 
 
 
 
 
-// src/App.js
 
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
+// config/siteConfig.js
 
-import DashboardHome    from './pages/DashboardHome';
-import FloorDetailsPage from './pages/FloorDetailsPage';
+const { sql, getPool } = require('./db');
 
-import './App.css';
+// Pune uses the shared getPool():
+const punePoolPromise = getPool();
 
-export default function App() {
-  // live data states
-  const [floorData, setFloorData]                   = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
-  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
-  const [floorInOutSummary, setFloorInOutSummary]   = useState([]);
+// Denver pool factory
+const denverConfig = {
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  },
+  pool: {
+    max: 5,
+    min: 0,
+    idleTimeoutMillis: 3000
+  },
+  connectionTimeout: 3000,
+  requestTimeout:    0
+};
 
-  useEffect(() => {
-    const es = new EventSource('http://10.199.22.57:5000/api/live-occupancy-denver');
-    es.onmessage = e => {
-      try {
-        const p = JSON.parse(e.data);
-        setFloorData(p.floorBreakdown || []);
-        setPersonnelBreakdown(p.personnelBreakdown || []);
-        setTotalVisitedToday(p.totalVisitedToday || 0);
-        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setFloorInOutSummary(p.floorInOutSummary || []);
-      } catch (err) {
-        console.error('SSE parse error:', err);
+let denverPoolPromise = null;
+async function getDenverPool(attempts = 3) {
+  if (denverPoolPromise) return denverPoolPromise;
+
+  denverPoolPromise = (async () => {
+    const pool = new sql.ConnectionPool(denverConfig);
+
+    // Attach error listener to this pool instance
+    pool.on('error', err => {
+      console.error('❌ Denver MSSQL pool error:', err);
+      // Reset so that next request will recreate it
+      denverPoolPromise = null;
+    });
+
+    try {
+      await pool.connect();
+      console.log('✅ Denver MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ Denver pool connection failed:', err);
+      denverPoolPromise = null;
+      if (attempts > 0) {
+        console.log(`⏳ Retrying Denver pool connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getDenverPool(attempts - 1);
       }
-    };
-    es.onerror = err => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
+      throw err;
+    }
+  })();
 
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4 navbar-infographic">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Denver
-          </Navbar.Brand>
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-
-            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
-              Floor Details
-            </Nav.Link>
-
-            {/* ← NEW: Link out to Pune Dashboard (opens in new tab) */}
-            <Nav.Link href="http://localhost:3000" target="_blank" rel="noopener" className="nav-item-infographic">
-              Pune Dashboard
-            </Nav.Link>
-
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun color="#FFC72C" />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-4">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  personnelSummary={personnelSummary}
-                  totalVisitedToday={totalVisitedToday}
-                  visitedToday={visitedToday}
-                  floorData={floorData}
-                  personnelBreakdown={personnelBreakdown}
-                  floorInOutSummary={floorInOutSummary}
-                />
-              }
-            />
-            <Route
-              path="/floor-details"
-              element={
-                <FloorDetailsPage
-                  floorData={floorData}
-                  floorInOutSummary={floorInOutSummary}
-                />
-              }
-            />
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
+  return denverPoolPromise;
 }
 
+// Optional keep‐alive for Denver
+setInterval(async () => {
+  try {
+    const pool = await getDenverPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 Denver keep‐alive ping');
+  } catch (err) {
+    console.error('⚠️ Denver keep‐alive failed:', err);
+    denverPoolPromise = null;
+  }
+}, 5 * 60 * 1000);
+
+module.exports = {
+  pune: {
+    name:        'Pune',
+    poolPromise: punePoolPromise,
+    sql
+  },
+  denver: {
+    name:        'Denver',
+    poolPromise: getDenverPool(),
+    sql
+  }
+};
 
 
 
 
 
+.env
 
-
-
-C:\Users\S326131HQ\Desktop\SwipeData\client\src\App.js
-
-// src/App.js
-
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
-
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import DashboardHome    from './pages/DashboardHome';
-import ErtPage from './pages/ErtPage';
-
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  return (
-    <>
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-      </div>
-      <ZoneDetailsTable data={detailsData} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData]             = useState([]);
-  const [detailsData, setDetailsData]             = useState({});
-  const [floorData, setFloorData]                 = useState([]);
-  const [zoneBreakdown, setZoneBreakdown]         = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus]                 = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://10.199.22.57:5000/api/live-occupancy');
-    es.onmessage = e => {
-      try {
-        const p = JSON.parse(e.data);
-        setSummaryData(p.summary           || []);
-        setDetailsData(p.details           || {});
-        setFloorData(p.floorBreakdown      || []);
-        setZoneBreakdown(p.zoneBreakdown   || []);
-        setPersonnelBreakdown(p.personnelBreakdown || []);
-        setTotalVisitedToday(p.totalVisitedToday || 0);
-        setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(p.ertStatus                    || {});
-      } catch {
-        console.error('SSE parse error');
-      }
-    };
-    es.onerror = err => {
-      console.error('SSE error', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Pune
-          </Navbar.Brand>
-
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
-              Details
-            </Nav.Link>
-
-            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
-              ERT Status
-            </Nav.Link>
-
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-2">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  zoneSummaryData={summaryData}
-                  detailsData={detailsData}
-                  floorData={floorData}
-                  zoneBreakdown={zoneBreakdown}
-                  personnelBreakdown={personnelBreakdown}
-                  totalVisitedToday={totalVisitedToday}
-                  personnelSummary={personnelSummary}
-                  visitedToday={visitedToday}
-                  ertStatus={ertStatus}
-                />
-              }
-            />
-            <Route
-              path="/details"
-              element={<ZoneDetailsPage detailsData={detailsData} />}
-            />
-            {/* ERT STATUS ROUTE */}
-            <Route
-              path="/ert"
-              element={<ErtPage ertStatus={ertStatus} />}
-            />
-
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-
-
-
-C:\Users\S326131HQ\Desktop\SwipeData\client-denver\src\App.js
-
-
-
-
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
-
-import DashboardHome    from './pages/DashboardHome';
-import FloorDetailsPage from './pages/FloorDetailsPage';
-
-import './App.css';
-
-export default function App() {
-  // live data states
-  // const [summaryData, setSummaryData]               = useState([]);
-  const [floorData, setFloorData]                   = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
-  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
-  const [floorInOutSummary, setFloorInOutSummary]   = useState([]); // ← NEW
-
-  useEffect(() => {
-    const es = new EventSource('http://10.199.22.57:5000/api/live-occupancy-denver');
-    es.onmessage = e => {
-      try {
-        const p = JSON.parse(e.data);
-        // setSummaryData(p.summary || []);
-        setFloorData(p.floorBreakdown || []);
-        setPersonnelBreakdown(p.personnelBreakdown || []);
-        setTotalVisitedToday(p.totalVisitedToday || 0);
-        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setFloorInOutSummary(p.floorInOutSummary || []); // ← NEW
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-    es.onerror = err => {
-      console.error('SSE error:', err);
-      es.close();
-    };
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4 navbar-infographic">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Denver
-          </Navbar.Brand>
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-            <Nav.Link as={Link} to="/floor-details" className="nav-item-infographic">
-              Floor Details
-            </Nav.Link>
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun color="#FFC72C" />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-4">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  personnelSummary={personnelSummary}
-                  totalVisitedToday={totalVisitedToday}
-                  visitedToday={visitedToday}
-                  floorData={floorData}
-                  personnelBreakdown={personnelBreakdown}
-                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
-                />
-              }
-            />
-            <Route
-              path="/floor-details"
-              element={
-                <FloorDetailsPage
-                  floorData={floorData}
-                  floorInOutSummary={floorInOutSummary}  // ← PASS DOWN
-                />
-              }
-            />
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
-}
+DB_SERVER=SRVWUPNQ0986V
+DB_USER=GSOC_Test
+DB_PASSWORD=Westernuniongsoc@2025
+DB_DATABASE=ACVSUJournal_00010020
+PORT=5000
 
 
 
