@@ -1,3 +1,58 @@
+// -------------------------------
+// data/doorZoneMap.js
+// -------------------------------
+
+const doorZoneMap = {
+  // … your existing entries …
+
+  // 2nd-Floor / Reception-Workstation
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR___INDIRECTION":    "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR___OUTDIRECTION":   "Out of office",
+
+  // 2nd-Floor / Lift-Lobby→Reception
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR___INDIRECTION": "2nd Floor, Pune",
+  "APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR___OUTDIRECTION":"2nd Floor, Pune",
+
+  // Podium / Red (ST2, ST1 variants)
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED)___INDIRECTION":                 "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___OUTDIRECTION":               "Red Zone - Outer Area",
+
+  // Podium / Yellow (MDF, Repro, Testing, Control Panel, Preactivation)
+  "APAC_IN_PUN_PODIUM_YELLOW_MDF RESTRICTED DOOR___INDIRECTION":       "Yellow Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_REPRO STORE-DOOR RESTRICTED DOOR___INDIRECTION":  "Yellow Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_TESTING LAB-DOOR RESTRICTED DOOR___INDIRECTION":   "Yellow Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_CONTROL PANEL ROOM-DOOR RESTRICTED DOOR___INDIRECTION": "Yellow Zone",
+  "APAC_IN_PUN_PODIUM_YELLOW_PREACTION ROOM-DOOR RESTRICTED DOOR___INDIRECTION":      "Yellow Zone",
+
+  // Podium / Green (IDF, UPS-entries, Locker-HR)
+  "APAC_IN_PUN_PODIUM_GREEN-_IDF ROOM 1-RESTRICTED DOOR___INDIRECTION":        "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 1-DOOR RESTRICTED DOOR___INDIRECTION":    "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_UPS ENTRY 2-DOOR RESTRICTED DOOR___INDIRECTION":    "Green Zone",
+  "APAC_IN_PUN_PODIUM_GREEN_LOCKER HR STORE 3-DOOR RESTRICTED DOOR___INDIRECTION":"Green Zone",
+
+  // Podium / Orange (IDF3)
+  "APAC_IN_PUN_PODIUM_ORANGE-IDF ROOM 3-RESTRICTED DOOR___INDIRECTION":        "Orange Zone",
+
+  // Podium / GSOC
+  "APAC_IN_PUN_PODIUM_GSOC DOOR RESTRICTED DOOR___INDIRECTION":                "Yellow Zone",
+
+  // 2nd-Floor / UPS/ELEC
+  "APAC_IN_PUN_2NDFLR_UPS/ELEC ROOM RESTRICTED DOOR___INDIRECTION":            "2nd Floor, Pune",
+
+  // 2nd-Floor / IDF (hex-suffix removed)
+  "APAC_IN_PUN_2NDFLR_IDF ROOM_10:05:86 RESTRICTED DOOR___INDIRECTION":        "2nd Floor, Pune"
+};
+
+module.exports = doorZoneMap;
+
+
+
+
+
+
+
+
+
 ⛔ Unmapped door–direction key: APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR___OutDirection
 ⛔ Unmapped door–direction key: APAC_IN_PUN_2NDFLR_LIFTLOBBY TO RECEPTION EMTRY DOOR___InDirection
 ⛔ Unmapped door–direction key: APAC_IN_PUN_2NDFLR_RECPTION TO WORKSTATION DOOR___InDirection
