@@ -1,3 +1,97 @@
+--- a/controllers/liveOccupancyController.js
++++ b/controllers/liveOccupancyController.js
+@@ -17,7 +17,7 @@
+ function normalizeZoneKey(rawDoor, rawDir) {
+   const base = String(rawDoor || '')
+     .trim()
+     .replace(/\s+/g, ' ')
+     .toUpperCase();
+   const dir = rawDir === 'InDirection' ? 'InDirection' : 'OutDirection';
+   return `${base}___${dir}`;
+ }
+
+ /**
+  * Map a swipe’s door+direction → zone.
+  * 1) explicit doorZoneMap lookup
+  * 2) if APAC_IN_PUN_* extract parenthesized or split zone
+  * 3) if OutDirection & not "Out of office" → mark as "… - Outer Area"
+  * 4) warn & return "Unknown Zone"
+  */
+-function mapDoorToZone(rawDoor, rawDir) {
+-  const key = normalizeZoneKey(rawDoor, rawDir);
+-  let zone = doorZoneMap[key];
+-
+-  // auto-extract for Pune doors
+-  if (!zone && String(rawDoor||'').toUpperCase().startsWith('APAC_IN_PUN_')) {
+-    const rest = rawDoor.toUpperCase().slice('APAC_IN_PUN_'.length);
+-    const paren = rest.match(/\(([^)]+)\)/);
+-    if (paren) {
+-
+-       // Always title-case the parenthesized word, then add " Zone"
+-       const color = paren[1].toLowerCase();
+-       const title = color.charAt(0).toUpperCase() + color.slice(1);
+-       zone = `${title} Zone`;
+-
+-    } else {
+-      const parts = rest.split(/[\s_]+/).filter(Boolean);
+-      const maybe = parts[1]||parts[0];
+-      if (/RECEPTION/.test(maybe)) {
+-        zone = 'Reception Area';
+-      } else {
+-        const z = `${maybe[0].toUpperCase()}${maybe.slice(1).toLowerCase()}`;
+-        zone = z.includes('Zone') ? z : `${z} Zone`;
+-      }
+-    }
+-  }
+-
+-  if (!zone) {
+-    if (!warnedKeys.has(key)) {
+-      console.warn('⛔ Unmapped door-zone key:', key);
+-      warnedKeys.add(key);
+-    }
+-    return 'Unknown Zone';
+-  }
+-
+-  // any OutDirection that isn’t the real “Out of office” → outer‐area
+-  if (rawDir === 'OutDirection' && zone !== 'Out of office') {
+-    const base = zone.replace(/\s+Zone$/i,'');
+-    return `${base}`;
+-  }
+-
+-  return zone;
+-}
++function mapDoorToZone(rawDoor, rawDir) {
++  const key = normalizeZoneKey(rawDoor, rawDir);
++  const zone = doorZoneMap[key];
++
++  if (!zone) {
++    if (!warnedKeys.has(key)) {
++      console.warn('⛔ Unmapped door‐zone key:', key);
++      warnedKeys.add(key);
++    }
++    return 'Unknown Zone';
++  }
++
++  // if it’s an OutDirection but not “Out of office,” strip “ Zone” suffix
++  if (rawDir === 'OutDirection' && zone !== 'Out of office') {
++    return zone.replace(/\s+Zone$/i, '');
++  }
++
++  return zone;
++}
+
+
+
+
+
+
+
+
+
+
+
+
+
 Now our HeadCount issue is solve , now issue is there , File by default creates new zone like GSOC Zone , idf zone which are not defined , 
 so always create only defined zone ccarefully,
  check data details,
