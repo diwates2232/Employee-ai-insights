@@ -1,3 +1,19 @@
+const { denver } = require('../config/siteConfig');
+// …
+async function fetchNewEvents(…) {
+  const pool = await denver.poolPromise;
+  const req  = pool.request();
+  // …
+}
+
+
+
+
+p
+
+
+
+
 // config/db.js
 
 const sql    = require('mssql');
