@@ -1,3 +1,16 @@
+// Somewhere in your code where you query Denver:
+const { denver } = require('../config/siteConfig');
+async function fetchDenverData() {
+  const pool = await denver.poolPromise;
+  const result = await pool.request().query('SELECT TOP 10 * FROM SomeTable');
+  return result.recordset;
+}
+
+
+
+
+
+
 // data/doorZoneMap.js
 
 
