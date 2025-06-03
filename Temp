@@ -1,3 +1,122 @@
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+Server running at http://localhost:5000
+✅ MSSQL pool connected
+✅ Denver MSSQL pool connected
+(node:25172) TimeoutOverflowWarning: 2592000000 does not fit into a 32-bit signed integer.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+❌ Denver MSSQL pool error: TimeoutError: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+Error: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+(node:25172) TimeoutOverflowWarning: 2592000000 does not fit into a 32-bit signed integer.
+Timeout duration was set to 1.
+❌ MSSQL global error: TimeoutError: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+Live occupancy SSE error: TimeoutError: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+(node:25172) TimeoutOverflowWarning: 2592000000 does not fit into a 32-bit signed integer.
+Timeout duration was set to 1.
+(node:25172) TimeoutOverflowWarning: 2592000000 does not fit into a 32-bit signed integer.
+Timeout duration was set to 1.
+❌ Denver MSSQL pool error: TimeoutError: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at listOnTimeout (node:internal/timers:549:9)
+    at process.processTimers (node:internal/timers:523:7)
+Error: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at listOnTimeout (node:internal/timers:549:9)
+    at process.processTimers (node:internal/timers:523:7)
+(node:25172) TimeoutOverflowWarning: 2592000000 does not fit into a 32-bit signed integer.
+Timeout duration was set to 1.
+❌ Denver MSSQL pool error: TimeoutError: operation timed out for an unknown reason
+    at C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+Error: operation timed out for an unknown reason
+    at C:\Users\W00
+24618\Desktop\swipeData\employee-ai-insights\node_modules\tarn\dist\PendingOperation.js:17:27
+
+
+
+Read all error carefully and solve this issue ,
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\config\db.js
+
+
+
+const sql    = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  connectionTimeout: 30000,    // 30 s to establish
+  requestTimeout:    0,        // no timeout on queries
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis:    2592000000, // 30 days
+    acquireTimeoutMillis: 2592000000  // 30 days
+  },
+  options: {
+    encrypt: true,
+    trustServerCertificate: true
+  }
+};
+
+let poolPromise = null;
+
+async function getPool(attempts = 3) {
+  if (poolPromise) return poolPromise;
+
+  poolPromise = (async () => {
+    try {
+      const pool = await sql.connect(config);
+      console.log('✅ MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ MSSQL pool connection failed:', err);
+      poolPromise = null;
+      if (attempts > 0) {
+        console.log(`⏳ Retrying MSSQL connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getPool(attempts - 1);
+      }
+      throw err;
+    }
+  })();
+
+  sql.on('error', err => {
+    console.error('❌ MSSQL global error:', err);
+  });
+
+  return poolPromise;
+}
+
+// Keep-alive ping every 5 minutes
+setInterval(async () => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1');
+  } catch (err) {
+    console.error('⚠️ MSSQL keep-alive ping failed:', err);
+  }
+}, 5 * 60 * 1000);
+
+module.exports = { sql, getPool };
+
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\config\siteConfig.js
+
+
 // config/siteConfig.js
 
 const { sql, getPool } = require('./db');
@@ -87,97 +206,6 @@ module.exports = {
 
 
 
-
-
-
-
-
-
-
-
-// config/siteConfig.js
-
-const { sql, getPool } = require('./db');
-
-// Pune uses the shared getPool():
-const punePoolPromise = getPool();
-
-// Denver pool factory
-const denverConfig = {
-  user:     'GSOC_Test',
-  password: 'Westerngsoc@2025',
-  server:   'SRVWUDEN0891V',
-  database: 'ACVSUJournal_00010027',
-  options: {
-    encrypt:               true,
-    trustServerCertificate: true
-  },
-  pool: {
-    max: 5,
-    min: 0,
-    idleTimeoutMillis: 3000
-  },
-  connectionTimeout: 3000,
-  requestTimeout:    0
-};
-
-let denverPoolPromise = null;
-async function getDenverPool(attempts = 3) {
-  if (denverPoolPromise) return denverPoolPromise;
-
-  denverPoolPromise = (async () => {
-    const pool = new sql.ConnectionPool(denverConfig);
-
-    // Attach error listener to this pool instance
-    pool.on('error', err => {
-      console.error('❌ Denver MSSQL pool error:', err);
-      // Reset so that next request will recreate it
-      denverPoolPromise = null;
-    });
-
-    try {
-      await pool.connect();
-      console.log('✅ Denver MSSQL pool connected');
-      return pool;
-    } catch (err) {
-      console.error('❌ Denver pool connection failed:', err);
-      denverPoolPromise = null;
-      if (attempts > 0) {
-        console.log(`⏳ Retrying Denver pool connect (${attempts} left)…`);
-        await new Promise(res => setTimeout(res, 3000));
-        return getDenverPool(attempts - 1);
-      }
-      throw err;
-    }
-  })();
-
-  return denverPoolPromise;
-}
-
-// Optional keep‐alive for Denver
-setInterval(async () => {
-  try {
-    const pool = await getDenverPool();
-    await pool.request().query('SELECT 1');
-    // console.log('🔄 Denver keep‐alive ping');
-  } catch (err) {
-    console.error('⚠️ Denver keep‐alive failed:', err);
-    denverPoolPromise = null;
-  }
-}, 5 * 60 * 1000);
-
-module.exports = {
-  pune: {
-    name:        'Pune',
-    poolPromise: punePoolPromise,
-    sql
-  },
-  denver: {
-    name:        'Denver',
-    poolPromise: getDenverPool(),
-    sql
-  }
-};
 
 
 
