@@ -1,3 +1,255 @@
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage          from './pages/ErtPage'; // ← make sure this file exists
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData]               = useState([]); // array of { zone, count }
+  const [detailsData, setDetailsData]               = useState({}); // { "Zone A": [ … ], "Zone B": [ … ], … }
+  const [floorData, setFloorData]                   = useState([]); // floorBreakdown: [ { floor, total, … }, … ]
+  const [zoneBreakdown, setZoneBreakdown]           = useState([]); // zoneBreakdown: [ { zone, total, … }, … ]
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]); // [ { personnelType, count }, … ]
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                   = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+
+    es.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data);
+
+        // ─── “summary” is the zone+count array, exactly as SummaryChart expects:
+        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
+
+        // ─── “details” is the full door-level list by zone:
+        setDetailsData(p.details || {});
+
+        // ─── “floorBreakdown” is the array that FloorOccupancyChart wants:
+        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
+
+        // ─── “zoneBreakdown” is a more detailed breakdown by zone (unused by DashboardHome’s top charts):
+        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
+
+        // ─── “personnelBreakdown” is the array for the donut chart:
+        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
+
+        // ─── “totalVisitedToday” is a plain number:
+        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
+
+        // ─── “personnelSummary” = { employees: #, contractors: # }:
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+
+        // ─── “visitedToday” = { employees: #, contractors: #, total: # }:
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+
+        // ─── “ertStatus” = { “Site Head”: [ … ], “First Aid Team”: [ … ], … }
+        setErtStatus(p.ertStatus || {});
+      } catch {
+        console.error('SSE parse error');
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('SSE error', err);
+      es.close();
+    };
+
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Overview
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  summaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards         from '../components/SummaryCards';
+import FloorOccupancyChart  from '../components/FloorOccupancyChart';
+import SummaryChart         from '../components/SummaryChart';
+import PersonnelDonutChart  from '../components/PersonnelDonutChart';
+// import ERTOverview        from '../components/ERTOverview';
+
+export default function DashboardHome({
+  summaryData,        // ← array of { zone, count }
+  detailsData,        // ← object of zone → [ … events … ]
+  floorData,          // ← array of { floor, total, byPersonnelType… }
+  zoneBreakdown,      // ← array of { zone, total, byPersonnelType… }
+  personnelBreakdown, // ← array of { personnelType, count }
+  totalVisitedToday,  // ← number
+  personnelSummary,   // ← { employees: #, contractors: # }
+  visitedToday,       // ← { employees: #, contractors: #, total: # }
+  ertStatus           // ← { “Site Head”: [ … ], “First Aid Team”: [ … ], … }
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  // Donut chart data: map into { personnelType, count } shape
+  const chartData = (personnelBreakdown || []).map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      {/* ─── Top-level summary cards ─── */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees   ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      <Row className="g-4">
+        {/* ─── Floor-wise Occupancy ─── */}
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+
+        {/* ─── Zone-wise summary (pie) ─── */}
+        <Col md={4}>
+          <SummaryChart summary={summaryData} />
+        </Col>
+
+        {/* ─── Personnel-type donut ─── */}
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+
+        {/* ─── (Optional) ERT status might go here ─── */}
+        {/* <Col md={12}>
+          <ERTOverview ertStatus={ertStatus} />
+        </Col> */}
+      </Row>
+
+      <footer
+        style={{
+          backgroundColor: '#000',
+          color: '#FFC72C',
+          padding: '1.5rem 0',
+          textAlign: 'center',
+          marginTop: '2rem',
+          borderTop: '2px solid #FFC72C',
+          fontSize: '0.95rem',
+          lineHeight: '1.6'
+        }}
+      >
+        <div>
+          <strong>Global Security Operations Center (GSOC)</strong><br />
+          Live Occupancy dashboard for Western Union Pune — Real-time occupancy,
+          floor activity, and personnel insights.
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          Contact us:&nbsp;
+          <a
+            href="mailto:GSOC-GlobalSecurityOperationCenter.SharedMailbox@westernunion.com"
+            style={{ color: '#FFC72C', textDecoration: 'underline' }}
+          >
+            gsoc@westernunion.com
+          </a>
+          &nbsp;|&nbsp;
+          Landline:&nbsp;
+          <span style={{ color: '#FFC72C' }}>+91-020-67632394</span>
+        </div>
+      </footer>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 Check both file carefully if iossue is there kindly solve this or if need to update backend i will share yoy backend details aslo
 
 // C:\Users\W0024618\Desktop\swipeData\client\src\App.js
