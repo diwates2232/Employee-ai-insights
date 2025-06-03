@@ -1,3 +1,75 @@
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+-   es.onmessage = e => {
+-     try {
+-       const p = JSON.parse(e.data);
+-       setSummaryData(p.summary           || []);
+-       setDetailsData(p.details           || {});
+-       setFloorData(p.floorBreakdown      || []);
+-       setZoneBreakdown(p.zoneBreakdown   || []);
+-       setPersonnelBreakdown(p.personnelBreakdown || []);
+-       setTotalVisitedToday(p.totalVisitedToday || 0);
+-       setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
+-       setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
+-       setErtStatus(p.ertStatus                    || {});
+-     } catch {
+-       console.error('SSE parse error');
+-     }
+-   };
++   es.onmessage = e => {
++     try {
++       const p = JSON.parse(e.data);
++
++       // Force new references on every update:
++       setSummaryData(Array.isArray(p.summary)           ? [...p.summary]           : []);
++       setDetailsData(p.details && typeof p.details === 'object'
++         ? { ...p.details }
++         : {});
++       setFloorData(Array.isArray(p.floorBreakdown)      ? [...p.floorBreakdown]      : []);
++       setZoneBreakdown(Array.isArray(p.zoneBreakdown)   ? [...p.zoneBreakdown]       : []);
++       setPersonnelBreakdown(Array.isArray(p.personnelBreakdown)
++         ? [...p.personnelBreakdown]
++         : []);
++
++       setTotalVisitedToday(typeof p.totalVisitedToday === 'number'
++         ? p.totalVisitedToday
++         : 0);
++
++       setPersonnelSummary(p.personnelSummary && typeof p.personnelSummary === 'object'
++         ? { ...p.personnelSummary }
++         : { employees: 0, contractors: 0 });
++
++       setVisitedToday(p.visitedToday && typeof p.visitedToday === 'object'
++         ? { ...p.visitedToday }
++         : { employees: 0, contractors: 0, total: 0 });
++
++       setErtStatus(p.ertStatus && typeof p.ertStatus === 'object'
++         ? { ...p.ertStatus }
++         : {});
++
++     } catch {
++       console.error('SSE parse error');
++     }
++   };
+    es.onerror = err => {
+      console.error('SSE error', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
+
+
+
+
+
+
+
+
+
+
+
+
+
 File1 
 // controllers/liveOccupancyController.js
 
