@@ -1,404 +1,127 @@
-    // build occupancy + today counts
-    const occupancy  = await buildOccupancy(events);
-    const todayStats = buildVisitedToday(events);
+// src/App.js
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
 
-    occupancy.totalVisitedToday = todayStats.total;
-    occupancy.visitedToday      = {
-      employees:   todayStats.employees,
-      contractors: todayStats.contractors,
-      total:       todayStats.total
-    };
-
--   // send the same payload twice
--   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
--   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
-+   // send exactly one SSE “data:” event per interval
-+   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage from './pages/ErtPage';
 
 
+import './App.css';
 
-
-
-
-
-Now read below controller file carefully now issue is on UI not update Count instant Check there is issue on Backend or frontend ,
-
-// controllers/liveOccupancyController.js
-
-const { DateTime }   = require('luxon');
-// const { poolConnect, pool, sql } = require('../config/db');
-const { sql, getPool } = require('../config/db');
-
-const doorZoneMap    = require('../data/doorZoneMap');
-const zoneFloorMap   = require('../data/zoneFloorMap');
-
-const ertMembers = require('../data/puneErtMembers.json');
-
-// track which door→zone keys we've already warned on
-const warnedKeys = new Set();
-
-
-
-function normalizeZoneKey(rawDoor, rawDir) {
-  // 1) Ensure it’s a string and trim whitespace
-  let door = String(rawDoor || '').trim();
-
-  // 2) Strip any "_HH:MM:SS" or "_XX:XX:XX" suffix (hex codes or times at end)
-  door = door.replace(/_[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}$/, '');
-
-  // 3) Collapse multiple spaces into one, then uppercase
-  door = door.replace(/\s+/g, ' ').toUpperCase();
-
-  // 4) Pick the direction token exactly as doorZoneMap expects
-  const dir = rawDir === 'InDirection' ? 'InDirection' : 'OutDirection';
-
-  return `${door}___${dir}`;
-}
-
-/** Normalize "Last, First" or "First Last" → lowercase "first last" */
-function normalizePersonName(raw) {
-  let n = String(raw || '').trim();
-  if (n.includes(',')) {
-    const [last, rest] = n.split(',', 2);
-    n = `${rest.trim()} ${last.trim()}`;
-  }
-  return n.toLowerCase();
-}
-
-/**
- * Map a swipe’s door+direction → zone using exactly doorZoneMap.
- * If not in doorZoneMap, log once and return "Unknown Zone".
- * If OutDirection but not "Out of office", strip off " Zone" suffix.
- */
-function mapDoorToZone(rawDoor, rawDir) {
-  const key = normalizeZoneKey(rawDoor, rawDir);
-  const zone = doorZoneMap[key];
-
-  if (!zone) {
-    if (!warnedKeys.has(key)) {
-      console.warn('⛔ Unmapped door–direction key:', key);
-      warnedKeys.add(key);
-    }
-    return 'Unknown Zone';
-  }
-
-  // If it's an OutDirection but not the real "Out of office", remove trailing " Zone"
-  if (rawDir === 'OutDirection' && zone !== 'Out of office') {
-    return zone.replace(/\s+Zone$/i, '');
-  }
-
-  return zone;
-}
-
-
-async function fetchNewEvents(since) {
-  // await the shared pool promise instead of poolConnect
-  const pool = await getPool();
-  const req  = pool.request();
-  req.input('since', sql.DateTime2, since);
-
-
-  const { recordset } = await req.query(`
-    WITH CombinedQuery AS (
-      SELECT
-        DATEADD(MINUTE,-1 *t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,
-        t1.ObjectName1,
-        CASE
-          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
-          ELSE CAST(t2.Int1 AS NVARCHAR)
-        END AS EmployeeID,
-        t1.ObjectIdentity1 AS PersonGUID,
-        t3.Name AS PersonnelType,
-        COALESCE(
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]','varchar(50)'),
-          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID)[1]','varchar(50)'),
-          sc.value
-        ) AS CardNumber,
-        t5a.value AS AdmitCode,
-        t5d.value AS Direction,
-        t1.ObjectName2 AS Door
-      FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLog] t1
-      LEFT JOIN [ACVSCore].[Access].[Personnel]     t2 ON t1.ObjectIdentity1 = t2.GUID
-      LEFT JOIN [ACVSCore].[Access].[PersonnelType] t3 ON t2.PersonnelTypeId = t3.ObjectID
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5a
-        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred] t5d
-        ON t1.XmlGUID = t5d.GUID AND t5d.Value IN ('InDirection','OutDirection')
-      LEFT JOIN [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxml] t_xml
-        ON t1.XmlGUID = t_xml.GUID
-      LEFT JOIN (
-        SELECT GUID, value
-        FROM [ACVSUJournal_00010027].[dbo].[ACVSUJournalLogxmlShred]
-        WHERE Name IN ('Card','CHUID')
-      ) sc ON t1.XmlGUID = sc.GUID
-      WHERE
-        t1.MessageType     = 'CardAdmitted'
-        AND t1.PartitionName2 = 'APAC.Default'
-        AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
-    )
-    SELECT
-      LocaleMessageTime,
-      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
-      CONVERT(VARCHAR(8) , LocaleMessageTime, 108) AS Swipe_Time,
-      EmployeeID,
-      PersonGUID,
-      ObjectName1,
-      PersonnelType,
-      CardNumber,
-      AdmitCode,
-      Direction,
-      Door
-    FROM CombinedQuery
-    ORDER BY LocaleMessageTime ASC;
-  `);
-
-  return recordset;
-}
-
-
-
-async function buildOccupancy(allEvents) {
-  const current      = {};
-  const uniquePeople = new Map();
-
-  for (const evt of allEvents) {
-    const {
-      EmployeeID, PersonGUID,
-      ObjectName1, PersonnelType,
-      CardNumber, Dateonly,
-      Swipe_Time, Direction, Door
-    } = evt;
-
-    const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-    const zoneRaw  = mapDoorToZone(Door, Direction);
-    const zone     = zoneRaw && zoneRaw.toLowerCase();
-
-    // 1) True "Out of office" → full eviction
-    if (Direction === 'OutDirection' && zone === 'out of office') {
-      uniquePeople.delete(dedupKey);
-      delete current[dedupKey];
-      continue;
-    }
-
-    // 2) Any other OutDirection → keep them (outer areas, reception exits, etc.)
-    if (Direction === 'OutDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType,
-        // re-use the exact-cased string so your details match zoneFloorMap keys:
-        zone: zoneRaw,
-        door: Door,
-        Direction
-      };
-      continue;
-    }
-
-    // 3) InDirection → normal check-in
-    if (Direction === 'InDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType,
-        zone: zoneRaw,
-        door: Door,
-        Direction
-      };
-      continue;
-    }
-
-    // 4) Catch-all eviction
-    uniquePeople.delete(dedupKey);
-    delete current[dedupKey];
-  }
-
-  // live headcounts (only from uniquePeople, which has already evicted all true out-of-office)
-  let employeeCount   = 0;
-  let contractorCount = 0;
-  for (const pt of uniquePeople.values()) {
-    if (['Employee','Terminated Personnel'].includes(pt)) employeeCount++;
-    else contractorCount++;
-  }
-
-  // Build zone→people map, but filter out any out-of-office at this final step too
-  const zoneMap = {};
-  for (const emp of Object.values(current)) {
-    const zKey = emp.zone.toLowerCase();
-    if (zKey === 'out of office') continue;
-    zoneMap[emp.zone] = zoneMap[emp.zone] || [];
-    zoneMap[emp.zone].push(emp);
-  }
-
-  // zoneDetails
-  const zoneDetails = Object.fromEntries(
-    Object.entries(zoneMap).map(([zone, emps]) => {
-      const byType = emps.reduce((acc, e) => {
-        acc[e.PersonnelType] = (acc[e.PersonnelType]||0) + 1;
-        return acc;
-      }, {});
-      return [ zone, { total: emps.length, byPersonnelType: byType, employees: emps } ];
-    })
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
-
-  // floorBreakdown
-  const floorMap = {};
-  for (const [zone, data] of Object.entries(zoneDetails)) {
-    const floor = zoneFloorMap[zone] || 'Unknown Floor';
-    floorMap[floor] = floorMap[floor] || { total: 0, byPersonnelType: {} };
-    floorMap[floor].total += data.total;
-    for (const [pt, c] of Object.entries(data.byPersonnelType)) {
-      floorMap[floor].byPersonnelType[pt] = (floorMap[floor].byPersonnelType[pt]||0) + c;
-    }
-  }
-
-
-
-  const ertStatus = Object.fromEntries(
-    Object.entries(ertMembers).map(([role, members]) => {
-      const list = members.map(m => {
-        const expected = normalizePersonName(m.name);
-
-        // find a matching swipe in current[]
-        const matchEvt = Object.values(current).find(e => {
-          return normalizePersonName(e.ObjectName1) === expected;
-        });
-
-        return {
-          ...m,
-          present: !!matchEvt,
-          zone:    matchEvt ? matchEvt.zone : null
-        };
-     });
-      return [ role, list ];
-    })
-  );
-
-
-
-
-  return {
-    asOf:             new Date().toISOString(),
-    summary:          Object.entries(zoneDetails).map(([z,d])=>({ zone: z, count: d.total })),
-    zoneBreakdown:    Object.entries(zoneDetails).map(([z,d])=>({ zone: z, ...d.byPersonnelType, total: d.total })),
-    floorBreakdown:   Object.entries(floorMap).map(([f,d])=>({ floor: f, ...d.byPersonnelType, total: d.total })),
-    details:          zoneMap,
-    personnelSummary: { employees: employeeCount, contractors: contractorCount },
-     ertStatus,
-  
-
-  personnelBreakdown: (() => {
-    const map = new Map();
-    // uniquePeople: Map<dedupKey, PersonnelType>
-    for (const pt of uniquePeople.values()) {
-      map.set(pt, (map.get(pt) || 0) + 1);
-    }
-    return Array.from(map, ([personnelType, count]) => ({ personnelType, count }));
-  })(),
-
-
-
-  };
 }
 
+function App() {
+  const [summaryData, setSummaryData]             = useState([]);
+  const [detailsData, setDetailsData]             = useState({});
+  const [floorData, setFloorData]                 = useState([]);
+  const [zoneBreakdown, setZoneBreakdown]         = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                 = useState({});
 
-
-/**
- * Build “visited today” from the same in‐memory stream
- */
-function buildVisitedToday(allEvents) {
-  // “Today” in Asia/Kolkata, formatted as “yyyy-MM-dd”
-  const today = DateTime.now()
-    .setZone('Asia/Kolkata')
-    .toFormat('yyyy-LL-dd');
-
-  // Use evt.Dateonly (already “yyyy-MM-dd” in local zone) to pick out today's InDirection swipes
-  const todayIns = allEvents.filter(evt => {
-    return (
-      evt.Direction === 'InDirection' &&
-      evt.Dateonly === today
-    );
-  });
-
-  // Dedupe by PersonGUID → keep the latest swipe
-  const dedup = new Map();
-  for (const e of todayIns) {
-    const key = e.PersonGUID;
-    const prev = dedup.get(key);
-    if (!prev || e.LocaleMessageTime > prev.LocaleMessageTime) {
-      dedup.set(key, e);
-    }
-  }
-
-  const finalList = Array.from(dedup.values());
-
-  // Separate employees vs contractors
-  const employees = finalList.filter(e =>
-    !['Contractor','Terminated Contractor','Temp Badge','Visitor','Property Management']
-      .includes(e.PersonnelType)
-  ).length;
-  const contractors = finalList.length - employees;
-
-  return { employees, contractors, total: finalList.length };
-}
-
-
-
-/** Server‐Sent‐Events endpoint */
-exports.getLiveOccupancy = async (req, res) => {
-  // try {
-  //   await poolConnect;
-
-  try {
-    // wait for the shared pool to be ready
-    await getPool();
-
-    res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive'
-    });
-    res.write('\n');
-
-    // pull last 24h on startup
-    let lastSeen = new Date(Date.now() - 24*60*60*1000);
-    const events = [];
-
-    const push = async () => {
-      const fresh = await fetchNewEvents(lastSeen);
-      if (fresh.length) {
-        lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
-        events.push(...fresh);
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    es.onmessage = e => {
+      try {
+        const p = JSON.parse(e.data);
+        setSummaryData(p.summary           || []);
+        setDetailsData(p.details           || {});
+        setFloorData(p.floorBreakdown      || []);
+        setZoneBreakdown(p.zoneBreakdown   || []);
+        setPersonnelBreakdown(p.personnelBreakdown || []);
+        setTotalVisitedToday(p.totalVisitedToday || 0);
+        setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
+        setErtStatus(p.ertStatus                    || {});
+      } catch {
+        console.error('SSE parse error');
       }
-
-      // build occupancy + today counts
-      const occupancy  = await buildOccupancy(events);
-      const todayStats = buildVisitedToday(events);
-
-      occupancy.totalVisitedToday = todayStats.total;
-      occupancy.visitedToday      = {
-        employees:   todayStats.employees,
-        contractors: todayStats.contractors,
-        total:       todayStats.total
-      };
-
-      
-// occupancy.ertStatus = ertStatus;
-
-res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
-
-      res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
     };
+    es.onerror = err => {
+      console.error('SSE error', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
 
-    await push();
-    const timer = setInterval(push, 1000);
-    req.on('close', () => clearInterval(timer));
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
 
-  } catch (err) {
-    console.error('Live occupancy SSE error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  }
-};
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Status
+            </Nav.Link>
+
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  zoneSummaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            {/* ERT STATUS ROUTE */}
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
