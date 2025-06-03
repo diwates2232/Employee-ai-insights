@@ -1,3 +1,54 @@
+/**
+ * Build “visited today” from the same in‐memory stream
+ */
+function buildVisitedToday(allEvents) {
+  // “Today” in Asia/Kolkata, formatted as “yyyy-MM-dd”
+  const today = DateTime.now()
+    .setZone('Asia/Kolkata')
+    .toFormat('yyyy-LL-dd');
+
+  // Use evt.Dateonly (already “yyyy-MM-dd” in local zone) to pick out today's InDirection swipes
+  const todayIns = allEvents.filter(evt => {
+    return (
+      evt.Direction === 'InDirection' &&
+      evt.Dateonly === today
+    );
+  });
+
+  // Dedupe by PersonGUID → keep the latest swipe
+  const dedup = new Map();
+  for (const e of todayIns) {
+    const key = e.PersonGUID;
+    const prev = dedup.get(key);
+    if (!prev || e.LocaleMessageTime > prev.LocaleMessageTime) {
+      dedup.set(key, e);
+    }
+  }
+
+  const finalList = Array.from(dedup.values());
+
+  // Separate employees vs contractors
+  const employees = finalList.filter(e =>
+    !['Contractor','Terminated Contractor','Temp Badge','Visitor','Property Management']
+      .includes(e.PersonnelType)
+  ).length;
+  const contractors = finalList.length - employees;
+
+  return { employees, contractors, total: finalList.length };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 I have Update this file as per your suggestion still we are getting 100 diffrance in Haedcount (Total Visited today Count)
 
 
