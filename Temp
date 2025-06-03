@@ -1,55 +1,79 @@
-/**
- * Build “visited today” from the same in‐memory stream
- */
-function buildVisitedToday(allEvents) {
-  // “Today” in Asia/Kolkata, formatted as “yyyy-MM-dd”
-  const today = DateTime.now()
-    .setZone('Asia/Kolkata')
-    .toFormat('yyyy-LL-dd');
+Now our HeadCount issue is solve , now issue is there , File by default creates new zone like GSOC Zone , idf zone which are not defined , 
+so always create only defined zone ccarefully,
+ check data details,
 
-  // Use evt.Dateonly (already “yyyy-MM-dd” in local zone) to pick out today's InDirection swipes
-  const todayIns = allEvents.filter(evt => {
-    return (
-      evt.Direction === 'InDirection' &&
-      evt.Dateonly === today
-    );
-  });
+const doorZoneMap = {
+  // Podium / Red
+  "APAC_IN_PUN_PODIUM_RED_IDF ROOM-02-Restricted Door___InDirection": "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED ZONE)___InDirection":      "Red Zone",
+  "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED ZONE)___OutDirection":      "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___InDirection":  "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_MAIN LIFT LOBBY ENTRY 1-DOOR___OutDirection": "Out of office",
+  "APAC_IN_PUN_PODIUM_ST 1-DOOR 1 (RED)___InDirection":                "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___InDirection": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECEPTION TO WS ENTRY 1-DOOR NEW___OutDirection":"Reception Area",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___InDirection": "Red Zone",
+  "APAC_IN_PUN_PODIUM_RED_RECREATION AREA FIRE EXIT 1-DOOR NEW___OutDirection":"Yellow Zone - Outer Area",
 
-  // Dedupe by PersonGUID → keep the latest swipe
-  const dedup = new Map();
-  for (const e of todayIns) {
-    const key = e.PersonGUID;
-    const prev = dedup.get(key);
-    if (!prev || e.LocaleMessageTime > prev.LocaleMessageTime) {
-      dedup.set(key, e);
-    }
-  }
+ "APAC_IN_PUN_TOWER B_IBMS ROOM___InDirection":                  "Tower B",
+  "APAC_IN_PUN_TOWER B_UPS ROOM___InDirection":                   "Tower B",
+  "APAC_IN_PUN_TOWER B_MDF ROOM___InDirection":                   "Tower B",
+  "APAC_IN_PUN_TOWER B_PAC ROOM___InDirection":                   "Tower B",
+  "APAC_IN_PUN_TOWER B_IT STORE ROOM___InDirection":             "Tower B",
+  "APAC_IN_PUN_TOWER B_GYM ROOM___InDirection":                  "Tower B GYM",
+  "APAC_IN_PUN_TOWER B_GYM ROOM___OutDirection":                 "Tower B GYM"  
+};
 
-  const finalList = Array.from(dedup.values());
-
-  // Separate employees vs contractors
-  const employees = finalList.filter(e =>
-    !['Contractor','Terminated Contractor','Temp Badge','Visitor','Property Management']
-      .includes(e.PersonnelType)
-  ).length;
-  const contractors = finalList.length - employees;
-
-  return { employees, contractors, total: finalList.length };
-}
+module.exports = doorZoneMap;
 
 
 
 
 
 
+// data/zoneFloorMap.js
+
+const zoneFloorMap = {
+  // Podium Floor
+  "Red Zone":                    "Podium Floor",
+  "Yellow Zone":                 "Podium Floor",
+  "Reception Area":              "Podium Floor",
+  "Green Zone":                  "Podium Floor",
+  "Orange Zone":                 "Podium Floor",
+  "Gsoc Zone":                   "Podium Floor",
+  "Assembly Area":               "Podium Floor",
+  "Red":"Podium Floor",
+
+  // 2nd Floor
+  "2nd Floor, Pune":             "2nd Floor",
+
+  // Tower B
+  "Tower B":                     "Tower B",
+  "Reception Area Tower B":      "Tower B",
+  "Tower B GYM":                 "Tower B",
+
+  // Outer‐Area variants (same floors as their base zones)
+  "Red Zone - Outer Area":               "Podium Floor",
+  "Yellow Zone - Outer Area":            "Podium Floor",
+  "Reception Area - Outer Area":         "Podium Floor",
+  "Green Zone - Outer Area":             "Podium Floor",
+  "Orange Zone - Outer Area":            "Podium Floor",
+  "Assembly Area - Outer Area":          "Podium Floor",
+  "2nd Floor, Pune - Outer Area":        "2nd Floor",
+  "Tower B - Outer Area":                "Tower B",
+  "Reception Area Tower B - Outer Area": "Tower B",
+  "Tower B GYM - Outer Area":            "Tower B",
+
+  // True “Out of office” eviction (we filter these out in the controller)
+  "Out of office":               "Podium Floor"
+};
+
+module.exports = zoneFloorMap;
 
 
 
 
 
-
-
-I have Update this file as per your suggestion still we are getting 100 diffrance in Haedcount (Total Visited today Count)
 
 
 
@@ -357,31 +381,39 @@ async function buildOccupancy(allEvents) {
 
 
 
-/** Build “visited today” from the same in‐memory stream */
-function buildVisitedToday(allEvents) {
-  // IST “today” string
-  const today = DateTime.now().setZone('Asia/Kolkata').toFormat('yyyy-LL-dd');
 
-  // only today's InDirection swipes
+
+/**
+ * Build “visited today” from the same in‐memory stream
+ */
+function buildVisitedToday(allEvents) {
+  // “Today” in Asia/Kolkata, formatted as “yyyy-MM-dd”
+  const today = DateTime.now()
+    .setZone('Asia/Kolkata')
+    .toFormat('yyyy-LL-dd');
+
+  // Use evt.Dateonly (already “yyyy-MM-dd” in local zone) to pick out today's InDirection swipes
   const todayIns = allEvents.filter(evt => {
-    if (evt.Direction !== 'InDirection' || !evt.LocaleMessageTime) return false;
-    const swipeDate = DateTime
-      .fromJSDate(evt.LocaleMessageTime, { zone:'Asia/Kolkata' })
-      .toFormat('yyyy-LL-dd');
-    return swipeDate === today;
+    return (
+      evt.Direction === 'InDirection' &&
+      evt.Dateonly === today
+    );
   });
 
-  // dedupe by PersonGUID → keep latest
+  // Dedupe by PersonGUID → keep the latest swipe
   const dedup = new Map();
   for (const e of todayIns) {
-    const prev = dedup.get(e.PersonGUID);
+    const key = e.PersonGUID;
+    const prev = dedup.get(key);
     if (!prev || e.LocaleMessageTime > prev.LocaleMessageTime) {
-      dedup.set(e.PersonGUID, e);
+      dedup.set(key, e);
     }
   }
 
-  const finalList   = Array.from(dedup.values());
-  const employees   = finalList.filter(e =>
+  const finalList = Array.from(dedup.values());
+
+  // Separate employees vs contractors
+  const employees = finalList.filter(e =>
     !['Contractor','Terminated Contractor','Temp Badge','Visitor','Property Management']
       .includes(e.PersonnelType)
   ).length;
@@ -389,6 +421,8 @@ function buildVisitedToday(allEvents) {
 
   return { employees, contractors, total: finalList.length };
 }
+
+
 
 /** Server‐Sent‐Events endpoint */
 exports.getLiveOccupancy = async (req, res) => {
