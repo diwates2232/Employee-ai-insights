@@ -1,3 +1,26 @@
+    // build occupancy + today counts
+    const occupancy  = await buildOccupancy(events);
+    const todayStats = buildVisitedToday(events);
+
+    occupancy.totalVisitedToday = todayStats.total;
+    occupancy.visitedToday      = {
+      employees:   todayStats.employees,
+      contractors: todayStats.contractors,
+      total:       todayStats.total
+    };
+
+-   // send the same payload twice
+-   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
+-   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
++   // send exactly one SSE “data:” event per interval
++   res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
+
+
+
+
+
+
+
 Now read below controller file carefully now issue is on UI not update Count instant Check there is issue on Backend or frontend ,
 
 // controllers/liveOccupancyController.js
