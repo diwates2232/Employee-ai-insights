@@ -1,3 +1,86 @@
+
+const sql    = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  connectionTimeout: 30000,    // 30 s to establish
+  requestTimeout:    0,        // no timeout on queries
+  pool: {
+    max:                  10,
+    min:                   0,
+    idleTimeoutMillis:    0,   // never close idle connections
+    acquireTimeoutMillis: 0    // wait indefinitely for a free connection
+  },
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  }
+};
+
+let poolPromise = null;
+
+/**
+ * Get (and if needed, establish) the MSSQL connection pool.
+ * Retries up to `attempts` times on failure.
+ */
+async function getPool(attempts = 3) {
+  if (poolPromise) {
+    return poolPromise;
+  }
+
+  poolPromise = (async () => {
+    try {
+      const pool = await sql.connect(config);
+      console.log('✅ MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ MSSQL pool connection failed:', err);
+      poolPromise = null;  // allow a fresh retry next time
+      if (attempts > 0) {
+        console.log(`⏳ Retrying MSSQL connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getPool(attempts - 1);
+      }
+      throw err;
+    }
+  })();
+
+  sql.on('error', err => {
+    console.error('❌ MSSQL global error:', err);
+    // Do not reset poolPromise here unconditionally; monitor the error type if needed.
+  });
+
+  return poolPromise;
+}
+
+// Keep-alive ping every 5 minutes so the pool never idles out
+setInterval(async () => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 MSSQL keep-alive ping succeeded');
+  } catch (err) {
+    console.error('⚠️ MSSQL keep-alive ping failed (pool not reset):', err);
+    // Do not reset poolPromise here so the pool remains intact
+  }
+}, 5 * 60 * 1000);
+
+module.exports = { sql, getPool };
+
+
+
+
+
+
+
+
+
+
 Check below all file file line by line and solve this issue , alos Ui not reflect live data check its reason for backend or frontend, and Solve below error ,
 i want never disconnect any pool ,it need to continous stay connect,
 
