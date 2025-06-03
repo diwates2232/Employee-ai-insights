@@ -1,3 +1,23 @@
+ // data/doorZoneMap.js
+
+ const doorZoneMap = {
++  // “Pootum ST2 Door 1 (RED)” variant still occurs in the data:
++  "APAC IN PUN POOTUM ST2 DOOR 1 (RED)___InDirection":   "Red Zone",
++  "APAC IN PUN POOTUM ST2 DOOR 1 (RED)___OutDirection":  "Red Zone", 
+   // …the rest of your existing mappings…
+   "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED ZONE)___InDirection": "Red Zone",
+   "APAC_IN_PUN_PODIUM_ST2 DOOR 1 (RED ZONE)___OutDirection": "Red Zone",
+   // …etc…
+ };
+
+
+
+
+
+
+
+
+
 // data/doorZoneMap.js
 
 // ——————————————————————————————————————
