@@ -1,113 +1,178 @@
-// client/src/pages/DashboardHome.jsx
 
+
+// src/App.js
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
 
-import SummaryCards from '../components/SummaryCards';
-import FloorOccupancyChart from '../components/FloorOccupancyChart';
-import SummaryChart from '../components/SummaryChart';
-import PersonnelDonutChart from '../components/PersonnelDonutChart';
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage from './pages/ErtPage';
 
-export default function DashboardHome() {
-  // Local state to hold live data from SSE
-  const [personnelSummary, setPersonnelSummary] = useState({ employees: 0, contractors: 0 });
-  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
-  const [visitedToday, setVisitedToday] = useState({ employees: 0, contractors: 0, total: 0 });
-  const [floorData, setFloorData] = useState([]);
-  const [zoneSummaryData, setZoneSummaryData] = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
 
-  useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/api/live-occupancy');
+import './App.css';
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        // Update state fields based on backend payload
-        setPersonnelSummary(data.personnelSummary || { employees: 0, contractors: 0 });
-        setTotalVisitedToday(data.totalVisitedToday || 0);
-        setVisitedToday(data.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setFloorData(data.floorBreakdown || []);
-        setZoneSummaryData(data.zoneBreakdown || []);
-        setPersonnelBreakdown(data.personnelBreakdown || []);
-      } catch (err) {
-        console.error('Error parsing SSE data:', err);
-      }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error('EventSource failed:', err);
-      eventSource.close();
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, []);
-
-  const employees      = personnelSummary.employees   ?? 0;
-  const contractors    = personnelSummary.contractors ?? 0;
-  const totalOccupancy = employees + contractors;
-
-  const chartData = (personnelBreakdown || []).map(({ personnelType, count }) => ({
-    personnelType,
-    count
-  }));
-
+function ZoneDetailsPage({ detailsData }) {
   return (
-    <Container fluid className="py-4">
-      <SummaryCards
-        totalOccupancy={totalOccupancy}
-        employeeCount={employees}
-        contractorCount={contractors}
-        totalVisitedToday={totalVisitedToday}
-        employeesVisitedToday={visitedToday.employees   ?? 0}
-        contractorsVisitedToday={visitedToday.contractors ?? 0}
-      />
-
-      <Row className="g-4">
-        <Col md={4}>
-          <FloorOccupancyChart data={floorData} />
-        </Col>
-        <Col md={4}>
-          <SummaryChart summary={zoneSummaryData} />
-        </Col>
-        <Col md={4}>
-          <PersonnelDonutChart data={chartData} />
-        </Col>
-      </Row>
-
-      <footer
-        style={{
-          backgroundColor: '#000',
-          color: '#FFC72C',
-          padding: '1.5rem 0',
-          textAlign: 'center',
-          marginTop: '2rem',
-          borderTop: '2px solid #FFC72C',
-          fontSize: '0.95rem',
-          lineHeight: '1.6'
-        }}
-      >
-        <div>
-          <strong>Global Security Operations Center (GSOC)</strong><br />
-          Live Occupancy dashboard for Western Union Pune — Real-time occupancy, floor activity, and personnel insights.
-        </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          Contact us: <a href="mailto:GSOC-GlobalSecurityOperationCenter.SharedMailbox@westernunion.com" style={{ color: '#FFC72C', textDecoration: 'underline' }}>gsoc@westernunion.com</a> |
-          Landline: <span style={{ color: '#FFC72C' }}>+91-020-67632394</span>
-        </div>
-      </footer>
-    </Container>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
   );
 }
 
+function App() {
+  const [summaryData, setSummaryData]             = useState([]);
+  const [detailsData, setDetailsData]             = useState({});
+  const [floorData, setFloorData]                 = useState([]);
+  const [zoneBreakdown, setZoneBreakdown]         = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday] = useState(0);
+  const [personnelSummary, setPersonnelSummary]   = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]           = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                 = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+    // es.onmessage = e => {
+    //   try {
+    //     const p = JSON.parse(e.data);
+    //     setSummaryData(p.summary           || []);
+    //     setDetailsData(p.details           || {});
+    //     setFloorData(p.floorBreakdown      || []);
+    //     setZoneBreakdown(p.zoneBreakdown   || []);
+    //     setPersonnelBreakdown(p.personnelBreakdown || []);
+    //     setTotalVisitedToday(p.totalVisitedToday || 0);
+    //     setPersonnelSummary(p.personnelSummary     || { employees: 0, contractors: 0 });
+    //     setVisitedToday(p.visitedToday              || { employees: 0, contractors: 0, total: 0 });
+    //     setErtStatus(p.ertStatus                    || {});
+    //   } catch {
+    //     console.error('SSE parse error');
+    //   }
+    // };
+
+
+   es.onmessage = e => {
+     try {
+       const p = JSON.parse(e.data);
+
+       // Force new references on every update:
+       setSummaryData(Array.isArray(p.summary)           ? [...p.summary]           : []);
+       setDetailsData(p.details && typeof p.details === 'object'
+         ? { ...p.details }
+         : {});
+       setFloorData(Array.isArray(p.floorBreakdown)      ? [...p.floorBreakdown]      : []);
+       setZoneBreakdown(Array.isArray(p.zoneBreakdown)   ? [...p.zoneBreakdown]       : []);
+       setPersonnelBreakdown(Array.isArray(p.personnelBreakdown)
+         ? [...p.personnelBreakdown]
+         : []);
+
+       setTotalVisitedToday(typeof p.totalVisitedToday === 'number'
+         ? p.totalVisitedToday
+         : 0);
+
+       setPersonnelSummary(p.personnelSummary && typeof p.personnelSummary === 'object'
+         ? { ...p.personnelSummary }
+         : { employees: 0, contractors: 0 });
+
+       setVisitedToday(p.visitedToday && typeof p.visitedToday === 'object'
+         ? { ...p.visitedToday }
+         : { employees: 0, contractors: 0, total: 0 });
+
+       setErtStatus(p.ertStatus && typeof p.ertStatus === 'object'
+         ? { ...p.ertStatus }
+         : {});
+
+     } catch {
+       console.error('SSE parse error');
+     }
+   };
+es.onerror = err => {
+      console.error('SSE error', err);
+      es.close();
+    };
+    return () => es.close();
+  }, []);
+
+
+
+  //   // es.onerror = err => {
+  //     console.error('SSE error', err);
+  //     es.close();
+  //   };
+  //   return () => es.close();
+  // }, []);
 
 
 
 
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
 
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Status
+            </Nav.Link>
+
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  zoneSummaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            {/* ERT STATUS ROUTE */}
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
 
 
 
@@ -196,6 +261,7 @@ export default function DashboardHome({
     </Container>
   );
 }
+
 
 
 
