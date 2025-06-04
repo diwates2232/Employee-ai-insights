@@ -1,3 +1,230 @@
+// src/components/ZoneDetailsTable.jsx
+
+import React, { useMemo } from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {}, searchTerm = '' }) {
+  // 1) Sort zones by descending count
+  const sortedEntries = useMemo(() => {
+    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
+  }, [data]);
+
+  // 2) Filter predicate (case‐insensitive)
+  const matchesSearch = (emp) =>
+    emp.ObjectName1.toLowerCase().includes(searchTerm.trim().toLowerCase());
+
+  if (!sortedEntries.length) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-cards">
+      {sortedEntries.map(([zone, emps]) => {
+        // 3) Filter employees in this zone by searchTerm
+        const filteredEmps = emps.filter(matchesSearch);
+        if (filteredEmps.length === 0) {
+          return null;
+        }
+
+        return (
+          <div key={zone} className="zone-card">
+            <div className="zone-header">
+              <h3>{zone}</h3>
+              <span className="zone-badge">Total: {filteredEmps.length}</span>
+            </div>
+
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Swipe Time</th>
+                  <th>Type</th>
+                  <th>Door Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmps.map((emp, i) => (
+                  <tr key={`${emp.EmployeeID}-${i}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                    <td>{emp.door}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+
+
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage          from './pages/ErtPage';
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  return (
+    <>
+      <div
+        className="d-flex justify-content-between align-items-center mb-2"
+        style={{ flexWrap: 'wrap', gap: '0.5rem' }}
+      >
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+
+        <input
+          type="text"
+          placeholder="Search employee..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            flexGrow: 1,
+            maxWidth: 300,
+            padding: '0.4rem 0.8rem',
+            fontSize: '1rem',
+            borderRadius: 4,
+            border: '1px solid #ccc'
+          }}
+        />
+      </div>
+
+      <ZoneDetailsTable data={detailsData} searchTerm={searchTerm} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData]               = useState([]);
+  const [detailsData, setDetailsData]               = useState({});
+  const [floorData, setFloorData]                   = useState([]);
+  const [zoneBreakdown, setZoneBreakdown]           = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                   = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+
+    es.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data);
+
+        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
+        setDetailsData(p.details || {});
+        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
+        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
+        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
+        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setErtStatus(p.ertStatus || {});
+      } catch {
+        console.error('SSE parse error');
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('SSE error', err);
+      es.close();
+    };
+
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Overview
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  summaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+p
+
+
+
+
+
+
+
+
+
+
 Now only change the position of serch employee section,Now back to dashboard button and search button look like Vertical i want horizontal
 read both file carefully and update the file carefully
 
