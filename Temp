@@ -1,113 +1,5 @@
-// src/components/ZoneDetailsTable.jsx
-
-import React, { useState, useMemo } from 'react';
-import './ZoneDetailsTable.css';
-
-export default function ZoneDetailsTable({ data = {} }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // 1) Sort zones by descending count
-  const sortedEntries = useMemo(() => {
-    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
-  }, [data]);
-
-  // 2) Filter predicate
-  const matchesSearch = (emp) =>
-    emp.ObjectName1.toLowerCase().includes(searchTerm.trim().toLowerCase());
-
-  // 3) Handler for search input
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  if (!sortedEntries.length) {
-    return <p>No zone detail data available.</p>;
-  }
-
-  return (
-    <div className="zone-cards">
-      {/* Back to Dashboard and Search input, side by side */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem'
-        }}
-      >
-        <a
-          href="/"
-          style={{
-            color: '#FFD100',
-            fontSize: '1rem',
-            textDecoration: 'none',
-            fontWeight: 'bold'
-          }}
-        >
-          ← Back to Dashboard
-        </a>
-
-        <input
-          type="text"
-          placeholder="Search employee..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          style={{
-            padding: '0.4rem 0.8rem',
-            fontSize: '0.9rem',
-            borderRadius: 4,
-            border: '1px solid #ccc',
-            maxWidth: 250
-          }}
-        />
-      </div>
-
-      {sortedEntries.map(([zone, emps]) => {
-        // 4) Filter employees by search
-        const filteredEmps = emps.filter(matchesSearch);
-        if (filteredEmps.length === 0) {
-          return null;
-        }
-
-        return (
-          <div key={zone} className="zone-card">
-            <div className="zone-header">
-              <h3>{zone}</h3>
-              <span className="zone-badge">Total: {filteredEmps.length}</span>
-            </div>
-
-            <table className="zone-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Swipe Time</th>
-                  <th>Type</th>
-                  <th>Door Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEmps.map((emp, i) => (
-                  <tr key={`${emp.EmployeeID}-${i}`}>
-                    <td>{emp.ObjectName1}</td>
-                    <td>{emp.Swipe_Time}</td>
-                    <td>{emp.PersonnelType}</td>
-                    <td>{emp.door}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-
-
-
-
 Now only change the position of serch employee section,Now back to dashboard button and search button look like Vertical i want horizontal
+read both file carefully and update the file carefully
 
 // src/components/ZoneDetailsTable.jsx
 
@@ -193,4 +85,151 @@ export default function ZoneDetailsTable({ data = {} }) {
     </div>
   );
 }
+
+
+
+
+
+
+// C:\Users\W0024618\Desktop\swipeData\client\src\App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage          from './pages/ErtPage'; // ← make sure this file exists
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
+  return (
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+      </div>
+      <ZoneDetailsTable data={detailsData} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData]               = useState([]); // array of { zone, count }
+  const [detailsData, setDetailsData]               = useState({}); // { "Zone A": [ … ], "Zone B": [ … ], … }
+  const [floorData, setFloorData]                   = useState([]); // floorBreakdown: [ { floor, total, … }, … ]
+  const [zoneBreakdown, setZoneBreakdown]           = useState([]); // zoneBreakdown: [ { zone, total, … }, … ]
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]); // [ { personnelType, count }, … ]
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                   = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+
+    es.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data);
+
+        // ─── “summary” is the zone+count array, exactly as SummaryChart expects:
+        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
+
+        // ─── “details” is the full door-level list by zone:
+        setDetailsData(p.details || {});
+
+        // ─── “floorBreakdown” is the array that FloorOccupancyChart wants:
+        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
+
+        // ─── “zoneBreakdown” is a more detailed breakdown by zone (unused by DashboardHome’s top charts):
+        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
+
+        // ─── “personnelBreakdown” is the array for the donut chart:
+        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
+
+        // ─── “totalVisitedToday” is a plain number:
+        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
+
+        // ─── “personnelSummary” = { employees: #, contractors: # }:
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+
+        // ─── “visitedToday” = { employees: #, contractors: #, total: # }:
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+
+        // ─── “ertStatus” = { “Site Head”: [ … ], “First Aid Team”: [ … ], … }
+        setErtStatus(p.ertStatus || {});
+      } catch {
+        console.error('SSE parse error');
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('SSE error', err);
+      es.close();
+    };
+
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Overview
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  summaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
 
