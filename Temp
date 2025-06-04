@@ -1,3 +1,62 @@
+<BarChart
+  data={sortedData}
+  margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+  barCategoryGap="20%"
+>
+  <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+  <XAxis
+    dataKey="floor"
+    tick={{ fontSize: 12, fill: '#fff' }}
+    angle={0}
+    textAnchor="middle"
+    interval={0}
+    height={40}
+  />
+  <YAxis
+    tick={{ fontSize: 12, fill: '#fff' }}
+    allowDecimals={false}
+  />
+  <Tooltip content={renderTooltip} />
+
+  {/* Capacity bar (background / comparison bar) */}
+  <Bar
+    dataKey="capacity"
+    name="Total Capacity"
+    radius={[4, 4, 0, 0]}
+    fill="#444" // grey as background bar
+    barSize={30}
+  />
+
+  {/* Live headcount bar (actual usage) */}
+  <Bar
+    dataKey="total"
+    name="Live Headcount"
+    radius={[4, 4, 0, 0]}
+    barSize={20}
+    fill="#FFD100"
+  >
+    {/* Label % above headcount bar */}
+    <LabelList
+      dataKey="percentage"
+      position="top"
+      formatter={(val) => `${val}%`}
+      style={{
+        fill: '#fff',
+        fontSize: 13,
+        fontWeight: 'bold'
+      }}
+    />
+  </Bar>
+</BarChart>
+
+
+
+
+
+
+
+
+
 // client/src/constants/floorCapacities.js
 
 const floorCapacities = {
