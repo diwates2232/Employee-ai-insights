@@ -1,5 +1,32 @@
 // src/components/SummaryChart.jsx
 
+<LabelList
+  dataKey="count"
+  position="inside"
+  content={({ x, y, value }) => (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fill="#FFFFFF"
+      fontSize="14"
+      fontWeight="bold"
+      style={{
+        textShadow: '0 0 4px rgba(0,0,0,0.9)', // strong contrast on light slices
+      }}
+    >
+      {value}
+    </text>
+  )}
+/>
+
+
+
+
+
+
+
 import React, { useMemo } from 'react';
 import {
   PieChart,
