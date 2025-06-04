@@ -1,3 +1,33 @@
+<LabelList
+  dataKey="count"
+  content={({ x, y, value }) => {
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFFFF"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="14"
+        fontWeight="bold"
+        style={{
+          pointerEvents: 'none',
+        }}
+      >
+        {value}
+      </text>
+    );
+  }}
+/>
+
+
+
+
+
+
+
+
+
 // src/components/SummaryChart.jsx
 
 <LabelList
