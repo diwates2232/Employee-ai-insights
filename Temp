@@ -1,3 +1,36 @@
+const push = async () => {
+  console.log('🔄 [PUSH] Running at:', new Date().toISOString());
+  console.log('🔍 Last seen swipe time:', lastSeen);
+
+  const fresh = await fetchNewEvents(lastSeen);
+  console.log('📥 New events fetched:', fresh.length);
+
+  if (fresh.length) {
+    console.log('🕒 Last fresh event time:', fresh[fresh.length - 1].LocaleMessageTime);
+    lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+    events.push(...fresh);
+  } else {
+    console.log('⚠️ No new swipes since lastSeen.');
+  }
+
+  ...
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read this controller file carefully and line by line 
 
 // controllers/liveOccupancyController.js
