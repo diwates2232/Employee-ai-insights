@@ -1,3 +1,278 @@
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import floorCapacities from '../constants/floorCapacities'; 
+// floorCapacities should look like:
+// {
+//   "Podium Floor": 725,
+//   "Tower B":      303,
+//   "2nd Floor":    185,
+//   // …any other floors
+// }
+
+const FLOOR_COLOR_PALETTE = [
+  ['#FFD100', '#FFF2CC'],
+  ['#009E60', '#CFFAF3'],
+  ['#A80000', '#FFCCCC'],
+  ['#58595B', '#D6E3F0'],
+  ['#FF6F61', '#FFD1CD'],
+  ['#FFB800', '#FFF8CC'],
+  ['#006400', '#CCFFCC'],
+  ['#4B0082', '#E0CCFF'],
+  ['#C75D00', '#FFE0B2'],
+  ['#264653', '#A0B5D8'],
+  ['#9B2226', '#FFB3B3'],
+  ['#005F73', '#CAEBF2']
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  // If there’s no data, show a fallback card
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-white">
+        No floor data available
+      </Card>
+    );
+  }
+
+  // 1) Enrich each floor object with capacity, percentage, and label
+  const enriched = data.map((floorObj) => {
+    const { floor, total: liveCount } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    const pct = capacity > 0
+      ? ((liveCount / capacity) * 100).toFixed(1) // e.g. "85.3"
+      : '0.0';
+    return {
+      ...floorObj,
+      capacity,
+      percentage: Number(pct),    // e.g. 85.3
+      label: `${liveCount}/${capacity}` // e.g. "615/725"
+    };
+  });
+
+  // 2) Compute the “Pune Office” (total) across all floors
+  const totalLive = enriched.reduce((sum, f) => sum + f.total, 0);
+  const totalCap  = enriched.reduce((sum, f) => sum + f.capacity, 0);
+  const totalPct  = totalCap > 0
+    ? ((totalLive / totalCap) * 100).toFixed(1)
+    : '0.0';
+
+  const totalEntry = {
+    floor: 'Pune Office',
+    total: totalLive,
+    capacity: totalCap,
+    percentage: Number(totalPct),
+    label: `${totalLive}/${totalCap}`
+  };
+
+  // 3) Sort only the individual floors (desc by liveCount),
+  //    then place "Pune Office" at the very beginning:
+  const sortedFloors = [...enriched].sort((a, b) => b.total - a.total);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // 4) Custom tooltip to show live, capacity, percentage, plus any extra breakdown
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    // payload[0] could be capacity or total depending on hover,
+    // but payload[1] (if exists) will be the liveCount for grouped bars.
+    const floorObj = payload[0].payload;
+    const { total: liveCount, capacity, percentage } = floorObj;
+
+    // Show breakdown entries (like employees, contractors, etc.) if they exist
+    const breakdownEntries = Object.entries(floorObj).filter(
+      ([key]) =>
+        !['floor', 'total', 'capacity', 'percentage', 'label'].includes(key)
+    );
+
+    return (
+      <div
+        style={{
+          backgroundColor: 'var(--wu-gray-dark)',
+          color: '#fff',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '0.75rem',
+          minWidth: 180
+        }}
+      >
+        <div style={{ marginBottom: 4 }}>
+          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
+        </div>
+        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
+          Live: {liveCount} / {capacity} ({percentage}%)
+        </div>
+        {breakdownEntries.map(([type, value]) => (
+          <div
+            key={type}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 2,
+              color: '#fff'
+            }}
+          >
+            <span style={{ opacity: 0.8 }}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </span>
+            <span style={{ fontWeight: 'bold' }}>{value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Card
+      className="mb-4 shadow-sm border"
+      style={{ borderColor: 'var(--wu-yellow)' }}
+    >
+      <Card.Header className="bg-dark text-warning text-center">
+        Floor‐wise Live Headcount vs. Capacity
+      </Card.Header>
+
+      <Card.Body
+        style={{
+          height: 600,
+          padding: 0,
+          backgroundColor: 'var(--wu-gray-dark)'
+        }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="20%"
+          >
+            {/* 5) Define one gradient per bar (up to 12) */}
+            <defs>
+              {chartData.map((_, idx) => {
+                const [darkColor, lightColor] =
+                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient
+                    id={`floor-grad-${idx}`}
+                    key={`floor-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
+                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            {/* 6) Grid and Axes */}
+            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              angle={0}
+              textAnchor="middle"
+              interval={0}
+              height={40}
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: '#fff' }}
+              allowDecimals={false}
+            />
+
+            {/* 7) Custom Tooltip */}
+            <Tooltip content={renderTooltip} />
+
+            {/* 8) Legend for clarity */}
+            <Legend
+              verticalAlign="top"
+              align="right"
+              wrapperStyle={{ color: '#fff', paddingBottom: 8 }}
+              payload={[
+                { value: 'Capacity (Total Seats)', type: 'square', color: '#444' },
+                { value: 'Live Headcount', type: 'square', color: '#FFD100' }
+              ]}
+            />
+
+            {/* 9) Capacity bar (background/comparison) */}
+            <Bar
+              dataKey="capacity"
+              name="Total Capacity"
+              radius={[4, 4, 0, 0]}
+              fill="#444"       // solid grey
+              barSize={40}
+            />
+
+            {/* 10) Live headcount bar (actual occupancy) */}
+            <Bar
+              dataKey="total"
+              name="Live Headcount"
+              radius={[4, 4, 0, 0]}
+              barSize={24}
+              // Use gradient fill
+            >
+              {chartData.map((floorObj, idx) => (
+                <Cell
+                  key={`cell-live-${idx}`}
+                  fill={`url(#floor-grad-${idx})`}
+                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
+                  strokeWidth={1}
+                />
+              ))}
+
+              {/* 11) LabelList: show live/capacity above each live bar */}
+              <LabelList
+                dataKey="label"    // e.g. "615/725" or "901/1213"
+                position="top"
+                style={{
+                  fill: '#fff',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}
+              />
+
+              {/* 12) LabelList: show percentage above each live bar */}
+              <LabelList
+                dataKey="percentage"
+                position="insideTop"
+                formatter={(val) => `${val}%`}
+                style={{
+                  fill: '#000',
+                  fontSize: 10,
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  borderRadius: 2,
+                  padding: '2px 4px'
+                }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
 This is our current File so give me fully updatedjs file think next level and make it interactive and informative and give me updated js file carefully
 // src/components/FloorOccupancyChart.jsx
 
