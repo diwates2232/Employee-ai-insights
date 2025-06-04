@@ -1,3 +1,9 @@
+AND DATEADD(MINUTE, t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+
+
+
+
+
 First Testing done 
 
 const push = async () => {
