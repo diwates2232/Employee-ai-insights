@@ -1,4 +1,179 @@
 // src/components/FloorOccupancyChart.jsx
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import floorCapacities from '../constants/floorCapacities';
+
+const FLOOR_COLOR_PALETTE = [
+  ['#FFD100', '#FFF2CC'],
+  ['#009E60', '#CFFAF3'],
+  ['#A80000', '#FFCCCC'],
+  ['#58595B', '#D6E3F0'],
+  ['#FF6F61', '#FFD1CD'],
+  ['#FFB800', '#FFF8CC'],
+  ['#006400', '#CCFFCC'],
+  ['#4B0082', '#E0CCFF'],
+  ['#C75D00', '#FFE0B2'],
+  ['#264653', '#A0B5D8'],
+  ['#9B2226', '#FFB3B3'],
+  ['#005F73', '#CAEBF2']
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return <Card body className="bg-dark text-white">No floor data available</Card>;
+  }
+
+  // Enrich data
+  const enriched = data.map((floorObj) => {
+    const { floor, total: live } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    const percentage = capacity > 0 ? ((live / capacity) * 100).toFixed(1) : '0.0';
+    return {
+      ...floorObj,
+      capacity,
+      percentage: Number(percentage),
+      availablePercentage: capacity > 0 ? (100 - percentage).toFixed(1) : '0.0'
+    };
+  });
+
+  const totalLive = enriched.reduce((sum, f) => sum + f.total, 0);
+  const totalCap = enriched.reduce((sum, f) => sum + f.capacity, 0);
+  const totalPct = totalCap > 0 ? ((totalLive / totalCap) * 100).toFixed(1) : '0.0';
+
+  const totalEntry = {
+    floor: 'Pune Office',
+    total: totalLive,
+    capacity: totalCap,
+    percentage: Number(totalPct),
+    availablePercentage: totalCap > 0 ? (100 - totalPct).toFixed(1) : '0.0'
+  };
+
+  const sortedFloors = enriched.sort((a, b) => b.total - a.total);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // Custom Tooltip
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const floorObj = payload[0].payload;
+
+    return (
+      <div style={{
+        backgroundColor: 'var(--wu-gray-dark)',
+        color: '#fff',
+        border: '1px solid var(--wu-yellow)',
+        borderRadius: 4,
+        padding: '0.75rem',
+        minWidth: 200
+      }}>
+        <div><strong>Floor: {label}</strong></div>
+        <div>Live Headcount: {floorObj.total}</div>
+        <div>Capacity: {floorObj.capacity}</div>
+        <div>Utilization: {floorObj.percentage}%</div>
+        <div>Available: {floorObj.availablePercentage}%</div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Live vs Capacity by Floor (Interactive)
+      </Card.Header>
+      <Card.Body style={{ height: 600, padding: 0, backgroundColor: 'var(--wu-gray-dark)' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="10%"
+            barGap={2}
+          >
+            <defs>
+              {chartData.map((_, idx) => {
+                const [darkColor, lightColor] = FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient id={`floor-grad-${idx}`} key={idx} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={darkColor} />
+                    <stop offset="100%" stopColor={lightColor} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+            <XAxis dataKey="floor" tick={{ fontSize: 12, fill: '#fff' }} />
+            <YAxis tick={{ fontSize: 12, fill: '#fff' }} allowDecimals={false} />
+
+            <Tooltip content={renderTooltip} />
+
+            {/* Live Headcount Bar */}
+            <Bar
+              dataKey="percentage"
+              name="Live Headcount (%)"
+              barSize={30}
+              radius={[10, 10, 0, 0]}
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`live-${idx}`}
+                  fill={`url(#floor-grad-${idx})`}
+                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
+                />
+              ))}
+              <LabelList
+                dataKey="percentage"
+                position="top"
+                formatter={(val) => `${val}%`}
+                style={{ fill: '#fff', fontSize: 14, fontWeight: 'bold' }}
+              />
+            </Bar>
+
+            {/* Capacity Bar */}
+            <Bar
+              dataKey="availablePercentage"
+              name="Available (%)"
+              barSize={30}
+              radius={[10, 10, 0, 0]}
+            >
+              {chartData.map((_, idx) => (
+                <Cell key={`cap-${idx}`} fill="#999" opacity={0.4} />
+              ))}
+              <LabelList
+                dataKey="availablePercentage"
+                position="top"
+                formatter={(val) => `${val}%`}
+                style={{ fill: '#ccc', fontSize: 12 }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
 
 import React from 'react';
 import {
