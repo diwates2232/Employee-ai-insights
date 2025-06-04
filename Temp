@@ -1,3 +1,298 @@
+// src/components/SummaryChart.jsx
+
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import { FaLightbulb } from 'react-icons/fa'; // bulb icon
+
+// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
+const ZONE_GRADIENTS = {
+  'Red Zone': ['#FF0000'],
+  'Red Zone - Outer Area': ['#FF0000'],
+  'Yellow Zone': ['#FFDE21'],
+  'Yellow Zone - Outer Area': ['#FFDE21'],
+  '2nd Floor, Pune': ['#FF6F61'],
+  'Orange Zone': ['#ffa500'],
+  'Orange Zone - Outer Area': ['#ffa500'],
+  'Green Zone': ['#009E60'],
+  'Reception Area': ['#E0CCFF'],
+  'Assembly Area': ['#4B0082', '#E0CCFF'],
+  'Tower B': ['#bfd6ff', '#002f6c']
+};
+
+// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
+const SOLID_COLORS = [
+  '#FFD100', '#009E60', '#FF6F61',
+  '#58595B', '#FFB800', '#C75D00'
+];
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+
+// Keyframes for bulb blinking
+const bulbBlinkStyle = `
+@keyframes bulbBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+`;
+
+export default function SummaryChart({ summary = [] }) {
+  // 1) Compute totalCount for percentage calculation
+  const totalCount = useMemo(
+    () => summary.reduce((sum, z) => sum + z.count, 0),
+    [summary]
+  );
+
+  // 2) Build pieData where each slice has value=1 (equal width), but carry actual count and percent
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => {
+        const percent = totalCount > 0
+          ? ((z.count / totalCount) * 100).toFixed(1)
+          : '0.0';
+        return {
+          name: z.zone,
+          value: 1,         // equal slice widths
+          count: z.count,   // actual numeric count
+          percent: Number(percent)
+        };
+      }),
+    [summary, totalCount]
+  );
+
+  // 3) Build a zoneLegendItems array BEFORE any early return
+  const zoneLegendItems = useMemo(() => {
+    return pieData.map((entry, idx) => {
+      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
+      // Use the gradient’s second color (if any) or fallback solid for dot
+      const dotColor = colors[1] || colors[0];
+      return {
+        name: entry.name,
+        color: dotColor
+      };
+    });
+  }, [pieData]);
+
+  // 4) Early return if there is no data
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // 5) Custom tooltip to display the actual count and percentage on hover
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count, percent } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#000'
+        }}
+      >
+        <div><strong>Zone:</strong> {name}</div>
+        <div style={{ marginTop: 4 }}>
+          <strong>Count:</strong> {count} ({percent}%)
+        </div>
+      </div>
+    );
+  };
+
+  // 6) Helper: get fill & stroke for a given zone
+  const getColorsForZone = (zoneName, idx) => {
+    const grad = ZONE_GRADIENTS[zoneName];
+    if (grad) {
+      return {
+        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
+        stroke: grad[1] || grad[0]
+      };
+    } else {
+      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
+      return { fill: solid, stroke: solid };
+    }
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Western Union ‐ Pune Area ‐ wise HeadCount
+      </Card.Header>
+
+      <Card.Body style={{ height: 600, padding: 0 }}>
+        {/* Inject keyframes for bulb blink */}
+        <style>{bulbBlinkStyle}</style>
+
+        <div
+          style={{
+            position: 'relative',
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            display: 'flex',
+            overflow: 'hidden'
+          }}
+        >
+          {/* —— Left: Vertical Legend of Zones —— */}
+          <div
+            style={{
+              width: 140,
+              padding: '1rem 0.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10
+            }}
+          >
+            {zoneLegendItems.map((item) => (
+              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: item.color
+                  }}
+                />
+                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* —— Right: Semi‐donut Chart —— */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                {/* Gradient definitions for each slice */}
+                <defs>
+                  {pieData.map((entry) => {
+                    const key = entry.name.replace(/\s+/g, '-');
+                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                    return (
+                      <linearGradient
+                        id={`grad-${key}`}
+                        key={key}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
+                        <stop offset="100%" stopColor={gradientColors[1] || gradientColors[0]} stopOpacity={1} />
+                      </linearGradient>
+                    );
+                  })}
+                </defs>
+
+                {/* Semi‐donut spanning 360°→0° (bottom half only) */}
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  startAngle={360}
+                  endAngle={0}
+                  innerRadius={80}
+                  outerRadius={240}
+                  paddingAngle={3}
+                  labelLine={false}
+                  isAnimationActive={false}
+                >
+                  {/* LabelList: show "count (percent%)" inside each slice, larger font */}
+                  <LabelList
+                    dataKey="label"
+                    position="inside"
+                    content={({ x, y, index, viewBox }) => {
+                      const entry = pieData[index];
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy - 10}
+                          textAnchor="middle"
+                          fill="#fff"
+                          fontSize="1.25rem"
+                          fontWeight="bold"
+                        >
+                          {entry.count}
+                        </text>
+                      );
+                    }}
+                  />
+                  <LabelList
+                    dataKey="label"
+                    position="inside"
+                    content={({ x, y, index, viewBox }) => {
+                      const entry = pieData[index];
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy + 15}
+                          textAnchor="middle"
+                          fill="#fff"
+                          fontSize="1rem"
+                        >
+                          {entry.percent}%
+                        </text>
+                      );
+                    }}
+                  />
+                  {pieData.map((entry, idx) => {
+                    const { fill, stroke } = getColorsForZone(entry.name, idx);
+                    return (
+                      <Cell
+                        key={`slice-${idx}`}
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={1}
+                      />
+                    );
+                  })}
+                </Pie>
+
+                <Tooltip content={renderTooltip} />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Blinking bulb, shifted slightly upward */}
+            <FaLightbulb
+              style={{
+                position: 'absolute',
+                top: '50%',   // centered
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '3rem',
+                color: '#FFD100',
+                animation: 'bulbBlink 5.5s infinite'
+              }}
+            />
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Now dont change anything just add 
 in details add count has already display also add only percentage,
 and increase count font size and in Live Count bar display count value in top of bar , and display percentage in middle of bar,
