@@ -1,3 +1,52 @@
+{/* Live HeadCount Bar */}
+<Bar
+  dataKey="liveCount"
+  name="Live HeadCount"
+  radius={[4, 4, 0, 0]}
+  barSize={70}
+>
+  {chartData.map((_, idx) => (
+    <Cell
+      key={`live-cell-${idx}`}
+      fill={`url(#live-grad-${idx})`}
+    />
+  ))}
+
+  {/* Label on top: raw count */}
+  <LabelList
+    dataKey="liveCount"
+    position="top"
+    formatter={(val) => val}
+    style={{
+      fill: '#fff',
+      fontSize: 15,
+      fontWeight: 'bold',
+      backgroundColor: 'rgba(255,255,255,0.7)',
+      borderRadius: 2,
+      padding: '2px 4px'
+    }}
+  />
+
+  {/* Label inside bar: percentage */}
+  <LabelList
+    dataKey="usedPct"
+    position="center"
+    formatter={(val) => `${val}%`}
+    style={{
+      fill: '#fff',
+      fontSize: 13,
+      fontWeight: 'bold'
+    }}
+  />
+</Bar>
+
+
+
+
+
+
+
+
 Dont make unneccessary changes in this file just in lable Add percentage in live plate 
 just share me only required snippet carefully
 
