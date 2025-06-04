@@ -1,1 +1,41 @@
+const push = async () => {
+  console.log('🔄 [Denver PUSH] Running at:', new Date().toISOString());
+  console.log('🔍 [Denver] Last seen swipe time:', lastSeen);
+  let fresh;
+  try {
+    fresh = await fetchNewEvents(lastSeen);
+    console.log('📥 [Denver] New events fetched:', fresh.length);
+    if (fresh.length) {
+      console.log('🕒 [Denver] Last fresh event time:', fresh[fresh.length - 1].LocaleMessageTime);
+    } else {
+      console.log('⚠️ [Denver] No new swipes since lastSeen');
+    }
+  } catch (err) {
+    console.error('❌ [Denver] Error in fetchNewEvents():', err);
+    fresh = [];
+  }
+  ...
+};
+
+
+
+
+
+
+const push = async () => {
+  const start = Date.now();
+  let fresh;
+  try {
+    fresh = await fetchNewEvents(lastSeen);
+    console.log('⏱️ [Denver] fetchNewEvents took', Date.now() - start, 'ms');
+  } catch (err) {
+    console.error('❌ [Denver] Error in fetchNewEvents():', err);
+    fresh = [];
+  }
+  ...
+};
+
+
+
+
 
