@@ -23,6 +23,271 @@ import floorCapacities from '../constants/floorCapacities';
 //   // …any other floors
 // }
 
+// A palette of 12 gradients for “live headcount” bars
+const FLOOR_COLOR_PALETTE = [
+  ['#FFD100', '#FFF2CC'],
+  ['#009E60', '#CFFAF3'],
+  ['#A80000', '#FFCCCC'],
+  ['#58595B', '#D6E3F0'],
+  ['#FF6F61', '#FFD1CD'],
+  ['#FFB800', '#FFF8CC'],
+  ['#006400', '#CCFFCC'],
+  ['#4B0082', '#E0CCFF'],
+  ['#C75D00', '#FFE0B2'],
+  ['#264653', '#A0B5D8'],
+  ['#9B2226', '#FFB3B3'],
+  ['#005F73', '#CAEBF2']
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-white">
+        No floor data available
+      </Card>
+    );
+  }
+
+  // 1) Enrich each floor object with liveCount, capacity, usedPct, availPct, and label
+  const enriched = data.map((floorObj) => {
+    const { floor, total: liveCount } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    const usedPct = capacity > 0
+      ? ((liveCount / capacity) * 100).toFixed(1)
+      : '0.0';
+    const availPct = capacity > 0
+      ? ((((capacity - liveCount) / capacity) * 100).toFixed(1))
+      : '0.0';
+    return {
+      ...floorObj,
+      capacity,
+      liveCount,
+      usedPct: Number(usedPct),
+      availPct: Number(availPct),
+      label: `${liveCount}/${capacity}`
+    };
+  });
+
+  // 2) Compute “Pune Office” totals across all floors
+  const totalLive = enriched.reduce((sum, f) => sum + f.liveCount, 0);
+  const totalCap  = enriched.reduce((sum, f) => sum + f.capacity, 0);
+  const totalUsedPct = totalCap > 0
+    ? ((totalLive / totalCap) * 100).toFixed(1)
+    : '0.0';
+  const totalAvailPct = totalCap > 0
+    ? ((((totalCap - totalLive) / totalCap) * 100).toFixed(1))
+    : '0.0';
+
+  const totalEntry = {
+    floor: 'Pune Office',
+    liveCount: totalLive,
+    capacity: totalCap,
+    usedPct: Number(totalUsedPct),
+    availPct: Number(totalAvailPct),
+    label: `${totalLive}/${totalCap}`
+  };
+
+  // 3) Sort floors by liveCount descending, then prepend “Pune Office”
+  const sortedFloors = [...enriched].sort((a, b) => b.liveCount - a.liveCount);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // 4) Custom tooltip to show raw numbers and percentages
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const floorObj = payload[0].payload;
+    const { liveCount, capacity, usedPct, availPct } = floorObj;
+
+    return (
+      <div
+        style={{
+          backgroundColor: 'var(--wu-gray-dark)',
+          color: '#fff',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '0.75rem',
+          minWidth: 180
+        }}
+      >
+        <div style={{ marginBottom: 4 }}>
+          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
+        </div>
+        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
+          Live: {liveCount} / {capacity} ({usedPct}%)
+        </div>
+        <div style={{ fontWeight: 'bold' }}>
+          Available: {capacity - liveCount} / {capacity} ({availPct}%)
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card
+      className="mb-4 shadow-sm border"
+      style={{ borderColor: 'var(--wu-yellow)' }}
+    >
+      <Card.Header className="bg-dark text-warning text-center">
+        Floor‐wise Occupancy (% Used vs. % Available)
+      </Card.Header>
+
+      <Card.Body
+        style={{
+          height: 600,
+          padding: 0,
+          backgroundColor: 'var(--wu-gray-dark)'
+        }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="10%"
+          >
+            {/* 5) Gradient for “used” bars (red dark→faint) */}
+            <defs>
+              <linearGradient id="used-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#A80000" stopOpacity={1} />
+                <stop offset="100%" stopColor="#FFCCCC" stopOpacity={1} />
+              </linearGradient>
+              {/* 6) One gradient per floor for “available” bars */}
+              {chartData.map((_, idx) => {
+                const [darkColor, lightColor] =
+                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient
+                    id={`avail-grad-${idx}`}
+                    key={`avail-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
+                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            {/* 7) Grid and Axes */}
+            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              angle={0}
+              textAnchor="middle"
+              interval={0}
+              height={40}
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: '#fff' }}
+              domain={[0, 100]}
+              unit="%"
+            />
+
+            {/* 8) Custom Tooltip */}
+            <Tooltip content={renderTooltip} />
+
+            {/* 9) Legend */}
+            <Legend
+              verticalAlign="top"
+              align="right"
+              wrapperStyle={{ color: '#fff', paddingBottom: 8 }}
+              payload={[
+                { value: 'Available (%)', type: 'square', color: '#006400' },
+                { value: 'Used (%)', type: 'square', color: '#A80000' }
+              ]}
+            />
+
+            {/* 10) Available (%) bar – narrower, multi‐color per floor */}
+            <Bar
+              dataKey="availPct"
+              name="Available (%)"
+              radius={[4, 4, 0, 0]}
+              barSize={24}    // narrower
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`avail-cell-${idx}`}
+                  fill={`url(#avail-grad-${idx})`}
+                />
+              ))}
+              <LabelList
+                dataKey="availPct"
+                position="top"
+                formatter={(val) => `${val}%`}
+                style={{
+                  fill: '#fff',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}
+              />
+            </Bar>
+
+            {/* 11) Used (%) bar – wider, red gradient */}
+            <Bar
+              dataKey="usedPct"
+              name="Used (%)"
+              radius={[4, 4, 0, 0]}
+              barSize={40}    // wider
+              fill="url(#used-gradient)"
+            >
+              {chartData.map((_, idx) => (
+                <Cell key={`used-cell-${idx}`} fill="url(#used-gradient)" />
+              ))}
+              <LabelList
+                dataKey="usedPct"
+                position="insideTop"
+                formatter={(val) => `${val}%`}
+                style={{
+                  fill: '#000',
+                  fontSize: 10,
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  borderRadius: 2,
+                  padding: '2px 4px'
+                }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import floorCapacities from '../constants/floorCapacities';
+// floorCapacities should look like:
+// {
+//   "Podium Floor": 725,
+//   "Tower B":      303,
+//   "2nd Floor":    185,
+//   // …any other floors
+// }
+
 const USAGE_RED_GRADIENT = ['#A80000', '#FFCCCC']; // dark red → pale red
 
 const FLOOR_COLOR_PALETTE = [
