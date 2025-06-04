@@ -1,3 +1,5 @@
+First Testing done 
+
 const push = async () => {
   console.log('🔄 [PUSH] Running at:', new Date().toISOString());
   console.log('🔍 Last seen swipe time:', lastSeen);
@@ -15,6 +17,57 @@ const push = async () => {
 
   ...
 };
+
+
+Console Details.
+
+PS C:\Users\W0024618\Desktop\swipeData\employee-ai-insights> node server.js
+Server running at http://localhost:5000
+✅ MSSQL pool connected
+✅ Denver MSSQL pool connected
+🔄 [PUSH] Running at: 2025-06-04T05:29:20.185Z
+🔍 Last seen swipe time: 2025-06-03T05:29:20.185Z
+📥 New events fetched: 12138
+🔄 [PUSH] Running at: 2025-06-04T05:29:24.233Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:26.234Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:28.234Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:30.238Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:32.254Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:34.255Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:36.260Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:38.274Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:40.281Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+📥 New events fetched: 0
+⚠️ No new swipes since lastSeen.
+🔄 [PUSH] Running at: 2025-06-04T05:29:42.290Z
+🔍 Last seen swipe time: 2025-06-04T10:59:19.000Z
+
+
 
 
 
