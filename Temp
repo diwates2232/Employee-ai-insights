@@ -1,550 +1,278 @@
-// src/components/SummaryChart.jsx
+Dont make unneccessary changes in this file just in lable Add percentage in live plate 
+just share me only required snippet carefully
 
-import React, { useMemo } from 'react';
+
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
 import {
-  PieChart,
-  Pie,
-  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
   Tooltip,
   ResponsiveContainer,
-  LabelList
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend
 } from 'recharts';
 import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
+import floorCapacities from '../constants/floorCapacities';
+// floorCapacities should look like:
+// {
+//   "Podium Floor": 725,
+//   "Tower B":      303,
+//   "2nd Floor":    185,
+//   // …any other floors
+// }
 
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone': ['#FF0000'],
-  'Red Zone - Outer Area': ['#FF0000'],
-  'Yellow Zone': ['#FFDE21'],
-  'Yellow Zone - Outer Area': ['#FFDE21'],
-  '2nd Floor, Pune': ['#FF6F61'],
-  'Orange Zone': ['#ffa500'],
-  'Orange Zone - Outer Area': ['#ffa500'],
-  'Green Zone': ['#009E60'],
-  'Reception Area': ['#E0CCFF'],
-  'Assembly Area': ['#4B0082', '#E0CCFF'],
-  'Tower B': ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-  '#58595B', '#FFB800', '#C75D00'
+// A palette of 12 gradients for “live headcount” bars
+const FLOOR_COLOR_PALETTE = [
+  //  ['#FFD100', '#FFF2CC'],
+  //  ['#009E60', '#CFFAF3'],
+  // ['#A80000', '#FFCCCC'],
+  // ['#58595B', '#D6E3F0'],
+  // ['#FF6F61', '#FFD1CD'],
+    // ['#FFB800', '#FFF8CC'],
+   ['#006400', '#CCFFCC'],
+  // ['#4B0082', '#E0CCFF'],
+  // ['#C75D00', '#FFE0B2'],
+  // ['#264653', '#A0B5D8'],
+  // ['#9B2226', '#FFB3B3'],
+  // ['#005F73', '#CAEBF2']
 ];
 
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-// Keyframes for bulb blinking
-const bulbBlinkStyle = `
-@keyframes bulbBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-`;
-
-export default function SummaryChart({ summary = [] }) {
-  // 1) Compute totalCount for percentage calculation
-  const totalCount = useMemo(
-    () => summary.reduce((sum, z) => sum + z.count, 0),
-    [summary]
-  );
-
-  // 2) Build pieData where each slice has value=1 (equal width), but carry actual count and percent
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => {
-        const percent = totalCount > 0
-          ? ((z.count / totalCount) * 100).toFixed(1)
-          : '0.0';
-        return {
-          name: z.zone,
-          value: 1,         // equal slice widths
-          count: z.count,   // actual numeric count
-          percent: Number(percent)
-        };
-      }),
-    [summary, totalCount]
-  );
-
-  // 3) Build a zoneLegendItems array BEFORE any early return
-  const zoneLegendItems = useMemo(() => {
-    return pieData.map((entry, idx) => {
-      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
-      // Use the gradient’s second color (if any) or fallback solid for dot
-      const dotColor = colors[1] || colors[0];
-      return {
-        name: entry.name,
-        color: dotColor
-      };
-    });
-  }, [pieData]);
-
-  // 4) Early return if there is no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-white">
+        No floor data available
+      </Card>
+    );
   }
 
-  // 5) Custom tooltip to display the actual count and percentage on hover
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count, percent } = payload[0].payload;
+  // 1) Enrich each floor object with liveCount, capacity, usedPct, and breakdown
+  const enriched = data.map((floorObj) => {
+    const { floor, total: liveCount } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    const usedPct = capacity > 0
+      ? ((liveCount / capacity) * 100).toFixed(1)
+      : '0.0';
+    return {
+      ...floorObj,           // includes breakdown fields: employees, contractors, etc.
+      capacity,
+      liveCount,
+      usedPct: Number(usedPct),
+      label: `${liveCount}/${capacity}`
+    };
+  });
+
+  // 2) Compute “Pune Office” totals across all floors
+  const totalLive = enriched.reduce((sum, f) => sum + f.liveCount, 0);
+  const totalCap  = enriched.reduce((sum, f) => sum + f.capacity, 0);
+  const totalUsedPct = totalCap > 0
+    ? ((totalLive / totalCap) * 100).toFixed(1)
+    : '0.0';
+
+  const totalEntry = {
+    floor: 'Pune Office',
+    liveCount: totalLive,
+    capacity: totalCap,
+    usedPct: Number(totalUsedPct),
+    label: `${totalLive}/${totalCap}`
+  };
+
+  // 3) Sort floors by liveCount descending, then prepend “Pune Office”
+  const sortedFloors = [...enriched].sort((a, b) => b.liveCount - a.liveCount);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // 4) Determine the maximum capacity to set Y-axis domain
+  const maxCapacity = Math.max(...chartData.map(f => f.capacity)) || 0;
+
+  // 5) Custom tooltip to show raw counts, percentages, and breakdown
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    // payload[0] corresponds to capacity; payload[1] to liveCount
+    const floorObj = payload[0].payload;
+    const { liveCount, capacity, usedPct } = floorObj;
+
+    // Include breakdown entries (employees, contractors, etc.)
+    const breakdownEntries = Object.entries(floorObj).filter(
+      ([key]) =>
+        !['floor', 'liveCount', 'capacity', 'usedPct', 'label'].includes(key)
+    );
+
     return (
       <div
         style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
+          backgroundColor: 'var(--wu-gray-dark)',
+          color: '#fff',
+          border: '1px solid var(--wu-yellow)',
           borderRadius: 4,
-          padding: '8px',
-          color: '#000'
+          padding: '0.75rem',
+          minWidth: 200
         }}
       >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}>
-          <strong>Count:</strong> {count} ({percent}%)
+        <div style={{ marginBottom: 4 }}>
+          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
         </div>
+        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
+          Live: {liveCount} / {capacity} ({usedPct}%)
+        </div>
+        {breakdownEntries.map(([type, value]) => (
+          <div
+            key={type}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 2,
+              color: '#fff'
+            }}
+          >
+            <span style={{ opacity: 0.8 }}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </span>
+            <span style={{ fontWeight: 'bold' }}>{value}</span>
+          </div>
+        ))}
       </div>
     );
   };
 
-  // 6) Helper: get fill & stroke for a given zone
-  const getColorsForZone = (zoneName, idx) => {
-    const grad = ZONE_GRADIENTS[zoneName];
-    if (grad) {
-      return {
-        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
-        stroke: grad[1] || grad[0]
-      };
-    } else {
-      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
-      return { fill: solid, stroke: solid };
-    }
-  };
-
   return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+    <Card
+      className="mb-4 shadow-sm border"
+      style={{ borderColor: 'var(--wu-yellow)' }}
+    >
       <Card.Header className="bg-dark text-warning text-center">
-        Western Union ‐ Pune Area ‐ wise HeadCount
+        Western Union-Pune Headcount against Occupancy
       </Card.Header>
 
-      <Card.Body style={{ height: 600, padding: 0 }}>
-        {/* Inject keyframes for bulb blink */}
-        <style>{bulbBlinkStyle}</style>
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-            display: 'flex',
-            overflow: 'hidden'
-          }}
-        >
-          {/* —— Left: Vertical Legend of Zones —— */}
-          <div
-            style={{
-              width: 140,
-              padding: '1rem 0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10
-            }}
-          >
-            {zoneLegendItems.map((item) => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: item.color
-                  }}
-                />
-                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* —— Right: Semi‐donut Chart —— */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Gradient definitions for each slice */}
-                <defs>
-                  {pieData.map((entry) => {
-                    const key = entry.name.replace(/\s+/g, '-');
-                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                    return (
-                      <linearGradient
-                        id={`grad-${key}`}
-                        key={key}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={gradientColors[1] || gradientColors[0]} stopOpacity={1} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Semi‐donut spanning 360°→0° (bottom half only) */}
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  startAngle={360}
-                  endAngle={0}
-                  innerRadius={80}
-                  outerRadius={240}
-                  paddingAngle={3}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  {/* LabelList: show "count (percent%)" inside each slice, larger font */}
-                  <LabelList
-                    dataKey="label"
-                    position="inside"
-                    content={({ x, y, index, viewBox }) => {
-                      const entry = pieData[index];
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy - 10}
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize="1.25rem"
-                          fontWeight="bold"
-                        >
-                          {entry.count}
-                        </text>
-                      );
-                    }}
-                  />
-                  <LabelList
-                    dataKey="label"
-                    position="inside"
-                    content={({ x, y, index, viewBox }) => {
-                      const entry = pieData[index];
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy + 15}
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize="1rem"
-                        >
-                          {entry.percent}%
-                        </text>
-                      );
-                    }}
-                  />
-                  {pieData.map((entry, idx) => {
-                    const { fill, stroke } = getColorsForZone(entry.name, idx);
-                    return (
-                      <Cell
-                        key={`slice-${idx}`}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth={1}
-                      />
-                    );
-                  })}
-                </Pie>
-
-                <Tooltip content={renderTooltip} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Blinking bulb, shifted slightly upward */}
-            <FaLightbulb
-              style={{
-                position: 'absolute',
-                top: '50%',   // centered
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '3rem',
-                color: '#FFD100',
-                animation: 'bulbBlink 5.5s infinite'
-              }}
-            />
-          </div>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Now dont change anything just add 
-in details add count has already display also add only percentage,
-and increase count font size and in Live Count bar display count value in top of bar , and display percentage in middle of bar,
-just update those thing and give me updated file carefully
-
-// src/components/SummaryChart.jsx
-
-import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { Card } from 'react-bootstrap';
-import { FaLightbulb } from 'react-icons/fa'; // bulb icon
-
-// Gradients for known zones (fallback to DEFAULT_GRADIENT if missing)
-const ZONE_GRADIENTS = {
-  'Red Zone':       ['#FF0000'],
-  'Red Zone - Outer Area':['#FF0000'],
-  'Yellow Zone':    [' #FFDE21'],
- ' Yellow Zone - Outer Area':['#FFDE21'],
- '2nd Floor, Pune':['#FF6F61'],
- 
-  'Orange Zone':    ['#ffa500'],
-  'Orange Zone - Outer Area':['#ffa500'],
-  'Green Zone':     ['#009E60'],
-  'Reception Area': ['#E0CCFF'],
-  'Assembly Area':['#4B0082', '#E0CCFF'],
-  'Tower B':        ['#bfd6ff', '#002f6c']
-};
-
-// Solid‐color fallbacks (if a zone isn’t in ZONE_GRADIENTS)
-const SOLID_COLORS = [
-  '#FFD100', '#009E60', '#FF6F61',
-   '#58595B', '#FFB800', '#C75D00'
-];
-
-const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
-
-// Keyframes for bulb blinking
-const bulbBlinkStyle = `
-@keyframes bulbBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-`;
-
-export default function SummaryChart({ summary = [] }) {
-  // 1) Build pieData where each slice has value=1 (equal width), but carry actual count.
-  const pieData = useMemo(
-    () =>
-      summary.map((z) => ({
-        name:  z.zone,
-        value: 1,       // equal slice widths
-        count: z.count  // actual numeric count
-      })),
-    [summary]
-  );
-
-  // 2) Build a zoneLegendItems array BEFORE any early return
-  const zoneLegendItems = useMemo(() => {
-    return pieData.map((entry, idx) => {
-      const colors = ZONE_GRADIENTS[entry.name] || [SOLID_COLORS[idx % SOLID_COLORS.length], null];
-      // Use the darker/second color for the dot if gradient exists, else the solid
-      const dotColor = colors[1] || colors[0];
-      return {
-        name: entry.name,
-        color: dotColor
-      };
-    });
-  }, [pieData]);
-
-  // 3) Early return if there is no data
-  if (!summary.length) {
-    return <Card body>No zone data available</Card>;
-  }
-
-  // 4) Custom tooltip to display the actual count on hover
-  const renderTooltip = ({ active, payload }) => {
-    if (!active || !payload || !payload.length) return null;
-    const { name, count } = payload[0].payload;
-    return (
-      <div
+      <Card.Body
         style={{
-          backgroundColor: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          padding: '8px',
-          color: '#000'
+          height: 600,
+          padding: 0,
+          backgroundColor: 'var(--wu-gray-dark)'
         }}
       >
-        <div><strong>Zone:</strong> {name}</div>
-        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
-      </div>
-    );
-  };
-
-  // 5) Helper: get fill & stroke for a given zone
-  const getColorsForZone = (zoneName, idx) => {
-    const grad = ZONE_GRADIENTS[zoneName];
-    if (grad) {
-      return {
-        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
-        stroke: grad[1]
-      };
-    } else {
-      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
-      return { fill: solid, stroke: solid };
-    }
-  };
-
-  return (
-    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
-      <Card.Header className="bg-dark text-warning text-center">
-        Western Union-Pune Area wise HeadCount
-      </Card.Header>
-
-      <Card.Body style={{ height: 600, padding: 0 }}>
-        {/* Inject keyframes for bulb blink */}
-        <style>{bulbBlinkStyle}</style>
-
-        <div
-          style={{
-            position: 'relative',
-            height: '100%',
-            backgroundColor: 'var(--wu-gray-dark)',
-            border: '1px solid var(--wu-yellow)',
-            borderRadius: 4,
-            display: 'flex',
-            overflow: 'hidden'
-          }}
-        >
-          {/* —— Left: Vertical Legend of Zones —— */}
-          <div
-            style={{
-              width: 140,
-              padding: '1rem 0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10
-            }}
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="1%"  // reduced gap between floor groups
           >
-            {zoneLegendItems.map((item) => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: item.color
-                  }}
-                />
-                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{item.name}</span>
-              </div>
-            ))}
-          </div>
+            {/* 6) Gradient for capacity bars (red dark → faintwu  ['#FFD100', '#FFF2CC'],['#A80000', '#FFCCCC'],  ['#006400', '#CCFFCC'], ['#FFB800', '#FFF8CC'],) */}
+            
+            <defs>
+              <linearGradient id="capacity-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFD100"stopOpacity={1} />
+                <stop offset="100%" stopColor="#FFB800"  stopOpacity={1} />
+              </linearGradient>
+              {/* 7) One gradient per floor for “live” bars (multi‐colour) */}
+              {chartData.map((_, idx) => {
+                const [darkColor, lightColor] =
+                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient
+                    id={`live-grad-${idx}`}
+                    key={`live-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
+                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
 
-          {/* —— Right: Semi‐donut Chart —— */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                {/* Gradient definitions for each slice */}
-                <defs>
-                  {pieData.map((entry) => {
-                    const key = entry.name.replace(/\s+/g, '-');
-                    const gradientColors = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
-                    return (
-                      <linearGradient
-                        id={`grad-${key}`}
-                        key={key}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor={gradientColors[0]} stopOpacity={1} />
-                        <stop offset="100%" stopColor={gradientColors[1]} stopOpacity={1} />
-                      </linearGradient>
-                    );
-                  })}
-                </defs>
-
-                {/* Semi‐donut spanning 360°→0° (bottom half only) */}
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  startAngle={360}
-                  endAngle={0}
-                  innerRadius={80}
-                  outerRadius={240}
-                  paddingAngle={3}
-                  labelLine={false}
-                  isAnimationActive={false}
-                >
-                  <LabelList
-                    dataKey="count"
-                    position="inside"
-                    fill="#fff"
-                    style={{ fontSize: '1rem', fontWeight: 'bold' }}
-                  />
-                  {pieData.map((entry, idx) => {
-                    const { fill, stroke } = getColorsForZone(entry.name, idx);
-                    return (
-                      <Cell
-                        key={`slice-${idx}`}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth={1}
-                      />
-                    );
-                  })}
-                </Pie>
-
-                <Tooltip content={renderTooltip} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Blinking bulb, shifted slightly upward */}
-            <FaLightbulb
-              style={{
-                position: 'absolute',
-                top: '50%',   // shifted up from 50%
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: '3rem',
-                color: '#FFD100',
-                animation: 'bulbBlink 5.5s infinite'
-              }}
+            {/* 8) Grid and Axes */}
+            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 15, fill: '#fff' }}
+              angle={0}
+              textAnchor="middle"
+              interval={0}
+              height={40}
+            />
+            <YAxis
+              tick={{ fontSize: 15, fill: '#fff' }}
+              domain={[0, Math.ceil(maxCapacity / 50) * 50]} // round up to nearest 50
             />
 
-            {/* “Western Union Pune” text below the bulb */}
-            {/* <div
-              style={{
-                position: 'absolute',
-                top: 'calc(45% + 50px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                color: '#FFD100',
-                fontSize: '1rem',
-                fontWeight: 'bold'
-              }}
+            {/* 9) Custom Tooltip */}
+            <Tooltip content={renderTooltip} />
+
+            {/* 10) Legend */}
+            <Legend
+              verticalAlign="top"
+              align="center"
+              wrapperStyle={{ color: '#fff', paddingBottom: 8 }}
+              payload={[
+                { value: 'Occupancy', type: 'square', color: '#FFD100' },
+                { value: 'Live HeadCount', type: 'square', color: '#006400' }
+              ]}
+            />
+
+            {/* 11) Capacity bar – wider, red gradient */}
+            <Bar
+              dataKey="capacity"
+              name="Occupancy"
+              radius={[4, 4, 0, 0]}
+              barSize={70}
+              fill="url(#capacity-gradient)"
             >
-              Western Union Pune
-            </div> */}
-          </div>
-        </div>
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`cap-cell-${idx}`}
+                  fill="url(#capacity-gradient)"
+                />
+              ))}
+              <LabelList
+                dataKey="capacity"
+                position="top"
+                formatter={(val) => val}
+                style={{
+                  fill: '#fff',
+                  fontSize: 15,
+                  fontWeight: 'bold'
+                }}
+              />
+            </Bar>
+
+            {/* 12) Live bar – narrower, multi‐colour */}
+            <Bar
+              dataKey="liveCount"
+              name="Live HeadCount"
+              radius={[4, 4, 0, 0]}
+              barSize={70}
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`live-cell-${idx}`}
+                  fill={`url(#live-grad-${idx})`}
+                />
+              ))}
+              <LabelList
+                dataKey="liveCount"
+                position="top"
+                formatter={(val) => val}
+                style={{
+                  fill: '#fff',
+                  fontSize: 15,
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  borderRadius: 2,
+                  padding: '2px 4px'
+                }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </Card.Body>
     </Card>
   );
