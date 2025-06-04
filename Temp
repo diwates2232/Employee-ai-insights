@@ -1,3 +1,243 @@
+// src/components/SummaryChart.jsx
+
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LabelList,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import { FaLightbulb } from 'react-icons/fa'; // bulb icon
+
+// Gradients/solid colors for known zones
+const ZONE_GRADIENTS = {
+  'Red Zone':               ['#FF0000', '#FF6666'],
+  'Red Zone - Outer Area':  ['#FF0000', '#FF6666'],
+  'Yellow Zone':            ['#FFDE21', '#FFF27A'],
+  'Yellow Zone - Outer Area':['#FFDE21', '#FFF27A'],
+  '2nd Floor, Pune':        ['#FF6F61', '#FFA28F'],
+  'Orange Zone':            ['#FFA500', '#FFC966'],
+  'Orange Zone - Outer Area':['#FFA500', '#FFC966'],
+  'Green Zone':             ['#009E60', '#66D9A5'],
+  'Reception Area':         ['#E0CCFF', '#F4E6FF'],
+  'Assembly Area':          ['#4B0082', '#A366FF'],
+  'Tower B':                ['#002F6C', '#99BBFF']
+};
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+const SOLID_COLORS = ['#FFD100', '#009E60', '#FF6F61', '#58595B', '#FFB800', '#C75D00'];
+
+// Keyframes for bulb blinking and rainbow color
+const bulbStyles = `
+@keyframes bulbBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes rainbow {
+  0% { color: #FF0000; }
+  17% { color: #FF7F00; }
+  34% { color: #FFFF00; }
+  51% { color: #00FF00; }
+  68% { color: #0000FF; }
+  85% { color: #4B0082; }
+  100% { color: #9400D3; }
+}
+`;
+
+export default function SummaryChart({ summary = [] }) {
+  // 1) Build pieData with equal slice widths but carry actual counts
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name:  z.zone,
+        value: 1,
+        count: z.count
+      })),
+    [summary]
+  );
+
+  // 2) Build a zoneLegendItems array
+  const zoneLegendItems = useMemo(() => {
+    return pieData.map((entry, idx) => {
+      const grad = ZONE_GRADIENTS[entry.name];
+      const color = grad ? grad[0] : SOLID_COLORS[idx % SOLID_COLORS.length];
+      return {
+        value: entry.name,
+        type: 'square',
+        color
+      };
+    });
+  }, [pieData]);
+
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // 3) Custom tooltip to display the actual count
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#000',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#FFD100'
+        }}
+      >
+        <div><strong>Zone:</strong> {name}</div>
+        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
+      </div>
+    );
+  };
+
+  // 4) Helper: get fill & stroke for a given zone
+  const getColorsForZone = (zoneName, idx) => {
+    const grad = ZONE_GRADIENTS[zoneName];
+    if (grad) {
+      return {
+        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
+        stroke: grad[0]
+      };
+    } else {
+      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
+      return { fill: solid, stroke: solid };
+    }
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center">
+        Western Union-Pune Area-wise HeadCount
+        {/* horizontal line below title */}
+        <div
+          style={{
+            borderBottom: '2px solid var(--wu-yellow)',
+            marginTop: 6,
+            width: '50%',
+            marginLeft: 'auto',
+            marginRight: 'auto'
+          }}
+        />
+      </Card.Header>
+
+      <Card.Body style={{ height: 600, padding: 0 }}>
+        {/* Inject keyframes for bulb blink and rainbow */}
+        <style>{bulbStyles}</style>
+
+        <div
+          style={{
+            position: 'relative',
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            overflow: 'hidden'
+          }}
+        >
+          {/* — Pie Chart with legend below — */}
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              {/* Gradient definitions for each slice */}
+              <defs>
+                {pieData.map((entry) => {
+                  const key = entry.name.replace(/\s+/g, '-');
+                  const grad = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                  return (
+                    <linearGradient
+                      id={`grad-${key}`}
+                      key={key}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor={grad[0]} stopOpacity={1} />
+                      <stop offset="100%" stopColor={grad[1]} stopOpacity={1} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="45%"
+                innerRadius={60}
+                outerRadius={200}
+                paddingAngle={3}
+                labelLine={false}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="count"
+                  position="inside"
+                  fill="var(--wu-yellow)"
+                  style={{ fontSize: '1rem', fontWeight: 'bold' }}
+                />
+                {pieData.map((entry, idx) => {
+                  const { fill, stroke } = getColorsForZone(entry.name, idx);
+                  return (
+                    <Cell
+                      key={`slice-${idx}`}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={2}
+                    />
+                  );
+                })}
+              </Pie>
+
+              <Tooltip content={renderTooltip} />
+
+              {/* Legend positioned below */}
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                iconType="square"
+                wrapperStyle={{
+                  paddingBottom: 16,
+                  color: '#FFD100'
+                }}
+                payload={zoneLegendItems}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+
+          {/* Blinking bulb with rainbow fill */}
+          <FaLightbulb
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontSize: '3rem',
+              animation: 'bulbBlink 4s infinite, rainbow 3s infinite'
+            }}
+          />
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
 Read carefully below chart in this chart right now Legends and details are display vertically ,adjust this legends and icons in below the chart and 
 use Western union Yellow Colour for display details, red Zone, Green Zone ..and legends colours are as per zone ,
 add border bor each slice 
