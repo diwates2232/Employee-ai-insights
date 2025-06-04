@@ -23,6 +23,273 @@ import floorCapacities from '../constants/floorCapacities';
 //   // …any other floors
 // }
 
+const USAGE_RED_GRADIENT = ['#A80000', '#FFCCCC']; // dark red → pale red
+
+const FLOOR_COLOR_PALETTE = [
+  ['#FFD100', '#FFF2CC'],
+  ['#009E60', '#CFFAF3'],
+  ['#58595B', '#D6E3F0'],
+  ['#FF6F61', '#FFD1CD'],
+  ['#FFB800', '#FFF8CC'],
+  ['#006400', '#CCFFCC'],
+  ['#4B0082', '#E0CCFF'],
+  ['#C75D00', '#FFE0B2'],
+  ['#264653', '#A0B5D8'],
+  ['#9B2226', '#FFB3B3'],
+  ['#005F73', '#CAEBF2'],
+  ['#009E60', '#CCFFCC']  // repeat if more floors
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  // If there’s no data, show a fallback card
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-white">
+        No floor data available
+      </Card>
+    );
+  }
+
+  // 1) Enrich each floor object with capacity and liveCount, plus label
+  const enriched = data.map((floorObj) => {
+    const { floor, total: liveCount } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    return {
+      ...floorObj,
+      capacity,
+      liveCount,
+      label: `${liveCount}/${capacity}`, // used in tooltip and LabelList
+    };
+  });
+
+  // 2) Compute the “Pune Office” (total) across all floors
+  const totalLive = enriched.reduce((sum, f) => sum + f.liveCount, 0);
+  const totalCap  = enriched.reduce((sum, f) => sum + f.capacity, 0);
+
+  const totalEntry = {
+    floor: 'Pune Office',
+    liveCount: totalLive,
+    capacity: totalCap,
+    label: `${totalLive}/${totalCap}`
+  };
+
+  // 3) Sort only the individual floors (desc by liveCount), then place "Pune Office" at the beginning:
+  const sortedFloors = [...enriched].sort((a, b) => b.liveCount - a.liveCount);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // 4) Custom tooltip to show raw numbers and percentage occupancy
+  const renderTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    // payload could include two bars: capacity and liveCount
+    const floorObj = payload[0].payload;
+    const { liveCount, capacity } = floorObj;
+    const usedPct = capacity > 0
+      ? ((liveCount / capacity) * 100).toFixed(1)
+      : '0.0';
+    return (
+      <div
+        style={{
+          backgroundColor: 'var(--wu-gray-dark)',
+          color: '#fff',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '0.75rem',
+          minWidth: 180
+        }}
+      >
+        <div style={{ marginBottom: 4 }}>
+          <strong style={{ fontSize: 14 }}>Floor: {label}</strong>
+        </div>
+        <div style={{ marginBottom: 6, fontWeight: 'bold' }}>
+          Live Headcount: {liveCount} / {capacity} ({usedPct}%)
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card
+      className="mb-4 shadow-sm border"
+      style={{ borderColor: 'var(--wu-yellow)' }}
+    >
+      <Card.Header className="bg-dark text-warning text-center">
+        Floor‐wise Occupancy (Capacity vs. Live)
+      </Card.Header>
+
+      <Card.Body
+        style={{
+          height: 600,
+          padding: 0,
+          backgroundColor: 'var(--wu-gray-dark)'
+        }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="10%"  // reduced gap between floor groups
+          >
+            {/* 5) Define gradients: one red gradient for occupancy bars, and one gradient per floor for live bars */}
+            <defs>
+              {chartData.map((_, idx) => {
+                // define gradient for usedPct (occupancy) bar
+                return (
+                  <linearGradient
+                    id={`usage-grad-${idx}`}
+                    key={`usage-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={USAGE_RED_GRADIENT[0]} stopOpacity={1} />
+                    <stop offset="100%" stopColor={USAGE_RED_GRADIENT[1]} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+              {chartData.map((_, idx) => {
+                // define gradient for liveCount bars
+                const [darkColor, lightColor] =
+                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient
+                    id={`live-grad-${idx}`}
+                    key={`live-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
+                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            {/* 6) Grid and Axes */}
+            <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              angle={0}
+              textAnchor="middle"
+              interval={0}
+              height={40}
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: '#fff' }}
+              allowDecimals={false}
+            />
+
+            {/* 7) Custom Tooltip */}
+            <Tooltip content={renderTooltip} />
+
+            {/* 8) Legend for clarity */}
+            <Legend
+              verticalAlign="top"
+              align="right"
+              wrapperStyle={{ color: '#fff', paddingBottom: 8 }}
+              payload={[
+                { value: 'Total Capacity', type: 'square', color: USAGE_RED_GRADIENT[0] },
+                { value: 'Live Headcount', type: 'square', color: FLOOR_COLOR_PALETTE[0][0] }
+              ]}
+            />
+
+            {/* 9) Occupancy bar (capacity), now “longer” */}
+            <Bar
+              dataKey="capacity"
+              name="Total Capacity"
+              radius={[4, 4, 0, 0]}
+              barSize={60}     // larger bar size
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`cell-cap-${idx}`}
+                  fill={`url(#usage-grad-${idx})`} 
+                  stroke={USAGE_RED_GRADIENT[0]}
+                  strokeWidth={1}
+                />
+              ))}
+
+              {/* 10) LabelList: show “capacity” above each occupancy bar */}
+              <LabelList
+                dataKey="capacity"
+                position="top"
+                style={{
+                  fill: '#fff',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}
+              />
+            </Bar>
+
+            {/* 11) Live headcount bar, “shorter” */}
+            <Bar
+              dataKey="liveCount"
+              name="Live Headcount"
+              radius={[4, 4, 0, 0]}
+              barSize={36}    // smaller bar size
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`cell-live-${idx}`}
+                  fill={`url(#live-grad-${idx})`}
+                  stroke={FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length][0]}
+                  strokeWidth={1}
+                />
+              ))}
+
+              {/* 12) LabelList: show raw “liveCount/capacity” only on hover via tooltip */}
+              {/* No static labels here to keep bars clear */}
+
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import floorCapacities from '../constants/floorCapacities';
+// floorCapacities should look like:
+// {
+//   "Podium Floor": 725,
+//   "Tower B":      303,
+//   "2nd Floor":    185,
+//   // …any other floors
+// }
+
 const FLOOR_COLOR_PALETTE = [
   ['#FFD100', '#FFF2CC'],
   ['#009E60', '#CFFAF3'],
