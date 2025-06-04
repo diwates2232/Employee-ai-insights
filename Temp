@@ -1,3 +1,23 @@
+// client/src/constants/floorCapacities.js
+
+const floorCapacities = {
+  "Podium Floor": 725,
+  "Tower B": 303,
+  "2nd Floor": 185,
+};
+
+export default floorCapacities;
+
+
+
+
+
+
+
+
+
+
+
 // src/components/FloorOccupancyChart.jsx
 
 import React from 'react';
