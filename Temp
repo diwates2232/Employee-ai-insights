@@ -1,3 +1,43 @@
+// 2) OutDirection - Remove if door/zone implies leaving office
+if (Direction === 'OutDirection') {
+  const zoneKey = zone.toLowerCase();
+  const doorKey = String(Door || '').toUpperCase();
+
+  const shouldEvict =
+    zoneKey === 'out of office' ||
+    doorKey.includes('TURNSTILE') ||         // e.g. TURNSTILE exit
+    doorKey.includes('LOBBY EXIT') ||        // add other exact exit door names if needed
+    doorKey.includes('EXIT GATE') ||         // optional based on site
+    doorKey.includes('RECEPTION EXIT');      // optional
+
+  if (shouldEvict) {
+    uniquePeople.delete(dedupKey);
+    delete current[dedupKey];
+  } else {
+    // Not a full exit, so retain
+    uniquePeople.set(dedupKey, PersonnelType);
+    current[dedupKey] = {
+      Dateonly, Swipe_Time,
+      EmployeeID, ObjectName1, CardNumber,
+      PersonnelType,
+      zone: zoneRaw,
+      door: Door,
+      Direction
+    };
+  }
+  continue;
+}
+
+
+
+
+
+
+
+
+
+
+
 async function buildOccupancy(allEvents) {
   const current      = {};
   const uniquePeople = new Map();
