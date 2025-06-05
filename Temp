@@ -1,3 +1,61 @@
+// near the top of controllers/liveOccupancyController.js:
+const { DateTime } = require('luxon');
+
+// …
+
+/**
+ * Returns “YYYY‐MM‐DD” for “now” in Asia/Kolkata.
+ */
+function getTodayString() {
+  return DateTime.now()
+    .setZone('Asia/Kolkata')
+    .toFormat('yyyy-LL-dd');
+}
+
+
+
+
+
+exports.getLiveOccupancy = async (req, res) => {
+  await getPool();
+
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24*60*60*1000);
+  const events = [];
+
+  const push = async () => {
+    const fresh = await fetchNewEvents(lastSeen);
+    if (fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+    // ─────────────────────────────────────────────────
+    // build occupancy + today counts
+    const occupancy  = await buildOccupancy(events);
+    const todayStats = buildVisitedToday(events);
+    // … write SSE …
+  };
+
+  await push();
+  const timer = setInterval(push, 2000);
+  req.on('close', () => clearInterval(timer));
+};
+
+
+
+
+
+
+
+
+
+
 Let check below file carefully , our File is working Properly , issue is 
 for Live Occupancy Store previous day records, They not use Only Current day records, beacuse i have review all files in Live Occupancy we got some Entry which are not today,
 so debug code and solve the isue carefully
