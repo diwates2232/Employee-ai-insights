@@ -1,4 +1,29 @@
-  {/* Locations */}
+{/* Locations */}
+<div className="mt-2 small">
+  <div className="d-flex align-items-center mb-1">
+    <FaHome className="me-2" style={{ color: '#A80000' }} /> 
+    <span style={{ color: '#A80000' }}>
+      Base: {baseLoc}
+    </span>
+  </div>
+  {m.present && (
+    <div className="d-flex align-items-center">
+      <FaMapMarkerAlt className="me-2" style={{ color: '#009E60' }} />
+      <span style={{ color: '#009E60' }}>
+        Live: {m.zone}
+      </span>
+    </div>
+  )}
+</div>
+
+
+
+
+
+
+
+
+{/* Locations */}
                   <div className="mt-2 small">
                     <div className="d-flex align-items-center mb-1">
                       <FaHome className="me-2" style={{ color: '#A80000' }} /> 
