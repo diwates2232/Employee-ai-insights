@@ -1,4 +1,72 @@
 // src/pages/DenverInOutInconsistency.jsx
+
+import React, { useEffect, useState } from 'react';
+
+export default function DenverInOutInconsistencyPage({ data }) {
+  // If you want to re-fetch inside this component rather than rely on App.js, do it like this:
+  // (But if you’re already passing “data” from App.js via props, you don’t need another fetch.)
+
+  const [inconsistencyList, setInconsistencyList] = useState(data || []);
+
+  // ONLY use this useEffect if you want to fetch here directly:
+  useEffect(() => {
+    fetch('http://localhost:5000/api/inout-inconsistency-denver')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((json) => {
+        setInconsistencyList(json || []);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch in/out inconsistency:', err);
+      });
+  }, []);
+
+  return (
+    <div>
+      <h2>Denver In/Out Inconsistency</h2>
+      {inconsistencyList.length === 0 ? (
+        <p>No inconsistency data available.</p>
+      ) : (
+        <table className="table table-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Floor</th>
+              <th>Total Persons</th>
+              <th>Inconsistent Count</th>
+              <th>Inconsistency %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {inconsistencyList.map((row) => (
+              <tr key={`${row.date}-${row.floor}`}>
+                <td>{row.date}</td>
+                <td>{row.floor}</td>
+                <td>{row.totalPersons}</td>
+                <td>{row.inconsistentCount}</td>
+                <td>{row.inconsistencyPercentage}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+// src/pages/DenverInOutInconsistency.jsx
 import React, { useState, useEffect } from 'react';
 
 export default function DenverInOutInconsistency() {
