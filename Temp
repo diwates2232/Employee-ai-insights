@@ -1,3 +1,44 @@
+import React from 'react';
+import { Container, Row, Col, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import ERTOverview from '../components/ERTOverview';
+
+/**
+ * A standalone page that only renders the ERTOverview component,
+ * with a "← Back to Dashboard" link at the top.
+ */
+export default function ErtPage({ ertStatus }) {
+  return (
+    <Container fluid className="py-4">
+      {/* ←— Page header */}
+      <h1 className="mb-4">Emergency Response Team</h1>
+
+      {/* Back-to-Dashboard link */}
+      <div className="mb-3">
+        <Button as={Link} to="/" variant="secondary">
+          ← Back to Dashboard
+        </Button>
+      </div>
+
+      {/* ERTOverview (re-use existing component) */}
+      <Row className="g-2">
+        <Col>
+          <ERTOverview ertStatus={ertStatus} />
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+
 // src/App.js
 
 import React, { useEffect, useState } from 'react';
