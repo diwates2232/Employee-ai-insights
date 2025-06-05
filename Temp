@@ -1,3 +1,185 @@
+// src/pages/DenverInOutInconsistency.jsx
+import React, { useState, useEffect } from 'react';
+
+export default function DenverInOutInconsistency() {
+  const [dailyFloorStats, setDailyFloorStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  // track which “date+floor” rows have their instances expanded:
+  const [expandedRows, setExpandedRows] = useState({});
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const resp = await fetch('/api/denver/inout-inconsistency');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        // we only need dailyFloorStats for this page
+        setDailyFloorStats(json.dailyFloorStats || []);
+      } catch (err) {
+        console.error('Failed to fetch:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const toggleRow = (key) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  if (loading) {
+    return <div>Loading data…</div>;
+  }
+
+  if (error) {
+    return <div style={{ color: 'red' }}>Error: {error}</div>;
+  }
+
+  return (
+    <div>
+      <h1>Denver In/Out Inconsistency</h1>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          marginTop: '1rem',
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Date</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Floor</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>In Count</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Out Count</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Total Persons</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Inconsistent Count</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Inconsistency %</th>
+            <th style={{ border: '1px solid #ccc', padding: '8px' }}>Instances</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dailyFloorStats.map((row) => {
+            // use a unique key: date__floor
+            const rowKey = `${row.date}__${row.floor}`;
+            const isExpanded = Boolean(expandedRows[rowKey]);
+            return (
+              <React.Fragment key={rowKey}>
+                <tr>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.date}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.floor}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.inCount}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.outCount}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.totalPersons}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.inconsistentCount}
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                    {row.inconsistencyPercentage}%
+                  </td>
+                  <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                    {row.instances.length > 0 ? (
+                      <button onClick={() => toggleRow(rowKey)}>
+                        {isExpanded ? 'Hide' : 'View'} ({row.instances.length})
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                </tr>
+
+                {isExpanded && row.instances.length > 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      style={{
+                        border: '1px solid #ccc',
+                        padding: '8px',
+                        backgroundColor: '#f9f9f9',
+                      }}
+                    >
+                      <table
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          marginTop: '0.5rem',
+                        }}
+                      >
+                        <thead>
+                          <tr>
+                            <th style={{ border: '1px solid #ddd', padding: '6px' }}>
+                              Employee ID
+                            </th>
+                            <th style={{ border: '1px solid #ddd', padding: '6px' }}>
+                              Name
+                            </th>
+                            <th style={{ border: '1px solid #ddd', padding: '6px' }}>
+                              Personnel Type
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {row.instances.map((inst) => (
+                            <tr key={inst.employeeId}>
+                              <td style={{ border: '1px solid #ddd', padding: '6px' }}>
+                                {inst.employeeId}
+                              </td>
+                              <td style={{ border: '1px solid #ddd', padding: '6px' }}>
+                                {inst.name}
+                              </td>
+                              <td style={{ border: '1px solid #ddd', padding: '6px' }}>
+                                {inst.personnelType}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+
+          {dailyFloorStats.length === 0 && (
+            <tr>
+              <td colSpan={8} style={{ padding: '16px', textAlign: 'center' }}>
+                No data to display.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 // C:\Users\W0024618\Desktop\swipeData\client-denver\src\App.js
 
 import React, { useEffect, useState } from 'react';
