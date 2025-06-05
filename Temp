@@ -1,3 +1,115 @@
+--- src/App.js
++++ src/App.js
+@@ -1,7 +1,7 @@
+ import React, { useEffect, useState } from 'react';
+ import { Container, Navbar, Nav } from 'react-bootstrap';
+ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+ import { FaSun } from 'react-icons/fa';
+
+-import DashboardHome    from './pages/DashboardHome';
+-import FloorDetailsPage from './pages/FloorDetailsPage';
+-import DenverInOutInconsistencyPage  from './pages/DenverInOutInconsistency'; // ← NEW
++import DashboardHome       from './pages/DashboardHome';
++import FloorDetailsPage    from './pages/FloorDetailsPage';
++import DenverInOutInconsistencyPage from './pages/DenverInOutInconsistency'; // ← NEW
+
+ import './App.css';
+
+ export default function App() {
+@@ -153,7 +153,7 @@ export default function App() {
+             }
+           />
+
+-          <Route
+-            path="/inout-inconsistency-denver"
+-            element={
+-              <DenverInOutInconsistency
+-                data={inOutData}
+-                loading={loadingInOut}
+-                error={inOutError}
+-              />
+-            }
+-          />
++          <Route
++            path="/inout-inconsistency-denver"
++            element={
++              <DenverInOutInconsistencyPage
++                data={inOutData}
++                loading={loadingInOut}
++                error={inOutError}
++              />
++            }
++          />
+         </Routes>
+       </Container>
+     </div>
+
+
+
+
+
+// src/pages/DenverInOutInconsistency.jsx
+
+import React from 'react';
+
+export default function DenverInOutInconsistencyPage({ data, loading, error }) {
+  console.log('Inconsistency Data:', data);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p style={{ color: 'red' }}>Error: {error}</p>;
+  }
+
+  // The API returns an object { asOf: "...", dailyFloorStats: [ ... ] }
+  // So we grab the array out of data.dailyFloorStats
+  const stats = Array.isArray(data?.dailyFloorStats) ? data.dailyFloorStats : [];
+
+  if (stats.length === 0) {
+    return <p>No inconsistency data available.</p>;
+  }
+
+  return (
+    <div>
+      <h2>Denver In/Out Inconsistency</h2>
+      <table className="table table-striped">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Floor</th>
+            <th>Total Persons</th>
+            <th>Inconsistent Count</th>
+            <th>Inconsistency %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stats.map((row) => (
+            <tr key={`${row.date}-${row.floor}`}>
+              <td>{row.date}</td>
+              <td>{row.floor}</td>
+              <td>{row.totalPersons}</td>
+              <td>{row.inconsistentCount}</td>
+              <td>{row.inconsistencyPercentage}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
 // src/pages/DenverInOutInconsistency.jsx
 
 import React from 'react';
