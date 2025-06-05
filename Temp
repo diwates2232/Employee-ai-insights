@@ -1,93 +1,616 @@
- async function buildOccupancy(allEvents) {
-   const current      = {};
-   const uniquePeople = new Map();
+// C:\Users\W0024618\Desktop\swipeData\employee-ai-insights\config\db.js
 
-   for (const evt of allEvents) {
-     const {
-       EmployeeID, PersonGUID,
-       ObjectName1, PersonnelType,
-       CardNumber, Dateonly,
-       Swipe_Time, Direction, Door
-     } = evt;
+const sql    = require('mssql');
+const dotenv = require('dotenv');
+dotenv.config();
 
-     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
-     const zoneRaw  = mapDoorToZone(Door, Direction);
-     const zone     = zoneRaw && zoneRaw.toLowerCase();
+const config = {
+  server:   process.env.DB_SERVER,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  connectionTimeout: 30000,    // 30 s to establish
+  requestTimeout:    0,        // no timeout on individual queries
+  pool: {
+    max:                  100,
+    min:                   0,
 
-     // ─── A) If we can’t map door+direction → skip entirely ───────
-     if (zoneRaw === 'Unknown Zone') {
-       continue;
-     }
+    // Use maximum 32-bit signed‐int (~24.8 days) so Node/tarn doesn't overflow
+    idleTimeoutMillis:    2147483647,
+    acquireTimeoutMillis: 2147483647
+  },
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  }
+};
 
-     // ─── 1) True "Out of office" → full eviction ───────────────────
-     if (Direction === 'OutDirection' && zone === 'out of office') {
-       uniquePeople.delete(dedupKey);
-       delete current[dedupKey];
-       continue;
-     }
+let poolPromise = null;
 
--    // ─── 2) Any other OutDirection → keep them (outer areas, reception exits, etc.)
--    if (Direction === 'OutDirection') {
--      uniquePeople.set(dedupKey, PersonnelType);
--      current[dedupKey] = {
--        Dateonly, Swipe_Time,
--        EmployeeID, ObjectName1, CardNumber,
--        PersonnelType,
--        zone: zoneRaw,
--        door: Door,
--        Direction
--      };
--      continue;
--    }
+async function getPool(attempts = 100) {
+  if (poolPromise) return poolPromise;
 
-+    // ─── 2) Other OutDirection → maybe eviction, maybe keep
-+    if (Direction === 'OutDirection') {
-+      // If this OutDirection is genuinely “Outer Area,” keep them:
-+      if (zone.toLowerCase().endsWith('outer area')) {
-+        uniquePeople.set(dedupKey, PersonnelType);
-+        current[dedupKey] = {
-+          Dateonly, Swipe_Time,
-+          EmployeeID, ObjectName1, CardNumber,
-+          PersonnelType,
-+          zone: zoneRaw,
-+          door: Door,
-+          Direction
-+        };
-+      } else {
-+        // Any other OutDirection (TURNSTILE, lobby exits, etc.) = full eviction
-+        uniquePeople.delete(dedupKey);
-+        delete current[dedupKey];
-+      }
-+      continue;
-+    }
+  poolPromise = (async () => {
+    try {
+      const pool = await sql.connect(config);
+      console.log('✅ MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ MSSQL pool connection failed:', err);
+      poolPromise = null;
+      if (attempts > 0) {
+        console.log(`⏳ Retrying MSSQL connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getPool(attempts - 1);
+      }
+      throw err;
+    }
+  })();
 
-     // ─── 3) InDirection → normal check-in ─────────────────────────
-     if (Direction === 'InDirection') {
-       uniquePeople.set(dedupKey, PersonnelType);
-       current[dedupKey] = {
-         Dateonly, Swipe_Time,
-         EmployeeID, ObjectName1, CardNumber,
-         PersonnelType,
-         zone: zoneRaw,
-         door: Door,
-         Direction
-       };
-       continue;
-     }
+  sql.on('error', err => {
+    console.error('❌ MSSQL global error:', err);
+    // Don’t force‐reset poolPromise here unless it’s a fatal error you want to recover from.
+  });
 
-     // ─── 4) Catch-all eviction (just in case) ────────────────────
-     uniquePeople.delete(dedupKey);
-     delete current[dedupKey];
-   }
+  return poolPromise;
+}
 
-   // … rest of function unchanged …
- }
+// Keep‐alive ping every 5 minutes
+setInterval(async () => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('SELECT 1');
+    // console.log('🔄 MSSQL keep‐alive succeeded');
+  } catch (err) {
+    console.error('⚠️ MSSQL keep‐alive ping failed:', err);
+    // poolPromise stays intact so we keep using the same pool
+  }
+}, 5 * 60 * 1000);
+
+module.exports = { sql, getPool };
 
 
 
 
 
 
+// config/siteConfig.js
+
+const { sql, getPool } = require('./db');
+
+// Pune uses the shared getPool():
+const punePoolPromise = getPool();
+
+// Denver pool configuration
+const denverConfig = {
+  user:     'GSOC_Test',
+  password: 'Westerngsoc@2025',
+  server:   'SRVWUDEN0891V',
+  database: 'ACVSUJournal_00010027',
+  options: {
+    encrypt:               true,
+    trustServerCertificate: true
+  },
+  pool: {
+    max:                  5,
+    min:                  0,
+
+    // Make these extremely large so that Tarn will never time us out
+    idleTimeoutMillis:    2147483647,
+    acquireTimeoutMillis: 2147483647
+  },
+  connectionTimeout: 30000,  // 30 seconds to establish
+  requestTimeout:    0       // no timeout on individual queries
+};
+
+let denverPoolPromise = null;
+
+async function getDenverPool(attempts = 3) {
+  // If a pool promise is already in-flight (or resolved), return it.
+  if (denverPoolPromise) {
+    return denverPoolPromise;
+  }
+
+  denverPoolPromise = (async () => {
+    const pool = new sql.ConnectionPool(denverConfig);
+
+    // If this pool ever errors, reset the promise so that
+    // next time we can try to re-connect.
+    pool.on('error', err => {
+      console.error('❌ Denver MSSQL pool error:', err);
+      denverPoolPromise = null;
+    });
+
+    try {
+      await pool.connect();
+      console.log('✅ Denver MSSQL pool connected');
+      return pool;
+    } catch (err) {
+      console.error('❌ Denver pool connection failed:', err);
+      denverPoolPromise = null;
+
+      if (attempts > 0) {
+        console.log(`⏳ Retrying Denver pool connect (${attempts} left)…`);
+        await new Promise(res => setTimeout(res, 3000));
+        return getDenverPool(attempts - 1);
+      }
+
+      // If all retries fail, re­throw so that calling code can catch it.
+      throw err;
+    }
+  })().catch(err => {
+    // Catch any unhandled rejection here so it never propagates
+    // out of the immediate getDenverPool() call.
+    console.error('❌ Denver pool promise ultimately failed:', err);
+    denverPoolPromise = null;
+    return null;
+  });
+
+  return denverPoolPromise;
+}
+
+// Every 5 minutes, ping Denver so it never goes idle.
+// If ping fails, reset the poolPromise (so next request will re-connect).
+setInterval(async () => {
+  try {
+    const pool = await getDenverPool();
+    if (pool) {
+      await pool.request().query('SELECT 1');
+      // console.log('🔄 Denver keep-alive succeeded');
+    }
+  } catch (err) {
+    console.error('⚠️ Denver keep-alive failed, resetting poolPromise:', err);
+    denverPoolPromise = null;
+  }
+}, 5 * 60 * 1000);
+
+module.exports = {
+  pune: {
+    name:        'Pune',
+    poolPromise: punePoolPromise,
+    sql
+  },
+  denver: {
+    name:        'Denver',
+    poolPromise: getDenverPool(),
+    sql
+  }
+};
+
+
+
+
+
+
+// controllers/denverLiveOccupancyController.js
+
+const { DateTime }       = require('luxon');
+// const { denver }         = require('../config/siteConfig');
+const { denver } = require('../config/siteConfig');
+const doorFloorMap       = require('../data/denverDoorFloorMap');
+const { monitoredDoors } = require('../data/strictDoorList');
+const sql                = require('mssql');
+const normalizeKey = require('../data/normalizeKey');
+
+const warnedKeys = new Set();
+
+
+// build a Set of normalized door___direction keys
+const normalizedMonitoredKeys = new Set(
+  Object.entries(monitoredDoors).map(
+    ([door, dir]) => normalizeKey(door, dir)
+  )
+);
+
+/** Determine floor label, fallback to “HQ. N.” parsing **/
+function mapDoorToFloor(rawDoor, rawDir) {
+  const key = normalizeKey(rawDoor, rawDir);
+  if (doorFloorMap[key]) return doorFloorMap[key];
+  const m = rawDoor.match(/HQ\.\s*(\d{1,2})\b/);
+  if (m) return `Floor ${m[1]}`;
+  if (!warnedKeys.has(key)) {
+    console.warn(`⛔ Unmapped door-floor key: "${key}"`);
+    warnedKeys.add(key);
+  }
+  return 'Unknown Floor';
+}
+
+/** Strip any trailing “_HH:MM:SS” from a door name **/
+function stripTimeSuffix(doorRaw) {
+  return doorRaw.replace(/_[0-9]{2}:[0-9]{2}:[0-9]{2}$/, '');
+}
+
+
+async function fetchNewEvents(since) {
+  // 1) Acquire the pool. If it fails, we’ll catch below.
+  let pool;
+  try {
+    pool = await denver.poolPromise;
+  } catch (err) {
+    console.error('❌ Failed to get Denver pool in fetchNewEvents():', err);
+    return [];
+  }
+  if (!pool) {
+    // If poolPromise ultimately returned null, just bail out with an empty array.
+    return [];
+  }
+
+ const req = pool.request();
+  req.input('since', sql.DateTime2, since);
+
+
+  const { recordset } = await req.query(`
+    WITH CombinedQuery AS (
+      SELECT
+          DATEADD(MINUTE, -1 * t1.MessageLocaleOffset, t1.MessageUTC) AS LocaleMessageTime,    
+        t1.ObjectName1,
+        CASE
+          WHEN t3.Name IN ('Contractor','Terminated Contractor') THEN t2.Text12
+          ELSE CAST(t2.Int1 AS NVARCHAR)
+        END AS EmployeeID,
+        t1.ObjectIdentity1 AS PersonGUID,
+        t3.Name AS PersonnelType,
+        COALESCE(
+          TRY_CAST(t_xml.XmlMessage AS XML).value('(/LogMessage/CHUID/Card)[1]' ,'varchar(50)'),
+          sc.value
+        ) AS CardNumber,
+        t5a.value AS AdmitCode,
+        t5d.value AS Direction,
+        t1.ObjectName2 AS Door
+      FROM ACVSUJournal_00010027.dbo.ACVSUJournalLog t1
+      LEFT JOIN ACVSCore.Access.Personnel     t2 ON t1.ObjectIdentity1 = t2.GUID
+      LEFT JOIN ACVSCore.Access.PersonnelType t3 ON t2.PersonnelTypeId  = t3.ObjectID
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5a
+        ON t1.XmlGUID = t5a.GUID AND t5a.Name = 'AdmitCode'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred t5d
+        ON t1.XmlGUID = t5d.GUID AND t5d.Name = 'Direction'
+      LEFT JOIN ACVSUJournal_00010027.dbo.ACVSUJournalLogxml t_xml
+        ON t1.XmlGUID = t_xml.GUID
+      LEFT JOIN (
+        SELECT GUID, value
+        FROM ACVSUJournal_00010027.dbo.ACVSUJournalLogxmlShred
+        WHERE Name IN ('Card','CHUID')
+      ) sc ON t1.XmlGUID = sc.GUID
+      WHERE
+        t1.MessageType   = 'CardAdmitted'
+        AND t1.ObjectName2 LIKE '%HQ%'
+        AND DATEADD(MINUTE,-1* t1.MessageLocaleOffset, t1.MessageUTC) >= @since
+    )
+    SELECT
+      LocaleMessageTime,
+      CONVERT(VARCHAR(10), LocaleMessageTime, 23) AS Dateonly,
+      CONVERT(VARCHAR(8),  LocaleMessageTime, 108) AS Swipe_Time,
+      EmployeeID, PersonGUID, ObjectName1, PersonnelType,
+      CardNumber, AdmitCode, Direction, Door
+    FROM CombinedQuery
+    ORDER BY LocaleMessageTime ASC;
+  `);
+
+  return recordset;
+}
+
+function isTodayInDenver(dateOnly) {
+  const swipeDate = DateTime.fromISO(dateOnly, { zone: 'America/Denver' })
+    .toFormat('yyyy-LL-dd');
+  const today = DateTime.now().setZone('America/Denver').toFormat('yyyy-LL-dd');
+  return swipeDate === today;
+}
+
+/**
+ * Build live occupancy + swipe summaries.
+ * @param {Array} allEvents   – cumulative events (for occupancy)
+ * @param {Array} freshEvents – just-fetched events (for swipeStats & floorInOut)
+ */
+
+
+function computeVisitedToday(allEvents) {
+  const seen = new Map(); // key -> PersonnelType
+  allEvents.forEach(evt => {
+    if (evt.Direction === 'InDirection' && isTodayInDenver(evt.Dateonly)) {
+      const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+      if (!seen.has(key)) {
+        seen.set(key, evt.PersonnelType);
+      }
+    }
+  });
+  let emp = 0, ctr = 0;
+  seen.forEach(type => {
+    if (type === 'Employee' || type === 'Terminated Personnel') emp++;
+    else ctr++;
+  });
+  return { total: seen.size, employees: emp, contractors: ctr };
+}
+
+
+
+function buildOccupancyForToday(allEvents, freshEvents) {
+  // ─── A) Evict “Out of office” ───────────────────────────────────
+  const evicted = new Set();
+  const lastByPerson = new Map();
+  allEvents.forEach(evt => {
+    if (!isTodayInDenver(evt.Dateonly)) return;
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+    const prev = lastByPerson.get(key);
+    if (!prev || evt.LocaleMessageTime > prev.LocaleMessageTime) {
+      lastByPerson.set(key, evt);
+    }
+  });
+  lastByPerson.forEach(evt => {
+    if (
+      evt.Direction === 'OutDirection'
+      && mapDoorToFloor(evt.Door, evt.Direction) === 'Out of office'
+    ) {
+      evicted.add(evt.PersonGUID || evt.EmployeeID || evt.CardNumber);
+    }
+  });
+  const activeEvents = allEvents.filter(evt => {
+    const key = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+    return !evicted.has(key);
+  });
+
+
+
+  // ─── 1) Live occupancy dedupe by last InDirection ───────────────
+  const todayIn = activeEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  );
+  const latestByPerson = new Map();
+  todayIn.forEach(e => {
+    const prev = latestByPerson.get(e.PersonGUID);
+    const tcur = DateTime.fromFormat(e.Swipe_Time, 'HH:mm:ss');
+    if (!prev || tcur > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+      latestByPerson.set(e.PersonGUID, e);
+    }
+  });
+  const finalList = Array.from(latestByPerson.values());
+
+
+ // ─── 2) Floor breakdown & personnel counts (live) ───────────────
+  let employees = 0, contractors = 0;
+  const floorMap = {};
+  finalList.forEach(e => {
+    // const floor = mapDoorToFloor(evt.Door, evt.Direction);
+    const fl = mapDoorToFloor(e.Door, e.Direction);
+    floorMap[fl] = floorMap[fl] || [];
+    floorMap[fl].push(e);
+    if (e.PersonnelType === 'Employee' || e.PersonnelType === 'Terminated Personnel') {
+      employees++;
+    } else {
+      contractors++;
+    }
+  });
+
+
+
+const floorBreakdown = Object.entries(floorMap).map(([floor, occ]) => {
+  // Initialize counters
+  let empCount    = 0;
+  let contractorCount = 0;
+  let tempBadgeCount  = 0;
+  let otherCount      = 0;
+
+  occ.forEach(e => {
+    switch (e.PersonnelType) {
+      case 'Employee':
+      case 'Terminated Personnel':
+        empCount++;
+        break;
+      case 'Contractor':
+      case 'Terminated Contractor':
+        contractorCount++;
+        break;
+      case 'Temp Badge':
+        tempBadgeCount++;
+        break;
+      default:
+        otherCount++;
+    }
+  });
+
+  return {
+    floor,
+    total:       occ.length,
+    employees:   empCount,
+    contractors: contractorCount,
+    tempBadge:   tempBadgeCount,
+    others:      otherCount,   // optional, in case you have Visitors etc.
+    occupants:   occ
+  };
+});
+
+
+
+  // ─── 3) Personnel breakdown ───────────────────────────────────────
+  const personnelBreakdown = Array.from(
+    finalList.reduce((m, e) => {
+      m.set(e.PersonnelType, (m.get(e.PersonnelType) || 0) + 1);
+      return m;
+    }, new Map()),
+    ([personnelType, count]) => ({ personnelType, count })
+  );
+
+
+
+  // ─── 4) Swipe stats (fresh only) ─────────────────────────────────
+  const totalInSwipes  = freshEvents.filter(e =>
+    e.Direction === 'InDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+  const totalOutSwipes = freshEvents.filter(e =>
+    e.Direction === 'OutDirection' && isTodayInDenver(e.Dateonly)
+  ).length;
+
+
+
+
+// ─── 5) Floor In/Out summary (strict doors only) ───────────────
+const validEvents = allEvents
+  .filter(e => isTodayInDenver(e.Dateonly))
+  .filter(evt => {
+    // 1) strip any "_HH:MM:SS" suffix
+    const doorNoTime = stripTimeSuffix(evt.Door.trim());
+    // 2) normalize to KEY___IN or KEY___OUT
+    const key = normalizeKey(doorNoTime, evt.Direction.trim());
+    // 3) only keep if it’s exactly in your strict list
+    return normalizedMonitoredKeys.has(key);
+  });
+
+// Dedupe per person+floor+direction
+const deduped = new Map();
+validEvents.forEach(evt => {
+  // Determine floor by regex (not via doorFloorMap, to avoid "Out of office")
+  const rawNoTime = stripTimeSuffix(evt.Door);
+  const m = rawNoTime.match(/HQ\.\s*(\d{1,2})\b/);
+  const floor = m ? `Floor ${m[1]}` : 'Unknown Floor';
+
+  const mapKey = `${evt.PersonGUID || evt.EmployeeID}___${floor}___${evt.Direction}`;
+  const prev   = deduped.get(mapKey);
+  const now    = DateTime.fromFormat(evt.Swipe_Time, 'HH:mm:ss');
+  if (!prev || now > DateTime.fromFormat(prev.Swipe_Time, 'HH:mm:ss')) {
+    deduped.set(mapKey, evt);
+  }
+});
+
+// Aggregate inSwipes/outSwipes per floor
+const floorMapIO = {};
+for (const evt of deduped.values()) {
+  const rawNoTime = stripTimeSuffix(evt.Door);
+  const m = rawNoTime.match(/HQ\.\s*(\d{1,2})\b/);
+  const floor = m ? `Floor ${m[1]}` : 'Unknown Floor';
+
+  if (!floorMapIO[floor]) {
+    floorMapIO[floor] = {
+      inSwipes:  0,
+      outSwipes: 0,
+      inSet:     new Set(),
+      outSet:    new Set()
+    };
+  }
+
+  const id = evt.PersonGUID || evt.EmployeeID || evt.CardNumber;
+  if (evt.Direction === 'InDirection') {
+    floorMapIO[floor].inSwipes++;
+    floorMapIO[floor].inSet.add(id);
+  } else {
+    floorMapIO[floor].outSwipes++;
+    floorMapIO[floor].outSet.add(id);
+  }
+}
+
+// Build your final summary
+const floorInOutSummary = Object.entries(floorMapIO).map(([floor, stats]) => {
+  const inOnly = [...stats.inSet].filter(id => !stats.outSet.has(id));
+  return {
+    floor,
+    inSwipes:      stats.inSwipes,
+    outSwipes:     stats.outSwipes,
+    inOnlyCount:   inOnly.length,
+    inOnlyPersons: inOnly
+  };
+});
+
+
+
+
+
+    // ─── 6) Visited today breakdown ─────────────────────────────────
+  const visited = computeVisitedToday(allEvents);
+
+  return {
+    asOf:               new Date().toISOString(),
+    currentCount:       finalList.length,
+    floorBreakdown,
+    personnelSummary:   { employees, contractors },
+    personnelBreakdown,
+    totalVisitedToday:  visited.total,
+    visitedToday:       {
+      employees:   visited.employees,
+      contractors: visited.contractors,
+      total:       visited.total
+    },
+    swipeStats:         { totalInSwipes, totalOutSwipes },
+    floorInOutSummary   // unchanged
+  };
+}
+
+
+exports.getDenverLiveOccupancy = async (req, res) => {
+
+ try {
+    await denver.poolPromise;
+  } catch (err) {
+    console.error('❌ Failed to initialize Denver pool in SSE endpoint:', err);
+    // If we can’t even get a pool, return 500 and abort.
+    return res.status(500).end();
+  }
+
+
+  //  await denver.poolPromise;
+
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive'
+  });
+  res.write('\n');
+
+  let lastSeen = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const events = [];
+
+//   const push = async () => {
+//     const fresh = await fetchNewEvents(lastSeen);
+//     if (fresh.length) {
+//       lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+//       events.push(...fresh);
+//     }
+//     const payload = buildOccupancyForToday(events, fresh);
+//     res.write(`data: ${JSON.stringify(payload)}\n\n`);
+//   };
+
+//   await push();
+//   const timer = setInterval(push, 1000);
+//   req.on('close', () => clearInterval(timer));
+// };
+
+
+const push = async () => {
+    let fresh;
+    try {
+      fresh = await fetchNewEvents(lastSeen);
+    } catch (err) {
+      console.error('❌ Error in fetchNewEvents():', err);
+      fresh = [];
+    }
+
+    if (Array.isArray(fresh) && fresh.length) {
+      lastSeen = fresh[fresh.length - 1].LocaleMessageTime;
+      events.push(...fresh);
+    }
+
+    let payload;
+    try {
+      payload = buildOccupancyForToday(events, fresh);
+    } catch (err) {
+      console.error('❌ Error building Denver occupancy payload:', err);
+      payload = {
+        asOf: new Date().toISOString(),
+        currentCount: 0,
+        floorBreakdown: [],
+        personnelSummary: { employees: 0, contractors: 0 },
+        personnelBreakdown: [],
+        totalVisitedToday: 0,
+        visitedToday: { employees: 0, contractors: 0, total: 0 },
+        swipeStats: { totalInSwipes: 0, totalOutSwipes: 0 },
+        floorInOutSummary: []
+      };
+    }
+
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  await push();
+  const timer = setInterval(push, 1000);
+  req.on('close', () => clearInterval(timer));
+};
 
 
 
@@ -96,9 +619,13 @@
 
 
 
-debud all file line by line i think issue is there Swipe out of office are store in realtime Headcount, just i think debug all code and solve this issue
+
+
+
+
 
 // controllers/liveOccupancyController.js
+
 
 const { DateTime }   = require('luxon');
 // const { poolConnect, pool, sql } = require('../config/db');
@@ -266,20 +793,46 @@ async function buildOccupancy(allEvents) {
       continue;
     }
 
-    // 2) Any other OutDirection → keep them (outer areas, reception exits, etc.)
+    // // 2) Any other OutDirection → keep them (outer areas, reception exits, etc.)
+    // if (Direction === 'OutDirection') {
+    //   uniquePeople.set(dedupKey, PersonnelType);
+    //   current[dedupKey] = {
+    //     Dateonly, Swipe_Time,
+    //     EmployeeID, ObjectName1, CardNumber,
+    //     PersonnelType,
+    //     // re-use the exact-cased string so your details match zoneFloorMap keys:
+    //     zone: zoneRaw,
+    //     door: Door,
+    //     Direction
+    //   };
+    //   continue;
+    // }
+
+
+
+
+    // ─── 2) Other OutDirection → maybe eviction, maybe keep
     if (Direction === 'OutDirection') {
-      uniquePeople.set(dedupKey, PersonnelType);
-      current[dedupKey] = {
-        Dateonly, Swipe_Time,
-        EmployeeID, ObjectName1, CardNumber,
-        PersonnelType,
-        // re-use the exact-cased string so your details match zoneFloorMap keys:
-        zone: zoneRaw,
-        door: Door,
-        Direction
-      };
+      // If this OutDirection is genuinely “Outer Area,” keep them:
+      if (zone.toLowerCase().endsWith('outer area')) {
+        uniquePeople.set(dedupKey, PersonnelType);
+        current[dedupKey] = {
+          Dateonly, Swipe_Time,
+          EmployeeID, ObjectName1, CardNumber,
+          PersonnelType,
+          zone: zoneRaw,
+          door: Door,
+          Direction
+        };
+      } else {
+        // Any other OutDirection (TURNSTILE, lobby exits, etc.) = full eviction
+        uniquePeople.delete(dedupKey);
+        delete current[dedupKey];
+      }
       continue;
     }
+
+
 
     // 3) InDirection → normal check-in
     if (Direction === 'InDirection') {
@@ -504,4 +1057,1045 @@ res.write(`data: ${JSON.stringify(occupancy)}\n\n`);
     }
   }
 };
+
+
+
+
+
+
+
+C:\Users\W0024618\Desktop\swipeData\client\src\constants
+
+// client/src/constants/floorCapacities.js
+
+const floorCapacities = {
+  "Podium Floor": 725,
+  "Tower B": 303,
+  "2nd Floor": 185,
+};
+
+export default floorCapacities;
+
+
+
+
+
+
+
+
+// C:\Users\W0024618\Desktop\swipeData\client\src\pages\DashboardHome.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
+import SummaryCards         from '../components/SummaryCards';
+import FloorOccupancyChart  from '../components/FloorOccupancyChart';
+import SummaryChart         from '../components/SummaryChart';
+import PersonnelDonutChart  from '../components/PersonnelDonutChart';
+// import ERTOverview        from '../components/ERTOverview';
+
+export default function DashboardHome({
+  summaryData,        // ← array of { zone, count }
+  detailsData,        // ← object of zone → [ … events … ]
+  floorData,          // ← array of { floor, total, byPersonnelType… }
+  zoneBreakdown,      // ← array of { zone, total, byPersonnelType… }
+  personnelBreakdown, // ← array of { personnelType, count }
+  totalVisitedToday,  // ← number
+  personnelSummary,   // ← { employees: #, contractors: # }
+  visitedToday,       // ← { employees: #, contractors: #, total: # }
+  ertStatus           // ← { “Site Head”: [ … ], “First Aid Team”: [ … ], … }
+}) {
+  const employees      = personnelSummary?.employees   ?? 0;
+  const contractors    = personnelSummary?.contractors ?? 0;
+  const totalOccupancy = employees + contractors;
+
+  // Donut chart data: map into { personnelType, count } shape
+  const chartData = (personnelBreakdown || []).map(({ personnelType, count }) => ({
+    personnelType,
+    count
+  }));
+
+  return (
+    <Container fluid className="py-4">
+      {/* ─── Top-level summary cards ─── */}
+      <SummaryCards
+        totalOccupancy={totalOccupancy}
+        employeeCount={employees}
+        contractorCount={contractors}
+        totalVisitedToday={totalVisitedToday}
+        employeesVisitedToday={visitedToday?.employees   ?? 0}
+        contractorsVisitedToday={visitedToday?.contractors ?? 0}
+      />
+
+      <Row className="g-4">
+        {/* ─── Floor-wise Occupancy ─── */}
+        <Col md={4}>
+          <FloorOccupancyChart data={floorData} />
+        </Col>
+
+        {/* ─── Zone-wise summary (pie) ─── */}
+        <Col md={4}>
+          <SummaryChart summary={summaryData} />
+        </Col>
+
+        {/* ─── Personnel-type donut ─── */}
+        <Col md={4}>
+          <PersonnelDonutChart data={chartData} />
+        </Col>
+
+        {/* ─── (Optional) ERT status might go here ─── */}
+        {/* <Col md={12}>
+          <ERTOverview ertStatus={ertStatus} />
+        </Col> */}
+      </Row>
+
+      <footer
+        style={{
+          backgroundColor: '#000',
+          color: '#FFC72C',
+          padding: '1.5rem 0',
+          textAlign: 'center',
+          marginTop: '2rem',
+          borderTop: '2px solid #FFC72C',
+          fontSize: '0.95rem',
+          lineHeight: '1.6'
+        }}
+      >
+        <div>
+          <strong>Global Security Operations Center (GSOC)</strong><br />
+          Live Occupancy dashboard for Western Union Pune — Real-time occupancy,
+          floor activity, and personnel insights.
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          Contact us:&nbsp;
+          <a
+            href=
+            "mailto:GSOC-GlobalSecurityOperationCenter.SharedMailbox@westernunion.com"
+            style={{ color: '#FFC72C', textDecoration: 'underline' }}
+          >
+            gsoc@westernunion.com
+          </a>
+          &nbsp;|&nbsp;
+          Landline:&nbsp;
+          <span style={{ color: '#FFC72C' }}>+91-020-67632394</span>
+        </div>
+      </footer>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+
+// C:\Users\W0024618\Desktop\swipeData\client\src\pages\ZoneDeatailsPage.jsx
+
+// src/components/ZoneDetailsTable.jsx
+
+import React, { useState, useMemo } from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // 1) Sort zones by descending count
+  const sortedEntries = useMemo(() => {
+    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
+  }, [data]);
+
+  // 2) Filter predicate
+  const matchesSearch = (emp) =>
+    emp.ObjectName1.toLowerCase().includes(searchTerm.trim().toLowerCase());
+
+  // 3) Handler for search input
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  if (!sortedEntries.length) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-cards">
+      {/* Search input (optional reuse) */}
+      <div style={{ marginBottom: '1rem', textAlign: 'right' }}>
+        <input
+          type="text"
+          placeholder="Search employee..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          style={{
+            padding: '0.4rem 0.8rem',
+            fontSize: '0.9rem',
+            borderRadius: 4,
+            border: '1px solid #ccc'
+          }}
+        />
+      </div>
+
+      {sortedEntries.map(([zone, emps]) => {
+        // 4) Filter employees by search
+        const filteredEmps = emps.filter(matchesSearch);
+        if (filteredEmps.length === 0) {
+          return null;
+        }
+
+        return (
+          <div key={zone} className="zone-card">
+            <div className="zone-header">
+              <h3>{zone}</h3>
+              <span className="zone-badge">Total: {filteredEmps.length}</span>
+            </div>
+
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Swipe Time</th>
+                  <th>Type</th>
+                  <th>Door Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmps.map((emp, i) => (
+                  <tr key={`${emp.EmployeeID}-${i}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                    <td>{emp.door}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+// C:\Users\W0024618\Desktop\swipeData\client\src\App.js
+
+// src/App.js
+
+import React, { useEffect, useState } from 'react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { FaSun } from 'react-icons/fa';
+
+import ZoneDetailsTable from './components/ZoneDetailsTable';
+import DashboardHome    from './pages/DashboardHome';
+import ErtPage          from './pages/ErtPage';
+
+import './App.css';
+
+function ZoneDetailsPage({ detailsData }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  return (
+    <>
+      <div
+        className="d-flex justify-content-between align-items-center mb-2"
+        style={{ flexWrap: 'wrap', gap: '0.5rem' }}
+      >
+        <Link to="/" className="btn btn-secondary">
+          ← Back to Dashboard
+        </Link>
+
+        <input
+          type="text"
+          placeholder="Search employee..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            flexGrow: 1,
+            maxWidth: 300,
+            padding: '0.4rem 0.8rem',
+            fontSize: '1rem',
+            borderRadius: 4,
+            border: '1px solid #ccc'
+          }}
+        />
+      </div>
+
+      <ZoneDetailsTable data={detailsData} searchTerm={searchTerm} />
+    </>
+  );
+}
+
+function App() {
+  const [summaryData, setSummaryData]               = useState([]);
+  const [detailsData, setDetailsData]               = useState({});
+  const [floorData, setFloorData]                   = useState([]);
+  const [zoneBreakdown, setZoneBreakdown]           = useState([]);
+  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
+  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
+  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
+  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
+  const [ertStatus, setErtStatus]                   = useState({});
+
+  useEffect(() => {
+    const es = new EventSource('http://localhost:5000/api/live-occupancy');
+
+    es.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data);
+
+        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
+        setDetailsData(p.details || {});
+        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
+        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
+        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
+        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
+        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
+        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
+        setErtStatus(p.ertStatus || {});
+      } catch {
+        console.error('SSE parse error');
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error('SSE error', err);
+      es.close();
+    };
+
+    return () => es.close();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <div className="dark-theme">
+        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
+          <Navbar.Brand as={Link} to="/" className="wu-brand">
+            Live Occupancy — Western Union Pune
+          </Navbar.Brand>
+          <Nav className="ms-auto align-items-center">
+            <Nav.Link as={Link} to="/" className="nav-item-infographic">
+              Dashboard
+            </Nav.Link>
+            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
+              Details
+            </Nav.Link>
+            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
+              ERT Overview
+            </Nav.Link>
+            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
+              <FaSun />
+            </Nav.Link>
+          </Nav>
+        </Navbar>
+
+        <Container fluid className="mt-2">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <DashboardHome
+                  summaryData={summaryData}
+                  detailsData={detailsData}
+                  floorData={floorData}
+                  zoneBreakdown={zoneBreakdown}
+                  personnelBreakdown={personnelBreakdown}
+                  totalVisitedToday={totalVisitedToday}
+                  personnelSummary={personnelSummary}
+                  visitedToday={visitedToday}
+                  ertStatus={ertStatus}
+                />
+              }
+            />
+            <Route
+              path="/details"
+              element={<ZoneDetailsPage detailsData={detailsData} />}
+            />
+            <Route
+              path="/ert"
+              element={<ErtPage ertStatus={ertStatus} />}
+            />
+          </Routes>
+        </Container>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+// C:\Users\W0024618\Desktop\swipeData\client\src\components\FloorOccupancyChart.jsx
+
+
+// src/components/FloorOccupancyChart.jsx
+
+import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+import floorCapacities from '../constants/floorCapacities';
+
+// A single-color palette for “live headcount” bars
+const FLOOR_COLOR_PALETTE = [
+  ['#006400', '#CCFFCC']
+];
+
+export default function FloorOccupancyChart({ data = [] }) {
+  if (!data.length) {
+    return (
+      <Card body className="bg-dark text-white">
+        No floor data available
+      </Card>
+    );
+  }
+
+  // 1) Enrich each floor object with liveCount, capacity, usedPct, and breakdown
+  const enriched = data.map((floorObj) => {
+    const { floor, total: liveCount } = floorObj;
+    const capacity = floorCapacities[floor] ?? 0;
+    const usedPct = capacity > 0
+      ? ((liveCount / capacity) * 100).toFixed(1)
+      : '0.0';
+    return {
+      ...floorObj,           // includes breakdown fields: employees, contractors, etc.
+      capacity,
+      liveCount,
+      usedPct: Number(usedPct),
+      label: `${liveCount}/${capacity}`
+    };
+  });
+
+  // 2) Compute “Pune Office Total” across all floors
+  const totalLive = enriched.reduce((sum, f) => sum + f.liveCount, 0);
+  const totalCap  = enriched.reduce((sum, f) => sum + f.capacity, 0);
+  const totalUsedPct = totalCap > 0
+    ? ((totalLive / totalCap) * 100).toFixed(1)
+    : '0.0';
+
+  const totalEntry = {
+    floor: 'Pune Office Total',
+    liveCount: totalLive,
+    capacity: totalCap,
+    usedPct: Number(totalUsedPct),
+    label: `${totalLive}/${totalCap}`
+  };
+
+  // 3) Sort floors by liveCount descending, then prepend “Pune Office Total”
+  const sortedFloors = [...enriched].sort((a, b) => b.liveCount - a.liveCount);
+  const chartData = [totalEntry, ...sortedFloors];
+
+  // 4) Determine the maximum capacity to set Y-axis domain
+  const maxCapacity = Math.max(...chartData.map(f => f.capacity)) || 0;
+
+  // 5) Custom tooltip to show raw counts, percentages, and breakdown
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const floorObj = payload[0].payload;
+    const { liveCount, capacity, usedPct } = floorObj;
+
+    const breakdownEntries = Object.entries(floorObj).filter(
+      ([key]) =>
+        !['floor', 'liveCount', 'capacity', 'usedPct', 'label'].includes(key)
+    );
+
+    return (
+      <div
+        style={{
+          backgroundColor: '#1a1a1a',
+          color: '#FFD100',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '0.75rem',
+          minWidth: 180
+        }}
+      >
+        <div style={{ marginBottom: 4, fontSize: '1rem' }}>
+          <strong>Floor: {floorObj.floor}</strong>
+        </div>
+        <div style={{ marginBottom: 6, fontWeight: 'bold', fontSize: '0.9rem' }}>
+          Live: {liveCount} / {capacity} ({usedPct}%)
+        </div>
+        {breakdownEntries.map(([type, value]) => (
+          <div
+            key={type}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 2,
+              color: '#fff',
+              fontSize: '0.85rem'
+            }}
+          >
+            <span style={{ opacity: 0.8 }}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </span>
+            <span style={{ fontWeight: 'bold' }}>{value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center fw-bold" style={{ borderBottom: '2px solid var(--wu-yellow)', fontSize: '1.2rem' }}>
+        Western Union-Pune Headcount against Occupancy
+      </Card.Header>
+
+      <Card.Body style={{ height: '50vh', padding: 0, backgroundColor: 'var(--wu-gray-dark)' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 24, left: 0, bottom: 24 }}
+            barCategoryGap="1%"
+          >
+            {/* 6) Gradient for capacity bars (WU Yellow → WU Accent) */}
+            <defs>
+              <linearGradient id="capacity-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFD100" stopOpacity={1} />
+                <stop offset="100%" stopColor="#FFB800" stopOpacity={1} />
+              </linearGradient>
+              {/* 7) Single gradient for “live” bars */}
+              {chartData.map((_, idx) => {
+                const [darkColor, lightColor] =
+                  FLOOR_COLOR_PALETTE[idx % FLOOR_COLOR_PALETTE.length];
+                return (
+                  <linearGradient
+                    id={`live-grad-${idx}`}
+                    key={`live-grad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor={darkColor} stopOpacity={1} />
+                    <stop offset="100%" stopColor={lightColor} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            {/* 8) Grid and Axes */}
+            <CartesianGrid stroke="#444" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="floor"
+              tick={{ fontSize: 12, fill: '#fff' }}
+              position
+              textAnchor="end"
+              interval={0}
+              height={50}
+            />
+            <YAxis
+              tick={{ fontSize: 15, fill: '#fff' }}
+              domain={[0, Math.ceil(maxCapacity / 50) * 50]}
+            />
+
+            {/* 9) Custom Tooltip */}
+            <Tooltip content={renderTooltip} />
+
+  {/* 10) Legend */}   
+            <Legend
+               verticalAlign="top"
+               align="center"
+               wrapperStyle={{ color: '#fff', paddingBottom: 8 }}
+               payload={[
+                 { value: 'Occupancy', type: 'square', color: '#FFD100' },
+                 { value: 'Live HeadCount', type: 'square', color: '#006400' }
+               ]}
+             />
+
+            {/* 11) Capacity bar – wider, WU Yellow gradient, white border */}
+            <Bar
+              dataKey="capacity"
+              name="Occupancy"
+              radius={[4, 4, 0, 0]}
+              barSize={70}
+              fill="url(#capacity-gradient)"
+              stroke="#fff"
+              strokeWidth={1}
+            >
+              {chartData.map((_, idx) => (
+                <Cell key={`cap-cell-${idx}`} fill="url(#capacity-gradient)" />
+              ))}
+              <LabelList
+                dataKey="capacity"
+                position="top"
+                formatter={(val) => val}
+                style={{ fill: '#fff', fontSize: 15, fontWeight: 'bold' }}
+              />
+            </Bar>
+
+            {/* 12) Live bar – narrower, multi-color gradient, white border */}
+            <Bar
+              dataKey="liveCount"
+              name="Live HeadCount"
+              radius={[4, 4, 0, 0]}
+              barSize={70}
+              stroke="#fff"
+              strokeWidth={1}
+            >
+              {chartData.map((_, idx) => (
+                <Cell
+                  key={`live-cell-${idx}`}
+                  fill={`url(#live-grad-${idx})`}
+                />
+              ))}
+
+              {/* Label on top: raw count */}
+              <LabelList
+                dataKey="liveCount"
+                position="top"
+                formatter={(val) => val}
+                style={{
+                  fill: '#fff',
+                  fontSize: 15,
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  borderRadius: 2,
+                  padding: '2px 4px'
+                }}
+              />
+
+              {/* Label inside bar: percentage */}
+              <LabelList
+                dataKey="usedPct"
+                position="center"
+                formatter={(val) => `${val}%`}
+                style={{ fill: '#fff', fontSize: 15, fontWeight: 'bold' }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+// src/components/PersonnelDonutChart.jsx
+
+import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Label
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// 7 colors (WU theme + accents)
+const COLORS = [
+  '#FFD100', // WU Yellow
+  '#009E60', // WU Green
+  '#88B04B', // Olive
+  '#FF6F61', // Coral
+  '#58595B', // WU Gray
+  '#FFB800', // Accent Yellow
+  '#6B5B95'  // Indigo
+];
+
+const DarkTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const { name, value } = payload[0];
+  return (
+    <div style={{
+      backgroundColor: '#1a1a1a',
+      color: '#FFD100',
+      border: '1px solid var(--wu-yellow)',
+      padding: '0.5rem',
+      borderRadius: 4,
+      fontSize: '0.9rem'
+    }}>
+      <div><strong>{name}</strong></div>
+      <div>Count: {value}</div>
+    </div>
+  );
+};
+
+export default function PersonnelDonutChart({ data = [] }) {
+  const total = data.reduce((sum, e) => sum + e.count, 0);
+  if (!data.length || total === 0) {
+    return <Card body className="bg-dark text-white">No personnel data</Card>;
+  }
+
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header
+        className="bg-dark text-warning text-center fw-bold"
+        style={{ fontSize: '1.2rem', borderBottom: '2px solid var(--wu-yellow)' }}
+      >
+        Personnel Type Headcount
+      </Card.Header>
+      <Card.Body
+        style={{
+          height: '50vh',
+          padding: '1rem',
+          backgroundColor: '#1a1a1a'
+        }}
+      >
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="count"
+              nameKey="personnelType"
+              cx="50%"
+              cy="50%"
+              innerRadius="45%"
+              outerRadius="80%"
+              paddingAngle={2}
+              labelLine={false}
+              label={({ percent, name }) => (
+                <tspan style={{ fill: '#fff', fontSize: '0.9rem' }}>
+                  {`${name}: ${(percent * 100).toFixed(0)}%`}
+                </tspan>
+              )}
+              stroke="#fff"
+              strokeWidth={2}
+            >
+              {sorted.map((entry, idx) => (
+                <Cell
+                  key={entry.personnelType}
+                  fill={COLORS[idx % COLORS.length]}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              ))}
+              <Label
+                value={total}
+                position="center"
+                style={{ fill: '#fff', fontSize: '2.5rem', fontWeight: 'bold' }}
+              />
+            </Pie>
+            <Tooltip content={<DarkTooltip />} />
+            <Legend
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ paddingTop: 10, color: '#FFD100', fontSize: '1.1rem' }}
+              iconType="circle"
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+// src/components/SummaryChart.jsx
+
+import React, { useMemo } from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
+import { Card } from 'react-bootstrap';
+
+// Gradients/solid colors for known zones
+const ZONE_GRADIENTS = {
+  'Red Zone':               ['#FF0000', '#D22B2B'],
+  'Red Zone - Outer Area':  ['#FF0000', '#D22B2B'],
+  'Yellow Zone':            ['#FFDE21', '#FFBF00'],
+  'Yellow Zone - Outer Area':['#FFDE21', '#FFBF00'],
+  '2nd Floor, Pune':        ['#FF6F61', '#FFA28F'],
+  'Orange Zone':            ['#E3963E', '#FFC966'],
+  'Orange Zone - Outer Area':['#E3963E', '#FFC966'],
+  'Green Zone':             ['#009E60', '#50C878'],
+  'Reception Area':         ['#E0CCFF', '#F4E6FF'],
+  'Assembly Area':          ['#FE6F5E', '#A366FF'],
+  'Tower B':                ['#E68FAC', '#99BBFF']
+};
+
+const DEFAULT_GRADIENT = ['#3B4CCA', '#D0D8FF'];
+const SOLID_COLORS = ['#FFD100', '#009E60', '#FF6F61', '#58595B', '#FFB800', '#C75D00'];
+
+export default function SummaryChart({ summary = [] }) {
+  // 1) Build pieData with equal slice widths but carry actual counts
+  const pieData = useMemo(
+    () =>
+      summary.map((z) => ({
+        name:  z.zone,
+        value: 1,
+        count: z.count
+      })),
+    [summary]
+  );
+
+  // 2) Build a zoneLegendItems array
+  const zoneLegendItems = useMemo(() => {
+    return pieData.map((entry, idx) => {
+      const grad = ZONE_GRADIENTS[entry.name];
+      const color = grad ? grad[0] : SOLID_COLORS[idx % SOLID_COLORS.length];
+      return {
+        value: entry.name,
+        type: 'circle',
+        color
+      };
+    });
+  }, [pieData]);
+
+  if (!summary.length) {
+    return <Card body>No zone data available</Card>;
+  }
+
+  // 3) Custom tooltip to display the actual count
+  const renderTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const { name, count } = payload[0].payload;
+    return (
+      <div
+        style={{
+          backgroundColor: '#000',
+          border: '1px solid var(--wu-yellow)',
+          borderRadius: 4,
+          padding: '8px',
+          color: '#FFD100',
+          fontSize: '0.9rem'
+        }}
+      >
+        <div><strong>Zone:</strong> {name}</div>
+        <div style={{ marginTop: 4 }}><strong>Count:</strong> {count}</div>
+      </div>
+    );
+  };
+
+  // 4) Helper: get fill & stroke for a given zone
+  const getColorsForZone = (zoneName, idx) => {
+    const grad = ZONE_GRADIENTS[zoneName];
+    if (grad) {
+      return {
+        fill: `url(#grad-${zoneName.replace(/\s+/g, '-')})`,
+        stroke: grad[0]
+      };
+    } else {
+      const solid = SOLID_COLORS[idx % SOLID_COLORS.length];
+      return { fill: solid, stroke: solid };
+    }
+  };
+
+  return (
+    <Card className="mb-4 shadow-sm border" style={{ borderColor: 'var(--wu-yellow)' }}>
+      <Card.Header className="bg-dark text-warning text-center fw-bold" style={{ fontSize: '1.2rem', borderBottom: '2px solid var(--wu-yellow)' }}>
+        Western Union-Pune Area-wise Headcount
+      </Card.Header>
+
+      <Card.Body style={{ height: '50vh', padding: 0 }}>
+        <div
+          style={{
+            position: 'relative',
+            height: '100%',
+            backgroundColor: 'var(--wu-gray-dark)',
+            border: '1px solid var(--wu-yellow)',
+            borderRadius: 4,
+            overflow: 'hidden'
+          }}
+        >
+          {/* Pie Chart with legend below */}
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              {/* Gradient definitions for each slice */}
+              <defs>
+                {pieData.map((entry) => {
+                  const key = entry.name.replace(/\s+/g, '-');
+                  const grad = ZONE_GRADIENTS[entry.name] || DEFAULT_GRADIENT;
+                  return (
+                    <linearGradient
+                      id={`grad-${key}`}
+                      key={key}
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="0%" stopColor={grad[0]} stopOpacity={1} />
+                      <stop offset="100%" stopColor={grad[1]} stopOpacity={1} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="45%"
+                innerRadius="40%"
+                outerRadius="80%"
+                paddingAngle={2}
+                labelLine={false}
+                isAnimationActive={false}
+                label={({ cx, cy, midAngle, innerRadius, outerRadius, index }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  const value = pieData[index].count;
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="#FFFFFF"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="1rem"
+                      fontWeight="bold"
+                      style={{ textShadow: '0 0 4px rgba(0,0,0,0.7)' }}
+                    >
+                      {value}
+                    </text>
+                  );
+                }}
+              >
+                {pieData.map((entry, idx) => {
+                  const { fill, stroke } = getColorsForZone(entry.name, idx);
+                  return (
+                    <Cell
+                      key={`slice-${idx}`}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={2}
+                    />
+                  );
+                })}
+              </Pie>
+
+              <Tooltip content={renderTooltip} />
+
+              {/* Legend positioned below */}
+              <Legend
+                layout="horizontal"
+                verticalAlign="bottom"
+                align="center"
+                iconType="circle"
+                wrapperStyle={{
+                   marginTop:-30,
+                  padding:0,
+                  paddingBottom:0,
+                  color: '#FFD100',
+                  fontSize: '0.9rem'
+                }}
+                payload={zoneLegendItems}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+}
+
+
+
+
+
+
+
+
+// src/components/ZoneDetailsTable.jsx
+
+import React, { useMemo } from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {}, searchTerm = '' }) {
+  // 1) Sort zones by descending count
+  const sortedEntries = useMemo(() => {
+    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
+  }, [data]);
+
+  // 2) Filter predicate (case‐insensitive)
+  const matchesSearch = (emp) =>
+    emp.ObjectName1.toLowerCase().includes(searchTerm.trim().toLowerCase());
+
+  if (!sortedEntries.length) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-cards">
+      {sortedEntries.map(([zone, emps]) => {
+        // 3) Filter employees in this zone by searchTerm
+        const filteredEmps = emps.filter(matchesSearch);
+        if (filteredEmps.length === 0) {
+          return null;
+        }
+
+        return (
+          <div key={zone} className="zone-card">
+            <div className="zone-header">
+              <h3>{zone}</h3>
+              <span className="zone-badge">Total: {filteredEmps.length}</span>
+            </div>
+
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Swipe Time</th>
+                  <th>Type</th>
+                  <th>Door Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmps.map((emp, i) => (
+                  <tr key={`${emp.EmployeeID}-${i}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                    <td>{emp.door}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
