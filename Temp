@@ -1,3 +1,59 @@
+.then(data => {
+  setInOutData(data.floorInconsistency || []); // ✅ Store only the array we want
+  setLoadingInOut(false);
+})
+
+
+
+
+// src/pages/DenverInOutInconsistency.jsx
+import React from 'react';
+
+export default function DenverInOutInconsistencyPage({ data, loading, error }) {
+  console.log('Inconsistency Data:', data); // for debug
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (!Array.isArray(data) || data.length === 0) {
+    return <p>No inconsistency data available.</p>;
+  }
+
+  return (
+    <div>
+      <h2>Denver In/Out Inconsistency</h2>
+      <table className="table table-striped">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Floor</th>
+            <th>Total Persons</th>
+            <th>Inconsistent Count</th>
+            <th>Inconsistency %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row) => (
+            <tr key={`${row.date}-${row.floor}`}>
+              <td>{row.date}</td>
+              <td>{row.floor}</td>
+              <td>{row.totalPersons}</td>
+              <td>{row.inconsistentCount}</td>
+              <td>{row.inconsistencyPercentage}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
 
 // C:\Users\W0024618\Desktop\swipeData\client-denver\src\pages\DenverInOutInconsistency.jsx
 
