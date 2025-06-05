@@ -4,6 +4,107 @@ import React, { useState, useMemo } from 'react';
 import './ZoneDetailsTable.css';
 
 export default function ZoneDetailsTable({ data = {} }) {
+  const [expandedZones, setExpandedZones] = useState({});
+
+  // 1) Sort zones by descending count
+  const sortedEntries = useMemo(() => {
+    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
+  }, [data]);
+
+  // Toggle expand/collapse for a given zone
+  const toggleZone = (zone) => {
+    setExpandedZones((prev) => ({
+      ...prev,
+      [zone]: !prev[zone],
+    }));
+  };
+
+  if (!sortedEntries.length) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  return (
+    <div className="zone-cards">
+      {sortedEntries.map(([zone, emps]) => {
+        if (emps.length === 0) {
+          return null;
+        }
+
+        const isExpanded = !!expandedZones[zone];
+        const displayCount = isExpanded ? emps.length : Math.min(50, emps.length);
+        const buttonNeeded = emps.length > 50;
+
+        return (
+          <div key={zone} className="zone-card">
+            <div className="zone-header">
+              <h3>{zone}</h3>
+              <span className="zone-badge">Total: {emps.length}</span>
+            </div>
+
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Swipe Time</th>
+                  <th>Type</th>
+                  <th>Door Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emps.slice(0, displayCount).map((emp, i) => (
+                  <tr key={`${emp.EmployeeID}-${i}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                    <td>{emp.door}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {buttonNeeded && (
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => toggleZone(zone)}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.9rem',
+                    borderRadius: 4,
+                    border: '1px solid #ccc',
+                    backgroundColor: '#f0f0f0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isExpanded ? 'Show Less' : `Show More (${emps.length - 50} more)`}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/components/ZoneDetailsTable.jsx
+
+import React, { useState, useMemo } from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedZones, setExpandedZones] = useState({});
 
