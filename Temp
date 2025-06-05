@@ -1,6 +1,17 @@
+Read below page details carefully now our page is fix ,
+now We are generate catds manually then fill Manually colours like dark to faint as per created Zone but fill dark to faint colours unique for each zone,
+also make a generated card as filter ,
+ex When i clicked Yello zone card the filter only Yellow Zone ERT Data ,
+same for all,
+
+also i have adde href for mail in footer then dont display Mail on sceen display only contact us :GSOC Mail,
+when i clicked GSOC mail ,i navigate to actual mail like ,
+Read both file carefully and give me updated file carefully.
+
+C:\Users\W0024618\Desktop\swipeData\client\src\pages\ErtPage.jsx
+
 import React from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Container, Row, Col } from 'react-bootstrap';
 import ERTOverview from '../components/ERTOverview';
 
 /**
@@ -9,23 +20,51 @@ import ERTOverview from '../components/ERTOverview';
  */
 export default function ErtPage({ ertStatus }) {
   return (
-    <Container fluid className="py-4">
-      {/* ←— Page header */}
-      <h1 className="mb-4">Emergency Response Team</h1>
-
-      {/* Back-to-Dashboard link */}
-      <div className="mb-3">
-        <Button as={Link} to="/" variant="secondary">
-          ← Back to Dashboard
-        </Button>
+    <Container fluid className="py-1">
+     
+      <div className="mb-1">
+       
       </div>
 
       {/* ERTOverview (re-use existing component) */}
-      <Row className="g-2">
+      <Row className="g-1">
         <Col>
           <ERTOverview ertStatus={ertStatus} />
         </Col>
       </Row>
+
+ <footer
+        style={{
+          backgroundColor: '#000',
+          color: '#FFC72C',
+          padding: '1.5rem 0',
+          textAlign: 'center',
+          marginTop: '2rem',
+          borderTop: '2px solid #FFC72C',
+          fontSize: '0.95rem',
+          lineHeight: '1.6'
+        }}
+      >
+        <div>
+          <strong>Global Security Operations Center (GSOC)</strong><br />
+          Live Occupancy dashboard for Western Union Pune — Real-time occupancy,
+          floor activity, and personnel insights.
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          Contact us:&nbsp;
+          <a
+            href=
+            "mailto:GSOC-GlobalSecurityOperationCenter.SharedMailbox@westernunion.com"
+            style={{ color: '#FFC72C', textDecoration: 'underline' }}
+          >
+            gsoc@westernunion.com
+          </a>
+          &nbsp;|&nbsp;
+          Landline:&nbsp;
+          <span style={{ color: '#FFC72C' }}>+91-020-67632394</span>
+        </div>
+      </footer>
+
     </Container>
   );
 }
@@ -33,327 +72,195 @@ export default function ErtPage({ ertStatus }) {
 
 
 
+C:\Users\W0024618\Desktop\swipeData\client\src\components\ERTOverview.jsx
 
 
 
+import React from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelopeOpenText,
+  FaMobileAlt,
+  FaMapMarkerAlt,
+  FaHome
+} from 'react-icons/fa';
 
+/** Base location per role **/
+const baseLocationByRole = {
+  "Site Head":                  "Podium Floor – Red Zone",
+  "HR":                         "Podium Floor – Red Zone",
+  "Incident Controller":        "Podium Floor – Green Zone",
+  "First Aid Team":             "Podium Floor – Green Zone",
+  "ERT Team Leader":            "Podium Floor – Green Zone",
+  "BCM Team / Site Operations": "Podium Floor – Red Zone"
+};
 
+/** Header border color per role **/
+const headerColorByRole = {
+  "Incident Controller":        "#009E60",
+  "First Aid Team":             "#FFD100",
+  "ERT Team Leader":            "#FFB800",
+  "BCM Team / Site Operations": "#A80000",
+  "Site Head":                  "#58595B",
+  "HR":                          "#FF6F61"
+};
 
-// src/App.js
+// rotating name colors (expandable)
+const NAME_COLORS = ['#FFD100'];
 
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
-
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import DashboardHome    from './pages/DashboardHome';
-import ErtPage          from './pages/ErtPage';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  return (
-    <>
-      <div
-        className="d-flex justify-content-between align-items-center mb-2"
-        style={{ flexWrap: 'wrap', gap: '0.5rem' }}
-      >
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-
-        <input
-          type="text"
-          placeholder="Search employee..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flexGrow: 1,
-            maxWidth: 300,
-            padding: '0.4rem 0.8rem',
-            fontSize: '1rem',
-            borderRadius: 4,
-            border: '1px solid #ccc'
-          }}
-        />
-      </div>
-
-      <ZoneDetailsTable data={detailsData} searchTerm={searchTerm} />
-    </>
-  );
-}
-
-function App() {
-  const location = useLocation();
-
-  // Determine header text based on current route
-  const headerText =
-    location.pathname === '/ert'
-      ? 'Emergency Response Team — Western Union Pune'
-      : 'Live Occupancy — Western Union Pune';
-
-  const [summaryData, setSummaryData]               = useState([]);
-  const [detailsData, setDetailsData]               = useState({});
-  const [floorData, setFloorData]                   = useState([]);
-  const [zoneBreakdown, setZoneBreakdown]           = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
-  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus]                   = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-
-    es.onmessage = (e) => {
-      try {
-        const p = JSON.parse(e.data);
-
-        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
-        setDetailsData(p.details || {});
-        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
-        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
-        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
-        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
-        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(p.ertStatus || {});
-      } catch {
-        console.error('SSE parse error');
+export default function ERTOverview({ ertStatus }) {
+  // ─── Compute zone-wise counts (only for present members) ───────────────────
+  const zoneCounts = {};
+  Object.values(ertStatus).forEach((membersArray) => {
+    membersArray.forEach((m) => {
+      if (m.present) {
+        // group by m.zone (fallback to 'N/A' if undefined/empty)
+        const z = m.zone || 'N/A';
+        zoneCounts[z] = (zoneCounts[z] || 0) + 1;
       }
-    };
+    });
+  });
 
-    es.onerror = (err) => {
-      console.error('SSE error', err);
-      es.close();
-    };
-
-    return () => es.close();
-  }, []);
+  // Convert zoneCounts to an array of [zone, count], sorted alphabetically by zone name
+  const sortedZones = Object.entries(zoneCounts).sort(([zoneA], [zoneB]) =>
+    zoneA.localeCompare(zoneB)
+  );
 
   return (
-    <>
-      <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-        <Navbar.Brand as={Link} to="/" className="wu-brand">
-          {headerText}
-        </Navbar.Brand>
-        <Nav className="ms-auto align-items-center">
-          <Nav.Link as={Link} to="/" className="nav-item-infographic">
-            Dashboard
-          </Nav.Link>
-          <Nav.Link as={Link} to="/details" className="nav-item-infographic">
-            Details
-          </Nav.Link>
-          <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
-            ERT Overview
-          </Nav.Link>
-          <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-            <FaSun />
-          </Nav.Link>
-        </Nav>
-      </Navbar>
+    <div className="mt-0">
+      {/* ── Zone-wise summary cards ───────────────────────────────────────────── */}
+      <Row className="g-2 mb-4">
+        {sortedZones.map(([zoneName, count]) => (
+          <Col key={zoneName} xs={12} sm={6} md={4} lg={3}>
+            <Card className="text-center shadow-sm">
+              <Card.Header
+                className="bg-dark text-white"
+                style={{
+                  borderTop:    `4px solid #ffd100`,
+                  borderLeft:   `6px solid #ffd100`,
+                  borderRadius: '0 0.25rem 0 0'
+                }}
+              >
+                {zoneName}
+              </Card.Header>
+              <Card.Body>
+                <h2 className="mb-0">{count}</h2>
+                <div className="text-muted small">Available</div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+        {/* If no one is present or no zones found, show a placeholder card */}
+        {sortedZones.length === 0 && (
+          <Col xs={12}>
+            <Card className="text-center shadow-sm">
+              <Card.Body>
+                <div className="text-muted">No available ERT members right now.</div>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+      </Row>
 
-      <Container fluid className="mt-2">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <DashboardHome
-                summaryData={summaryData}
-                detailsData={detailsData}
-                floorData={floorData}
-                zoneBreakdown={zoneBreakdown}
-                personnelBreakdown={personnelBreakdown}
-                totalVisitedToday={totalVisitedToday}
-                personnelSummary={personnelSummary}
-                visitedToday={visitedToday}
-                ertStatus={ertStatus}
-              />
-            }
-          />
-          <Route
-            path="/details"
-            element={<ZoneDetailsPage detailsData={detailsData} />}
-          />
-          <Route
-            path="/ert"
-            element={<ErtPage ertStatus={ertStatus} />}
-          />
-        </Routes>
-      </Container>
-    </>
+      {/* ── Existing role-wise member cards (unchanged except for indentation) ───── */}
+      <Row className="g-2 mt-1">
+        {Object.entries(ertStatus).map(([role, members]) => {
+          const accent = headerColorByRole[role] || '#FFD100';
+          const baseLoc = baseLocationByRole[role] || 'N/A';
+
+          // present members first
+          const sorted = [...members].sort((a, b) =>
+            a.present === b.present ? 0 : a.present ? -1 : 1
+          );
+
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header
+                  className="bg-dark text-white"
+                  style={{
+                    borderTop:    `4px solid ${accent}`,
+                    borderLeft:   `6px solid ${accent}`,
+                    borderRadius: '0 0.25rem 0 0'
+                  }}
+                >
+                  {role}
+                </Card.Header>
+                <ListGroup variant="flush">
+                  {sorted.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item key={m.name} className="py-2 bg-dark text-white">
+                        {/* Name + Availability */}
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <strong style={{ color: nameColor }}>{m.name}</strong>
+                            <Badge
+                              bg={m.present ? 'success' : 'danger'}
+                              className="ms-2"
+                              pill
+                            >
+                              {m.present ? 'Available' : 'Away'}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Contact row */}
+                        <div className="mt-2">
+                          <div className="small d-flex align-items-center mb-1">
+                            <FaEnvelopeOpenText className="me-2" style={{ color: '#FFD100' }} />
+                            <a
+                              href={`mailto:${m.email}`}
+                              style={{ color: '#fff', textDecoration: 'underline' }}
+                            >
+                              {m.email}
+                            </a>
+                          </div>
+                          <div className="small d-flex align-items-center">
+                            <FaMobileAlt className="me-2" style={{ color: '#FF6F61' }} />
+                            <a
+                              href={`tel:${m.phone}`}
+                              style={{ color: '#fff', textDecoration: 'underline' }}
+                            >
+                              {m.phone}
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Locations */}
+                        <div className="mt-3 d-flex flex-wrap gap-3 small">
+                          <div className="d-flex align-items-center">
+                            <FaHome className="me-2" style={{ color: '#A80000' }} />
+                            <span style={{ color: '#A80000' }}>
+                              Base: {baseLoc}
+                            </span>
+                          </div>
+                          {m.present && (
+                            <div className="d-flex align-items-center">
+                              <FaMapMarkerAlt className="me-2" style={{ color: '#009E60' }} />
+                              <span style={{ color: '#009E60' }}>
+                                Live: {m.zone || 'N/A'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
   );
 }
 
-export default function WrappedApp() {
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <App />
-      </div>
-    </BrowserRouter>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-// C:\Users\W0024618\Desktop\swipeData\client\src\App.js
-
-// src/App.js
-
-import React, { useEffect, useState } from 'react';
-import { Container, Navbar, Nav } from 'react-bootstrap';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { FaSun } from 'react-icons/fa';
-
-import ZoneDetailsTable from './components/ZoneDetailsTable';
-import DashboardHome    from './pages/DashboardHome';
-import ErtPage          from './pages/ErtPage';
-
-import './App.css';
-
-function ZoneDetailsPage({ detailsData }) {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  return (
-    <>
-      <div
-        className="d-flex justify-content-between align-items-center mb-2"
-        style={{ flexWrap: 'wrap', gap: '0.5rem' }}
-      >
-        <Link to="/" className="btn btn-secondary">
-          ← Back to Dashboard
-        </Link>
-
-        <input
-          type="text"
-          placeholder="Search employee..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flexGrow: 1,
-            maxWidth: 300,
-            padding: '0.4rem 0.8rem',
-            fontSize: '1rem',
-            borderRadius: 4,
-            border: '1px solid #ccc'
-          }}
-        />
-      </div>
-
-      <ZoneDetailsTable data={detailsData} searchTerm={searchTerm} />
-    </>
-  );
-}
-
-function App() {
-  const [summaryData, setSummaryData]               = useState([]);
-  const [detailsData, setDetailsData]               = useState({});
-  const [floorData, setFloorData]                   = useState([]);
-  const [zoneBreakdown, setZoneBreakdown]           = useState([]);
-  const [personnelBreakdown, setPersonnelBreakdown] = useState([]);
-  const [totalVisitedToday, setTotalVisitedToday]   = useState(0);
-  const [personnelSummary, setPersonnelSummary]     = useState({ employees: 0, contractors: 0 });
-  const [visitedToday, setVisitedToday]             = useState({ employees: 0, contractors: 0, total: 0 });
-  const [ertStatus, setErtStatus]                   = useState({});
-
-  useEffect(() => {
-    const es = new EventSource('http://localhost:5000/api/live-occupancy');
-
-    es.onmessage = (e) => {
-      try {
-        const p = JSON.parse(e.data);
-
-        setSummaryData(Array.isArray(p.summary) ? [...p.summary] : []);
-        setDetailsData(p.details || {});
-        setFloorData(Array.isArray(p.floorBreakdown) ? [...p.floorBreakdown] : []);
-        setZoneBreakdown(Array.isArray(p.zoneBreakdown) ? [...p.zoneBreakdown] : []);
-        setPersonnelBreakdown(Array.isArray(p.personnelBreakdown) ? [...p.personnelBreakdown] : []);
-        setTotalVisitedToday(typeof p.totalVisitedToday === 'number' ? p.totalVisitedToday : 0);
-        setPersonnelSummary(p.personnelSummary || { employees: 0, contractors: 0 });
-        setVisitedToday(p.visitedToday || { employees: 0, contractors: 0, total: 0 });
-        setErtStatus(p.ertStatus || {});
-      } catch {
-        console.error('SSE parse error');
-      }
-    };
-
-    es.onerror = (err) => {
-      console.error('SSE error', err);
-      es.close();
-    };
-
-    return () => es.close();
-  }, []);
-
-  return (
-    <BrowserRouter>
-      <div className="dark-theme">
-        <Navbar bg="dark" variant="dark" expand="lg" className="px-4">
-          <Navbar.Brand as={Link} to="/" className="wu-brand">
-            Live Occupancy — Western Union Pune
-          </Navbar.Brand>
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link as={Link} to="/" className="nav-item-infographic">
-              Dashboard
-            </Nav.Link>
-            <Nav.Link as={Link} to="/details" className="nav-item-infographic">
-              Details
-            </Nav.Link>
-            <Nav.Link as={Link} to="/ert" className="nav-item-infographic">
-              ERT Overview
-            </Nav.Link>
-            <Nav.Link className="theme-toggle-icon" title="Dark mode only">
-              <FaSun />
-            </Nav.Link>
-          </Nav>
-        </Navbar>
-
-        <Container fluid className="mt-2">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <DashboardHome
-                  summaryData={summaryData}
-                  detailsData={detailsData}
-                  floorData={floorData}
-                  zoneBreakdown={zoneBreakdown}
-                  personnelBreakdown={personnelBreakdown}
-                  totalVisitedToday={totalVisitedToday}
-                  personnelSummary={personnelSummary}
-                  visitedToday={visitedToday}
-                  ertStatus={ertStatus}
-                />
-              }
-            />
-            <Route
-              path="/details"
-              element={<ZoneDetailsPage detailsData={detailsData} />}
-            />
-            <Route
-              path="/ert"
-              element={<ErtPage ertStatus={ertStatus} />}
-            />
-          </Routes>
-        </Container>
-      </div>
-    </BrowserRouter>
-  );
-}
-
-export default App;
 
