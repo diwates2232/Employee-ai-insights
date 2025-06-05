@@ -1,3 +1,366 @@
+// src/pages/ErtPage.jsx
+
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+import ERTOverview from '../components/ERTOverview';
+
+/**
+ * A standalone page that only renders the ERTOverview component,
+ * with a footer containing “GSOC Mail” instead of the raw email.
+ */
+export default function ErtPage({ ertStatus }) {
+  return (
+    <Container fluid className="py-1">
+      <Row className="g-1">
+        <Col>
+          <ERTOverview ertStatus={ertStatus} />
+        </Col>
+      </Row>
+
+      <footer
+        style={{
+          backgroundColor: '#000',
+          color: '#FFC72C',
+          padding: '1.5rem 0',
+          textAlign: 'center',
+          marginTop: '2rem',
+          borderTop: '2px solid #FFC72C',
+          fontSize: '0.95rem',
+          lineHeight: '1.6'
+        }}
+      >
+        <div>
+          <strong>Global Security Operations Center (GSOC)</strong>
+          <br />
+          Live Occupancy dashboard for Western Union Pune — Real-time occupancy,
+          floor activity, and personnel insights.
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          Contact us:&nbsp;
+          <a
+            href="mailto:GSOC-GlobalSecurityOperationCenter.SharedMailbox@westernunion.com"
+            style={{ color: '#FFC72C', textDecoration: 'underline' }}
+          >
+            GSOC Mail
+          </a>
+          &nbsp;|&nbsp;
+          Landline:&nbsp;
+          <span style={{ color: '#FFC72C' }}>+91-020-67632394</span>
+        </div>
+      </footer>
+    </Container>
+  );
+}
+
+
+
+
+
+
+
+
+// src/components/ERTOverview.jsx
+
+import React, { useState, useMemo } from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  ListGroup,
+  Badge
+} from 'react-bootstrap';
+import {
+  FaEnvelopeOpenText,
+  FaMobileAlt,
+  FaMapMarkerAlt,
+  FaHome
+} from 'react-icons/fa';
+
+/** Base location per role **/
+const baseLocationByRole = {
+  "Site Head":                  "Podium Floor – Red Zone",
+  "HR":                          "Podium Floor – Red Zone",
+  "Incident Controller":        "Podium Floor – Green Zone",
+  "First Aid Team":             "Podium Floor – Green Zone",
+  "ERT Team Leader":            "Podium Floor – Green Zone",
+  "BCM Team / Site Operations": "Podium Floor – Red Zone"
+};
+
+/** Header border color per role **/
+const headerColorByRole = {
+  "Incident Controller":        "#009E60",
+  "First Aid Team":             "#FFD100",
+  "ERT Team Leader":            "#FFB800",
+  "BCM Team / Site Operations": "#A80000",
+  "Site Head":                  "#58595B",
+  "HR":                          "#FF6F61"
+};
+
+// rotating name colors (expandable)
+const NAME_COLORS = ['#FFD100'];
+
+/**
+ * Generate a palette of “dark to faint” colors.
+ * You can adjust or expand this list manually if you know your zones ahead of time.
+ */
+const PALETTE = [
+  '#4A148C', // very dark purple
+  '#311B92',
+  '#1A237E',
+  '#0D47A1',
+  '#01579B',
+  '#006064',
+  '#004D40',
+  '#1B5E20',
+  '#33691E',
+  '#827717',
+  '#F57F17',
+  '#FF6F00',
+  '#E65100',
+  '#BF360C'
+];
+
+export default function ERTOverview({ ertStatus }) {
+  // ─── State: which zone is currently selected (or null = “no filter”) ─────────
+  const [filterZone, setFilterZone] = useState(null);
+
+  // ─── Build a flat list of all present members, then extract zone counts ──────
+  const { sortedZones, zoneToColor } = useMemo(() => {
+    const counts = {};
+    Object.values(ertStatus).forEach((membersArray) => {
+      membersArray.forEach((m) => {
+        if (m.present) {
+          const z = m.zone || 'N/A';
+          counts[z] = (counts[z] || 0) + 1;
+        }
+      });
+    });
+
+    // Sort zones alphabetically
+    const zonesArr = Object.entries(counts).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
+
+    // Assign each zone a color from the PALETTE in order (dark → faint).
+    // If there are more zones than colors, we wrap around.
+    const mapping = {};
+    zonesArr.forEach(([zoneName], idx) => {
+      mapping[zoneName] = PALETTE[idx % PALETTE.length];
+    });
+
+    return {
+      sortedZones: zonesArr, // array of [zoneName, count]
+      zoneToColor: mapping  // e.g. { 'Red Zone': '#4A148C', ... }
+    };
+  }, [ertStatus]);
+
+  // ─── Filtered version of ertStatus for “role-wise” display ───────────────────
+  const filteredStatus = useMemo(() => {
+    if (!filterZone) {
+      return ertStatus;
+    }
+    // Build a new object containing only roles whose members match the filterZone
+    const result = {};
+    Object.entries(ertStatus).forEach(([role, membersArray]) => {
+      const filteredMembers = membersArray.filter(
+        (m) => m.present && (m.zone || 'N/A') === filterZone
+      );
+      if (filteredMembers.length > 0) {
+        result[role] = filteredMembers;
+      }
+    });
+    return result;
+  }, [ertStatus, filterZone]);
+
+  return (
+    <div className="mt-0">
+      {/* ── Zone-wise summary cards (manual colors, act as filters) ──────────────── */}
+      <Row className="g-2 mb-4">
+        {sortedZones.map(([zoneName, count]) => {
+          const color = zoneToColor[zoneName] || '#BBBBBB';
+          const isSelected = filterZone === zoneName;
+
+          return (
+            <Col key={zoneName} xs={12} sm={6} md={4} lg={3}>
+              <Card
+                className="text-center shadow-sm"
+                style={{
+                  cursor: 'pointer',
+                  opacity: filterZone && !isSelected ? 0.5 : 1
+                }}
+                onClick={() => {
+                  // Toggle filter: clicking the same zone again clears it
+                  setFilterZone((prev) => (prev === zoneName ? null : zoneName));
+                }}
+              >
+                <Card.Header
+                  className="text-white"
+                  style={{
+                    backgroundColor: color,
+                    borderRadius: '0 0.25rem 0 0'
+                  }}
+                >
+                  {zoneName}
+                </Card.Header>
+                <Card.Body>
+                  <h2 className="mb-0">{count}</h2>
+                  <div className="text-muted small">Available</div>
+                </Card.Body>
+              </Card>
+            </Col>
+          );
+        })}
+
+        {/* If no one is present or no zones found */}
+        {sortedZones.length === 0 && (
+          <Col xs={12}>
+            <Card className="text-center shadow-sm">
+              <Card.Body>
+                <div className="text-muted">No available ERT members right now.</div>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+      </Row>
+
+      {/* ── Role-wise member cards (filtered by filterZone) ───────────────────────── */}
+      <Row className="g-2 mt-1">
+        {Object.entries(filteredStatus).map(([role, members]) => {
+          const accent = headerColorByRole[role] || '#FFD100';
+          const baseLoc = baseLocationByRole[role] || 'N/A';
+
+          // Sort so that present members appear first (though filteredStatus only includes present)
+          const sortedMembers = [...members].sort((a, b) =>
+            a.present === b.present ? 0 : a.present ? -1 : 1
+          );
+
+          return (
+            <Col key={role} md={6} lg={4}>
+              <Card className="h-100 shadow-sm">
+                <Card.Header
+                  className="bg-dark text-white"
+                  style={{
+                    borderTop:    `4px solid ${accent}`,
+                    borderLeft:   `6px solid ${accent}`,
+                    borderRadius: '0 0.25rem 0 0'
+                  }}
+                >
+                  {role}
+                </Card.Header>
+
+                <ListGroup variant="flush">
+                  {sortedMembers.map((m, idx) => {
+                    const nameColor = NAME_COLORS[idx % NAME_COLORS.length];
+                    return (
+                      <ListGroup.Item
+                        key={m.name}
+                        className="py-2 bg-dark text-white"
+                      >
+                        {/* Name + Availability */}
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <strong style={{ color: nameColor }}>{m.name}</strong>
+                            <Badge
+                              bg={m.present ? 'success' : 'danger'}
+                              className="ms-2"
+                              pill
+                            >
+                              {m.present ? 'Available' : 'Away'}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Contact row */}
+                        <div className="mt-2">
+                          <div className="small d-flex align-items-center mb-1">
+                            <FaEnvelopeOpenText
+                              className="me-2"
+                              style={{ color: '#FFD100' }}
+                            />
+                            <a
+                              href={`mailto:${m.email}`}
+                              style={{
+                                color: '#fff',
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              {m.email}
+                            </a>
+                          </div>
+                          <div className="small d-flex align-items-center">
+                            <FaMobileAlt
+                              className="me-2"
+                              style={{ color: '#FF6F61' }}
+                            />
+                            <a
+                              href={`tel:${m.phone}`}
+                              style={{
+                                color: '#fff',
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              {m.phone}
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Locations */}
+                        <div className="mt-3 d-flex flex-wrap gap-3 small">
+                          <div className="d-flex align-items-center">
+                            <FaHome className="me-2" style={{ color: '#A80000' }} />
+                            <span style={{ color: '#A80000' }}>
+                              Base: {baseLoc}
+                            </span>
+                          </div>
+                          {m.present && (
+                            <div className="d-flex align-items-center">
+                              <FaMapMarkerAlt
+                                className="me-2"
+                                style={{ color: '#009E60' }}
+                              />
+                              <span style={{ color: '#009E60' }}>
+                                Live: {m.zone || 'N/A'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              </Card>
+            </Col>
+          );
+        })}
+
+        {/* If a zone is selected but yields no results */}
+        {filterZone && Object.keys(filteredStatus).length === 0 && (
+          <Col xs={12}>
+            <Card className="text-center shadow-sm">
+              <Card.Body>
+                <div className="text-muted">
+                  No ERT members present in “{filterZone}.”
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+      </Row>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
 Read below page details carefully now our page is fix ,
 now We are generate catds manually then fill Manually colours like dark to faint as per created Zone but fill dark to faint colours unique for each zone,
 also make a generated card as filter ,
