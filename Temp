@@ -1,3 +1,132 @@
+// src/components/ZoneDetailsTable.jsx
+
+import React, { useState, useMemo } from 'react';
+import './ZoneDetailsTable.css';
+
+export default function ZoneDetailsTable({ data = {} }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedZones, setExpandedZones] = useState({});
+
+  // 1) Sort zones by descending count
+  const sortedEntries = useMemo(() => {
+    return Object.entries(data).sort(([, aList], [, bList]) => bList.length - aList.length);
+  }, [data]);
+
+  // 2) Filter predicate (case‐insensitive)
+  const matchesSearch = (emp) =>
+    emp.ObjectName1.toLowerCase().includes(searchTerm.trim().toLowerCase());
+
+  // 3) Handler for search input
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  if (!sortedEntries.length) {
+    return <p>No zone detail data available.</p>;
+  }
+
+  // Toggle expand/collapse for a given zone
+  const toggleZone = (zone) => {
+    setExpandedZones((prev) => ({
+      ...prev,
+      [zone]: !prev[zone],
+    }));
+  };
+
+  return (
+    <div className="zone-cards">
+      {/* Search input */}
+      <div style={{ marginBottom: '1rem', textAlign: 'right' }}>
+        <input
+          type="text"
+          placeholder="Search employee..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          style={{
+            padding: '0.4rem 0.8rem',
+            fontSize: '0.9rem',
+            borderRadius: 4,
+            border: '1px solid #ccc',
+          }}
+        />
+      </div>
+
+      {sortedEntries.map(([zone, emps]) => {
+        // 4) Filter employees in this zone by searchTerm
+        const filteredEmps = emps.filter(matchesSearch);
+        if (filteredEmps.length === 0) {
+          return null;
+        }
+
+        const isExpanded = !!expandedZones[zone];
+        const displayCount = isExpanded ? filteredEmps.length : Math.min(50, filteredEmps.length);
+        const buttonNeeded = filteredEmps.length > 50;
+
+        return (
+          <div key={zone} className="zone-card">
+            <div className="zone-header">
+              <h3>{zone}</h3>
+              <span className="zone-badge">Total: {filteredEmps.length}</span>
+            </div>
+
+            <table className="zone-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Swipe Time</th>
+                  <th>Type</th>
+                  <th>Door Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmps.slice(0, displayCount).map((emp, i) => (
+                  <tr key={`${emp.EmployeeID}-${i}`}>
+                    <td>{emp.ObjectName1}</td>
+                    <td>{emp.Swipe_Time}</td>
+                    <td>{emp.PersonnelType}</td>
+                    <td>{emp.door}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {buttonNeeded && (
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => toggleZone(zone)}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.9rem',
+                    borderRadius: 4,
+                    border: '1px solid #ccc',
+                    backgroundColor: '#f0f0f0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {isExpanded ? 'Show Less' : `Show More (${filteredEmps.length - 50} more)`}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 Read below both file details carefully now ,
 currently page display data like if Green zone have 100 entry and orange Zone have 30 entry the its not look good ,
 add limit for display data initially display only 50 rows detaols, the add option to see more ,then display all data ,
