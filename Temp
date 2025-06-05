@@ -1,3 +1,101 @@
+ async function buildOccupancy(allEvents) {
+   const current      = {};
+   const uniquePeople = new Map();
+
+   for (const evt of allEvents) {
+     const {
+       EmployeeID, PersonGUID,
+       ObjectName1, PersonnelType,
+       CardNumber, Dateonly,
+       Swipe_Time, Direction, Door
+     } = evt;
+
+     const dedupKey = PersonGUID || EmployeeID || CardNumber || ObjectName1;
+     const zoneRaw  = mapDoorToZone(Door, Direction);
+     const zone     = zoneRaw && zoneRaw.toLowerCase();
+
+     // ─── A) If we can’t map door+direction → skip entirely ───────
+     if (zoneRaw === 'Unknown Zone') {
+       continue;
+     }
+
+     // ─── 1) True "Out of office" → full eviction ───────────────────
+     if (Direction === 'OutDirection' && zone === 'out of office') {
+       uniquePeople.delete(dedupKey);
+       delete current[dedupKey];
+       continue;
+     }
+
+-    // ─── 2) Any other OutDirection → keep them (outer areas, reception exits, etc.)
+-    if (Direction === 'OutDirection') {
+-      uniquePeople.set(dedupKey, PersonnelType);
+-      current[dedupKey] = {
+-        Dateonly, Swipe_Time,
+-        EmployeeID, ObjectName1, CardNumber,
+-        PersonnelType,
+-        zone: zoneRaw,
+-        door: Door,
+-        Direction
+-      };
+-      continue;
+-    }
+
++    // ─── 2) Other OutDirection → maybe eviction, maybe keep
++    if (Direction === 'OutDirection') {
++      // If this OutDirection is genuinely “Outer Area,” keep them:
++      if (zone.toLowerCase().endsWith('outer area')) {
++        uniquePeople.set(dedupKey, PersonnelType);
++        current[dedupKey] = {
++          Dateonly, Swipe_Time,
++          EmployeeID, ObjectName1, CardNumber,
++          PersonnelType,
++          zone: zoneRaw,
++          door: Door,
++          Direction
++        };
++      } else {
++        // Any other OutDirection (TURNSTILE, lobby exits, etc.) = full eviction
++        uniquePeople.delete(dedupKey);
++        delete current[dedupKey];
++      }
++      continue;
++    }
+
+     // ─── 3) InDirection → normal check-in ─────────────────────────
+     if (Direction === 'InDirection') {
+       uniquePeople.set(dedupKey, PersonnelType);
+       current[dedupKey] = {
+         Dateonly, Swipe_Time,
+         EmployeeID, ObjectName1, CardNumber,
+         PersonnelType,
+         zone: zoneRaw,
+         door: Door,
+         Direction
+       };
+       continue;
+     }
+
+     // ─── 4) Catch-all eviction (just in case) ────────────────────
+     uniquePeople.delete(dedupKey);
+     delete current[dedupKey];
+   }
+
+   // … rest of function unchanged …
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 debud all file line by line i think issue is there Swipe out of office are store in realtime Headcount, just i think debug all code and solve this issue
 
 // controllers/liveOccupancyController.js
